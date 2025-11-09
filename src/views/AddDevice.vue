@@ -245,9 +245,13 @@ async function openSSEOnce() {
   asciiQr.value = '';
 
   const token = localStorage.getItem('token') || '';
+  
+  // Get the correct API base URL from the userApi instance
+  const API_BASE = userApi.defaults.baseURL || '';
+  const sseUrl = `${API_BASE}/tutors/sessions/create-sse`;
 
   try {
-    const resp = await fetch('/tutors/sessions/create-sse', {
+    const resp = await fetch(sseUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
