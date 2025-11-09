@@ -407,10 +407,17 @@ const visibleGroups = computed(() => {
 
 const mediaUrl = (p) => {
   if (!p) return '';
-  // backend serves /media statically, path already includes 'media/'.
-  // Ensure leading slash for browser fetch.
-  return p.startsWith('/') ? p : `/${p}`;
+  
+  // Get API base URL from environment
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+  
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
+  
+  // Construct full URL with API base
+  return `${API_BASE}${cleanPath}`;
 };
+
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || '');
 
 watch([q, statusFilter, sortBy, sortDir, pageSize], () => { page.value = 1; });
