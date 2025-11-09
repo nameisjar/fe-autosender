@@ -415,7 +415,7 @@ const mediaUrl = (p) => {
   const cleanPath = p.startsWith('/') ? p.slice(1) : p;
   
   // Construct full URL with API base
-  return `${API_BASE}${cleanPath}`;
+  return `${API_BASE}/${cleanPath}`;
 };
 
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || '');
