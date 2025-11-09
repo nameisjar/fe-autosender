@@ -142,7 +142,8 @@ async function openSSEOnce() {
       },
       body: JSON.stringify({ deviceId: deviceId.value }),
       signal: controller.signal,
-      cache: 'no-store'
+      cache: 'no-store',
+      mode: 'cors'
     });
 
     if (!resp.ok) {
