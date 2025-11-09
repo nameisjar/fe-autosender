@@ -248,7 +248,7 @@ async function openSSEOnce() {
   
   // Get API base URL from environment
   const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-  const sseUrl = `${API_BASE}tutors/sessions/create-sse`;
+  const sseUrl = `${API_BASE}/tutors/sessions/create-sse`;
 
   try {
     const resp = await fetch(sseUrl, {
