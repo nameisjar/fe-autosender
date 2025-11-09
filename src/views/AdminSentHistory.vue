@@ -360,7 +360,19 @@ const deleteAllSent = async () => {
   }
 };
 
-const mediaUrl = (p) => p ? (p.startsWith('/') ? p : `/${p}`) : '';
+const mediaUrl = (p) => {
+  if (!p) return '';
+  
+  // Get API base URL from environment
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+  
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
+  
+  // Construct full URL with API base
+  return `${API_BASE}/${cleanPath}`;
+};
+
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || '');
 
 watch([sortBy, sortDir, pageSize], () => {
