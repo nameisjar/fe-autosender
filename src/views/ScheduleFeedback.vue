@@ -467,6 +467,36 @@ const lessonsForCourse = computed(() => {
     .sort((a, b) => Number(a.lesson) - Number(b.lesson));
 });
 
+// Helper function to convert datetime-local to ISO string with proper timezone
+const convertToServerTime = (datetimeLocal) => {
+  if (!datetimeLocal) return '';
+  
+  // Create date object from datetime-local input (assumes local timezone)
+  const localDate = new Date(datetimeLocal);
+  
+  // Convert to ISO string which includes timezone info
+  // This ensures consistent behavior between local and deployed environments
+  return localDate.toISOString();
+};
+
+// Helper to format for display with local timezone
+const formatLocalTime = (isoString) => {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString('id-ID', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta'
+    });
+  } catch {
+    return '';
+  }
+};
+
 const estimatedCount = computed(() => {
   const start = Number(form.value.startLesson || 1);
   const list = lessonsForCourse.value.filter((t) => Number(t.lesson) >= start);
@@ -481,14 +511,8 @@ const lastDate = computed(() => {
     const weeks = Math.max(estimatedCount.value - 1, 0);
     const last = new Date(start);
     last.setDate(last.getDate() + weeks * 7);
-    // format YYYY-MM-DD HH:mm local
-    const pad = (n) => String(n).padStart(2, '0');
-    const y = last.getFullYear();
-    const m = pad(last.getMonth() + 1);
-    const d = pad(last.getDate());
-    const hh = pad(last.getHours());
-    const mm = pad(last.getMinutes());
-    return `${y}-${m}-${d} ${hh}:${mm}`;
+    // Use formatLocalTime for consistent timezone display
+    return formatLocalTime(last.toISOString());
   } catch {
     return '';
   }
@@ -518,13 +542,15 @@ const submit = async () => {
   }
   loading.value = true;
   try {
-    // Pastikan schedule dikirim dengan benar
+    // Convert schedule to proper ISO format
+    const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : '';
+    
     const payload = {
       name: form.value.name,
       courseName: form.value.courseName,
       startLesson: form.value.startLesson,
       delay: form.value.delay ?? 5000,
-      schedule: form.value.schedule, // Tambahkan schedule
+      schedule: scheduleISO, // Use converted ISO format
       recipients: recipients.value,
     };
     

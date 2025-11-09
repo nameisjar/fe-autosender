@@ -164,6 +164,36 @@ const fmt = (d) => {
   } catch { return '-'; }
 };
 
+// Helper function to convert datetime-local to ISO string with proper timezone
+const convertToServerTime = (datetimeLocal) => {
+  if (!datetimeLocal) return '';
+  
+  // Create date object from datetime-local input (assumes local timezone)
+  const localDate = new Date(datetimeLocal);
+  
+  // Convert to ISO string which includes timezone info
+  // This ensures consistent behavior between local and deployed environments
+  return localDate.toISOString();
+};
+
+// Helper to format for display with local timezone
+const formatLocalTime = (isoString) => {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString('id-ID', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta'
+    });
+  } catch {
+    return '';
+  }
+};
+
 function onFile(e) {
   const file = e.target.files?.[0];
   mediaFile.value = file || null;
@@ -437,13 +467,17 @@ async function submit() {
   loading.value = true;
   try {
     const payloadDelay = form.value.delay ?? 5000;
+    
+    // Convert schedule to proper ISO format if provided
+    const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : undefined;
+    
     if (!mediaFile.value) {
       // JSON payload when no media
       await deviceApi.post('/messages/broadcasts', {
         name: form.value.name,
         message: form.value.message,
         delay: payloadDelay,
-        schedule: form.value.schedule || undefined,
+        schedule: scheduleISO,
         recipients: recipients.value,
       });
     } else {
@@ -452,7 +486,7 @@ async function submit() {
       fd.append('name', form.value.name);
       fd.append('message', form.value.message);
       fd.append('delay', String(payloadDelay));
-      if (form.value.schedule) fd.append('schedule', form.value.schedule);
+      if (scheduleISO) fd.append('schedule', scheduleISO);
       recipients.value.forEach((r) => fd.append('recipients', r));
       fd.append('media', mediaFile.value);
       await deviceApi.post('/messages/broadcasts', fd);

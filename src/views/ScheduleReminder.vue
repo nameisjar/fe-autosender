@@ -443,6 +443,36 @@ const validationError = computed(() => {
   return '';
 });
 
+// Helper function to convert datetime-local to ISO string with proper timezone
+const convertToServerTime = (datetimeLocal) => {
+  if (!datetimeLocal) return '';
+  
+  // Create date object from datetime-local input (assumes local timezone)
+  const localDate = new Date(datetimeLocal);
+  
+  // Convert to ISO string which includes timezone info
+  // This ensures consistent behavior between local and deployed environments
+  return localDate.toISOString();
+};
+
+// Helper to format for display with local timezone
+const formatLocalTime = (isoString) => {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString('id-ID', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta'
+    });
+  } catch {
+    return '';
+  }
+};
+
 const estimatedCount = computed(() => {
   // Simple estimation of occurrences between start and end by recurrence + interval
   try {
@@ -489,6 +519,10 @@ async function submit() {
 
   loading.value = true;
   try {
+    // Convert dates to proper ISO format
+    const startDateISO = form.value.startDate ? convertToServerTime(form.value.startDate) : '';
+    const endDateISO = form.value.endDate ? convertToServerTime(form.value.endDate) : '';
+    
     if (!mediaFile.value) {
       // Send as JSON when no media to ensure recipients stays an array
       await deviceApi.post('/messages/broadcasts/scheduled', {
@@ -497,8 +531,8 @@ async function submit() {
         delay: form.value.delay ?? 5000,
         recurrence: form.value.recurrence,
         interval: form.value.interval,
-        startDate: form.value.startDate,
-        endDate: form.value.endDate,
+        startDate: startDateISO, // Use converted ISO format
+        endDate: endDateISO, // Use converted ISO format
         recipients: recipients.value,
       });
     } else {
@@ -509,8 +543,8 @@ async function submit() {
       fd.append('delay', String(form.value.delay ?? 5000));
       fd.append('recurrence', form.value.recurrence);
       fd.append('interval', String(form.value.interval));
-      fd.append('startDate', form.value.startDate);
-      fd.append('endDate', form.value.endDate);
+      fd.append('startDate', startDateISO); // Use converted ISO format
+      fd.append('endDate', endDateISO); // Use converted ISO format
       recipients.value.forEach((r) => fd.append('recipients', r));
       fd.append('media', mediaFile.value);
 
