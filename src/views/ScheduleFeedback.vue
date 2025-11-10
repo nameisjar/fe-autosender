@@ -283,9 +283,7 @@ const loadGroups = async () => {
       : [];
     groups.value = mapGroups(list);
   } catch (e) {
-    console.error('Error loading groups:', e);
-    // Jangan tampilkan error jika hanya gagal load groups
-    groups.value = [];
+    err.value = 'Login WhatsApp untuk memuat grup' || e?.response?.data?.message || e?.message;
   } finally {
     loadingGroups.value = false;
   }

@@ -297,7 +297,7 @@ const loadGroups = async () => {
       : [];
     groups.value = mapGroups(list);
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal memuat grup';
+    err.value = 'Login WhatsApp untuk memuat grup' || e?.response?.data?.message || e?.message;
   } finally {
     loadingGroups.value = false;
   }

@@ -193,7 +193,9 @@ const loadGroups = async () => {
       : [];
     groups.value = mapGroups(list);
   } catch (e) {
-    error.value = e?.response?.data?.message || e?.message || 'Gagal memuat grup';
+    console.error('Error loading groups:', e);
+    // Jangan tampilkan error jika hanya gagal load groups
+    groups.value = [];
   } finally {
     loadingGroups.value = false;
   }
