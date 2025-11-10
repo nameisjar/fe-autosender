@@ -4,20 +4,30 @@
 
     <section class="tpl">
       <!-- <h3>Kelola Template Feedback</h3> -->
-      <div v-if="isAdmin" class="form card form-inline">
-        <label class="field">
-          <span>Course name</span>
-          <input v-model="fb.courseName" placeholder="Course name" />
-        </label>
-        <label class="field">
-          <span>Lesson</span>
-          <input v-model.number="fb.lesson" type="number" min="1" placeholder="Lesson" />
-        </label>
-        <label class="field grow">
-          <span>Message</span>
-          <input v-model="fb.message" placeholder="Message" />
-        </label>
-        <button class="btn primary" @click="createFeedback" :disabled="submitting">{{ submitting ? 'Menyimpan...' : 'Tambah' }}</button>
+      <div v-if="isAdmin" class="form card">
+        <div class="form-row">
+          <label class="field field-course">
+            <span>Course name</span>
+            <input v-model="fb.courseName" placeholder="Course name" />
+          </label>
+          <label class="field field-lesson">
+            <span>Lesson</span>
+            <input v-model.number="fb.lesson" type="number" min="1" placeholder="1" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field field-message">
+            <span>Message</span>
+            <textarea 
+              v-model="fb.message" 
+              placeholder="Tulis pesan feedback di sini..."
+              rows="4"
+            ></textarea>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn primary" @click="createFeedback" :disabled="submitting">{{ submitting ? 'Menyimpan...' : 'Tambah' }}</button>
+        </div>
       </div>
       <div v-else class="hint">Hanya admin yang dapat mengelola template feedback.</div>
 
@@ -61,7 +71,15 @@
                   <tr v-for="t in grouped[c]" :key="t.id">
                     <template v-if="editId === t.id">
                       <td><input type="number" v-model.number="ed.lesson" min="1" style="width:80px" /></td>
-                      <td><input v-model="ed.message" placeholder="Message" class="full" /></td>
+                      <td>
+                        <textarea 
+                          v-model="ed.message" 
+                          placeholder="Message" 
+                          class="full" 
+                          rows="3"
+                          style="resize: vertical; white-space: pre-wrap;"
+                        ></textarea>
+                      </td>
                       <td v-if="isAdmin">
                         <button class="btn small" @click="saveEdit" :disabled="submitting">Simpan</button>
                         <button class="btn small" @click="cancelEdit" :disabled="submitting">Batal</button>
@@ -69,7 +87,9 @@
                     </template>
                     <template v-else>
                       <td>Lesson {{ t.lesson }}</td>
-                      <td class="text">{{ t.message }}</td>
+                      <td class="text message-preview">
+                        <div class="message-content">{{ t.message }}</div>
+                      </td>
                       <td v-if="isAdmin">
                         <button class="btn small" @click="startEditInline(t)">Edit</button>
                         <button class="btn small danger" @click="deleteFeedback(t)" :disabled="submitting">Hapus</button>
@@ -309,7 +329,102 @@ loadFeedbacks();
 .tbl .text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 680px; }
 .tbl input.full { width: 100%; }
 
+/* Message content styling for better WhatsApp format preservation */
+.message-preview {
+  white-space: normal !important;
+  max-width: 400px;
+  overflow: visible !important;
+  text-overflow: initial !important;
+}
+
+.message-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.4;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* Textarea styling for better input experience */
+.field textarea {
+  padding: 8px 10px;
+  border: 1px solid #d8dde6;
+  border-radius: 8px;
+  background: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
+  min-height: 80px;
+}
+
+.tbl textarea.full {
+  width: 100%;
+  min-height: 60px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Form layout styling to match the image */
+.form {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row:last-of-type {
+  margin-bottom: 12px;
+}
+
+.field-course {
+  flex: 1;
+  max-width: 300px;
+}
+
+.field-lesson {
+  flex: 0 0 120px;
+}
+
+.field-message {
+  flex: 1;
+}
+
+.field-message textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 100px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .field-course,
+  .field-lesson {
+    flex: 1;
+  }
+}
+
 @media (max-width: 800px) {
   .toolbar .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .message-preview { max-width: 250px; }
 }
 </style>
