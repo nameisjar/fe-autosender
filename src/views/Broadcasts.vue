@@ -508,7 +508,7 @@ async function submit() {
     mediaFile.value = null;
     mediaPreview.value = '';
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal mengirim broadcast';
+    err.value = 'Gagal mengirim broadcast (silahkan login WhatsApp)' || e?.response?.data?.message || e?.message;
   } finally {
     loading.value = false;
   }

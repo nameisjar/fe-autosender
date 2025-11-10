@@ -131,13 +131,7 @@ const loadGroupNames = async () => {
       map[full] = name;
     }
     groupsMap.value = map;
-  } catch (_) { 
-    
-    console.error('Failed to load group names:', _);
-    groupsMap.value = {};
-} finally {
-    loading.value = false;
-  }
+  } catch (_) { /* ignore */ }
 };
 
 const contacts = ref([]);
@@ -290,7 +284,8 @@ const load = async () => {
     const { data } = await deviceApi.get('/messages/broadcasts');
     items.value = Array.isArray(data) ? data : [];
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal memuat jadwal';
+    // err.value = '';
+    err.value = 'Gagal memuat jadwal (silahkan login WhatsApp)' || e?.response?.data?.message || e?.message;
   } finally {
     loading.value = false;
   }

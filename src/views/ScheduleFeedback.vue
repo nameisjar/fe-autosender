@@ -566,8 +566,8 @@ const submit = async () => {
     recipients.value = [];
     recipientLabels.value = {};
   } catch (e) {
-    console.error('Error creating feedback schedule:', e);
-    const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal feedback';
+    // console.error('Error creating feedback schedule:', e);
+    const errorMsg = 'Gagal membuat jadwal feedback (silahkan login WhatsApp)' || e?.response?.data?.message || e?.response?.data?.error || e?.message;
     err.value = errorMsg;
   } finally {
     loading.value = false;

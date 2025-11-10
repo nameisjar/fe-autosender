@@ -570,7 +570,7 @@ async function submit() {
     mediaFile.value = null;
     mediaPreview.value = '';
   } catch (e) {
-    err.value = (e && e.response && e.response.data && (e.response.data.message || e.response.data.error)) || 'Gagal membuat jadwal reminder';
+    err.value = 'Gagal membuat jadwal reminder terjadwal (silahkan login WhatsApp)' || (e?.response?.data?.message || e?.response?.data?.error || e?.message || '');
   } finally {
     loading.value = false;
   }
