@@ -1,7 +1,7 @@
 <template>
   <div class="layout">
     <aside>
-      <h3>My Algo</h3>
+      <h3>Auto Sender</h3>
       <nav>
         <router-link to="/add-device">Tambah Device</router-link>
         <router-link to="/contacts">Kontak</router-link>
