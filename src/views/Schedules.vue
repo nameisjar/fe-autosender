@@ -131,7 +131,13 @@ const loadGroupNames = async () => {
       map[full] = name;
     }
     groupsMap.value = map;
-  } catch (_) { /* ignore */ }
+  } catch (_) { 
+    
+    console.error('Failed to load group names:', _);
+    groupsMap.value = {};
+} finally {
+    loading.value = false;
+  }
 };
 
 const contacts = ref([]);

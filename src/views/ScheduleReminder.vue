@@ -285,7 +285,13 @@ const loadGroups = async () => {
     try {
       res = await deviceApi.get('/messages/get-groups/detail');
     } catch (_) {
-      res = await deviceApi.get('/messages/get-groups');
+      try {
+        res = await deviceApi.get('/messages/get-groups');
+      } catch (__) {
+        // Fallback jika endpoint tidak ada
+        groups.value = [];
+        return;
+      }
     }
     const payload = res?.data;
     const list = Array.isArray(payload)
