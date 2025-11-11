@@ -3,8 +3,8 @@
     <h2>Login</h2>
     <form @submit.prevent="login" class="card form">
       <label class="field">
-        <span>email/username</span>
-        <input v-model="identifier" placeholder="email or username" />
+        <span>email</span>
+        <input v-model="identifier" placeholder="email" />
       </label>
       <label class="field">
         <span>Password</span>

@@ -6,8 +6,8 @@
       <h3>Tambah Tutor</h3>
       <form @submit.prevent="createTutor" class="form-inline">
         <label class="field">
-          <span>First name</span>
-          <input v-model.trim="firstName" placeholder="First name" required />
+          <span>Nama</span>
+          <input v-model.trim="firstName" placeholder="Nama" required />
         </label>
         <label class="field">
           <span>Email</span>
@@ -19,7 +19,7 @@
         </label>
         <button class="btn primary" :disabled="loading || !canSubmit">{{ loading ? 'Menyimpan...' : 'Tambah' }}</button>
       </form>
-      <small class="hint">Isi nama depan, email, dan password yang valid</small>
+      <small class="hint">Isi nama, email, dan password yang valid</small>
       <p v-if="msg" class="success">{{ msg }}</p>
       <p v-if="err" class="error">{{ err }}</p>
     </section>
