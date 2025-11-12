@@ -22,7 +22,7 @@
             <option value="createdAt">Terbaru</option>
             <option value="to">Nomor</option>
             <option value="message">Pesan</option>
-            <!-- <option value="status">Status</option> -->
+            <option value="status">Status</option>
           </select>
         </div>
         <div class="field compact">
@@ -61,7 +61,7 @@
             <th>Kontak</th>
             <th>Pesan</th>
             <th>Media</th>
-            <!-- <th>Status</th> -->
+            <th>Status</th>
             <th>Sumber</th>
             <th>Tutor</th>
           </tr>
@@ -84,9 +84,9 @@
               </template>
               <span v-else class="muted">-</span>
             </td>
-            <!-- <td>
+            <td>
               <span class="badge" :class="badgeClass(r.status)">{{ r.status }}</span>
-            </td> -->
+            </td>
             <td>
               <span v-if="sourceSimple(r) === 'reminder'" class="chip rm">Reminder</span>
               <span v-else-if="sourceSimple(r) === 'feedback'" class="chip fb">Feedback</span>
@@ -163,13 +163,13 @@ const fmt = (d) => {
   try { const dd = new Date(d); return isNaN(dd.getTime()) ? '-' : dd.toLocaleString(); } catch { return '-'; }
 };
 const normalizeNumber = (to) => String(to || '').replace('@s.whatsapp.net','');
-// const badgeClass = (status) => {
-//   const s = String(status || '').toLowerCase();
-//   if (s.includes('fail') || s.includes('error')) return 'warn';
-//   if (s.includes('sent') || s.includes('success')) return 'ok';
-//   if (s.includes('pending')) return 'info';
-//   return 'info';
-// };
+const badgeClass = (status) => {
+  const s = String(status || '').toLowerCase();
+  if (s.includes('fail') || s.includes('error')) return 'warn';
+  if (s.includes('sent') || s.includes('success')) return 'ok';
+  if (s.includes('pending')) return 'info';
+  return 'info';
+};
 const tutorName = (r) => {
   const f = r.tutor?.firstName || r.user?.firstName;
   const l = r.tutor?.lastName || r.user?.lastName;
