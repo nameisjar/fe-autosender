@@ -540,24 +540,24 @@ const submit = async () => {
   }
   loading.value = true;
   try {
-    // Convert schedule to proper ISO format
     const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : '';
-    
+    const deviceId = await ensureDeviceId();
+    if (!deviceId) {
+      err.value = 'Device tidak ditemukan atau belum login';
+      loading.value = false;
+      return;
+    }
     const payload = {
       name: form.value.name,
       courseName: form.value.courseName,
       startLesson: form.value.startLesson,
       delay: form.value.delay ?? 5000,
-      schedule: scheduleISO, // Use converted ISO format
+      schedule: scheduleISO,
       recipients: recipients.value,
+      deviceId, // pass deviceId required by backend
     };
-    
-    console.log('Sending feedback schedule payload:', payload);
-    
     await deviceApi.post('/messages/broadcasts/feedback', payload);
-    
     msg.value = 'Jadwal feedback berhasil dibuat.';
-    // reset form
     form.value.name = '';
     form.value.courseName = '';
     form.value.startLesson = 1;
@@ -566,8 +566,7 @@ const submit = async () => {
     recipients.value = [];
     recipientLabels.value = {};
   } catch (e) {
-    // console.error('Error creating feedback schedule:', e);
-    const errorMsg = 'Gagal membuat jadwal feedback (silahkan login WhatsApp)' || e?.response?.data?.message || e?.response?.data?.error || e?.message;
+    const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal feedback';
     err.value = errorMsg;
   } finally {
     loading.value = false;
