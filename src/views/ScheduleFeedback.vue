@@ -540,40 +540,24 @@ const submit = async () => {
   }
   loading.value = true;
   try {
-    // Convert datetime-local to ISO (UTC)
     const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : '';
-    // Also include numeric timestamp (ms)
-    const startTimestamp = form.value.schedule ? Date.parse(form.value.schedule) : null;
-
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
       err.value = 'Device tidak ditemukan atau belum login';
       loading.value = false;
       return;
     }
-
-    // Ensure recipients is array (in case input sends single string)
-    const recipientArray = Array.isArray(recipients.value) ? recipients.value : [recipients.value];
-
     const payload = {
       name: form.value.name,
       courseName: form.value.courseName,
       startLesson: form.value.startLesson,
       delay: form.value.delay ?? 5000,
-      // Send both for compatibility:
-      schedule: scheduleISO,           // existing (backward compat)
-      startDate: scheduleISO,          // prefer this on backend
-      startTimestamp,                  // unix ms, backend may accept numeric
-      recipients: recipientArray,
+      schedule: scheduleISO,
+      recipients: recipients.value,
       deviceId, // pass deviceId required by backend
     };
-
-    // If your endpoint supports multipart media, handle it here.
-    // This branch mirrors previous behavior (no media in feedback form currently)
     await deviceApi.post('/messages/broadcasts/feedback', payload);
-
     msg.value = 'Jadwal feedback berhasil dibuat.';
-    // reset form
     form.value.name = '';
     form.value.courseName = '';
     form.value.startLesson = 1;
@@ -588,7 +572,6 @@ const submit = async () => {
     loading.value = false;
   }
 };
-
 </script>
 
 <style scoped>
