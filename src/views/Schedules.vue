@@ -462,7 +462,7 @@ onMounted(async () => {
 .chip-label { background: #fff7f0; border-color: #ffd8b5; color: #8a4b0f; }
 .pager { display:flex; gap:8px; align-items:center; margin-top:12px; justify-content: center; }
 .msg-cell { max-width: 280px; }
-.msg-text { white-space: pre-wrap; font-size: 13px; }
+.msg-text { white-space: nowrap; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
 .media-cell { min-width: 120px; }
 .media-link { display:inline-block; margin-right:6px; font-size:12px; }
 .thumb { max-height: 48px; max-width: 80px; border:1px solid #ddd; border-radius:4px; display:block; margin-top:4px; }
