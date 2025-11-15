@@ -19,7 +19,7 @@
         <div class="field">
           <label>Jumlah Reminder</label>
           <input v-model.number="form.lessons" type="number" min="1" required />
-          <small class="hint">Jumlah pengulangan (reminder saat ini - total reminder)</small>
+          <small class="hint">Jumlah pengulangan (lesson saat ini - total lesson)</small>
         </div>
 
         <div class="field">
