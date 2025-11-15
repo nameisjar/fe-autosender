@@ -90,6 +90,7 @@
             <td>
               <span v-if="sourceSimple(r) === 'reminder'" class="chip rm">Reminder</span>
               <span v-else-if="sourceSimple(r) === 'feedback'" class="chip fb">Feedback</span>
+              <span v-else-if="sourceSimple(r) === 'recurrence'" class="chip rc">Recurrence</span>
               <span v-else-if="sourceSimple(r) === 'broadcast'" class="chip bc">Broadcast</span>
               <span v-else class="muted">-</span>
             </td>
@@ -303,12 +304,23 @@ const isFeedbackName = (name) => {
   return !!fbNameMapNorm.value[key];
 };
 
+const isRecurrenceName = (name) => {
+  if (!name) return false;
+  const nameStr = String(name || '').toLowerCase();
+  // Check for patterns that indicate recurring broadcasts
+  return /\b(reminder|recurrence|recurring|berulang)\b/i.test(nameStr) && 
+         (/\[(reminder|recurrence)\]/i.test(nameStr) || 
+          /- reminder ke \d+/i.test(nameStr));
+};
+
 const sourceSimple = (r) => {
   if (!isBroadcast(r)) return '';
   const t = (r && r.broadcastType) ? String(r.broadcastType).toLowerCase() : '';
   const name = getBroadcastName(r);
+  
   if (t === 'reminder' || isReminderName(name)) return 'reminder';
   if (t === 'feedback' || isFeedbackName(name)) return 'feedback';
+  if (t === 'recurrence' || isRecurrenceName(name)) return 'recurrence';
   return 'broadcast';
 };
 
@@ -460,6 +472,7 @@ tbody tr:hover { background: #f6faff; }
 .chip.bc { color: #334155; }
 .chip.fb { color: #0f5132; border-color: #c7eed8; background: #e7f8ec; }
 .chip.rm { color: #8a4b0f; border-color: #ffe0b2; background: #fff7ed; }
+.chip.rc { color: #1e40af; border-color: #bfdbfe; background: #dbeafe; }
 
 .pager { margin-top: 12px; display: flex; gap: 8px; align-items: center; justify-content: center; }
 .empty { text-align: center; color: #777; padding: 28px; }
