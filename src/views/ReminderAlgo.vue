@@ -1,53 +1,31 @@
 <template>
   <div class="wrapper">
-    <h2>Broadcast Berulang</h2>
+    <h2>Reminder (Algo)</h2>
 
     <section class="schedule card">
-      <!-- <h3>Buat Jadwal</h3> -->
       <form @submit.prevent="submit" class="form-grid">
+        <!-- Nama -->
         <div class="field">
           <label>Nama</label>
-          <input v-model.trim="form.name" placeholder="Contoh: Pengingat kelas" required />
+          <input v-model.trim="form.name" placeholder="Contoh: IND-PS-358-SAT-16.00 {PREM} (H-3)" required />
         </div>
 
-        <div class="field span-2">
+        <!-- Pesan -->
+        <div class="field">
           <label>Pesan</label>
-          <textarea v-model.trim="form.message" rows="4" placeholder="Tulis pesan yang akan dikirim" required />
+          <textarea v-model="form.message" placeholder="Masukkan pesan reminder..." rows="3" required></textarea>
         </div>
 
         <div class="field">
-          <label>Media (opsional)</label>
-          <input type="file" @change="onFile" :accept="acceptTypes" />
-          <div v-if="mediaPreview" class="preview">
-            <img v-if="isImage" :src="mediaPreview" alt="preview" />
-            <div v-else class="file-chip">{{ mediaName }}</div>
-          </div>
-        </div>
-        <div class="field"></div>
-
-        <div class="field">
-          <label>Recurrence</label>
-          <select v-model="form.recurrence" required>
-            <option value="minute">Per menit</option>
-            <option value="hourly">Per jam</option>
-            <option value="daily">Harian</option>
-            <option value="weekly">Mingguan</option>
-            <option value="monthly">Bulanan</option>
-          </select>
+          <label>Jumlah Lesson</label>
+          <input v-model.number="form.lessons" type="number" min="1" required />
+          <small class="hint">Jumlah pengulangan (lesson saat ini - total lesson)</small>
         </div>
 
         <div class="field">
-          <label>Interval</label>
-          <input v-model.number="form.interval" type="number" min="1" required />
-        </div>
-
-        <div class="field">
-          <label>Mulai</label>
-          <input v-model="form.startDate" type="datetime-local" required />
-        </div>
-        <div class="field">
-          <label>Selesai</label>
-          <input v-model="form.endDate" type="datetime-local" required />
+          <label>Tanggal mulai</label>
+          <input v-model="form.schedule" type="datetime-local" required />
+          <small class="hint">Pengiriman akan berulang setiap minggu</small>
         </div>
 
         <div class="field span-2">
@@ -113,7 +91,10 @@
         </div>
 
         <div class="field span-2 info">
-          <div>Estimasi kirim: <strong>{{ estimatedCount }}</strong> kali</div>
+          <div>
+            Estimasi kirim: <strong>{{ estimatedCount }}</strong> kali
+            <span v-if="lastDate"> — Perkiraan selesai: <strong>{{ lastDate }}</strong></span>
+          </div>
           <div v-if="validationError" class="error">{{ validationError }}</div>
         </div>
 
@@ -129,10 +110,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 
-// Pastikan deviceId tersedia di localStorage agar pemuatan labels/kontak tepat sasaran
+// Pastikan deviceId tersedia/tersimpan sebelum memuat label/kontak
 const ensureDeviceId = async () => {
   let deviceId = localStorage.getItem('device_selected_id');
   if (deviceId) return deviceId;
@@ -153,33 +134,24 @@ const ensureDeviceId = async () => {
 const form = ref({
   name: '',
   message: '',
+  lessons: 1,
   delay: 5000,
-  recurrence: 'daily',
-  interval: 1,
-  startDate: '',
-  endDate: ''
+  schedule: ''
 });
-
-const recipients = ref([]);
-const recipientInput = ref('');
-const mediaFile = ref(null);
-const mediaPreview = ref('');
-
-const acceptTypes = '.png,.jpg,.jpeg,.webp,.gif,.mp4,.mp3,.wav,.pdf,.doc,.docx,.xls,.xlsx,.txt';
-
-const isImage = computed(() => mediaFile.value && mediaFile.value.type?.startsWith('image'));
-const mediaName = computed(() => mediaFile.value?.name || '');
 
 const loading = ref(false);
 const msg = ref('');
 const err = ref('');
 
+// Recipients (same behaviour as ScheduleReminder)
+const recipients = ref([]);
+const recipientInput = ref('');
 const groups = ref([]); // { value, label, meta }
 const selectedGroupId = ref('');
 const loadingGroups = ref(false);
 const recipientLabels = ref({}); // map recipient string -> label for chip
 
-const contacts = ref([]); // { id, firstName, lastName, phone }
+const contacts = ref([]);
 const selectedContactId = ref('');
 const loadingContacts = ref(false);
 const contactSearch = ref('');
@@ -193,7 +165,7 @@ const filteredContacts = computed(() => {
   );
 });
 
-// labels (kelas)
+// Labels (kelas)
 const labels = ref([]); // { value: 'label_<slugOrName>', label: 'Name' }
 const selectedLabelValue = ref('');
 const loadingLabels = ref(false);
@@ -220,7 +192,6 @@ const mapLabels = (items) => {
     .filter(Boolean);
 };
 
-// NEW: derive labels from contacts when API returns none
 const deriveLabelsFromContacts = () => {
   const names = new Set();
   (contacts.value || []).forEach((c) => {
@@ -239,10 +210,9 @@ const loadLabels = async () => {
     const res = await userApi.get('/contacts/labels', { params: deviceId ? { deviceId } : {} });
     const data = res?.data;
     let list = Array.isArray(data?.labels) ? data.labels : Array.isArray(data) ? data : [];
-    // Fallback: derive from contacts if empty
     if (!Array.isArray(list) || list.length === 0) {
       if (!contacts.value || contacts.value.length === 0) {
-        await loadContacts().catch(() => {});
+        await loadContacts();
       }
       list = deriveLabelsFromContacts();
     }
@@ -313,11 +283,16 @@ const loadContacts = async () => {
   try {
     loadingContacts.value = true;
     err.value = '';
+    // Gunakan userApi untuk contacts, bukan deviceApi
     const deviceId = (await ensureDeviceId()) || undefined;
-    const res = await userApi.get('/contacts', { params: deviceId ? { deviceId } : {} });
-    contacts.value = Array.isArray(res?.data) ? res.data : [];
+    const res = await userApi.get('/contacts', {
+      params: deviceId ? { deviceId } : {},
+    });
+    contacts.value = res?.data || [];
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal memuat kontak';
+    console.error('Error loading contacts:', e);
+    // Jangan tampilkan error jika hanya gagal load contacts
+    contacts.value = [];
   } finally {
     loadingContacts.value = false;
   }
@@ -382,7 +357,7 @@ const addSelectedContact = () => {
     const found = contacts.value.find((c) => c.phone === selectedContactId.value);
     if (found) {
       const labels = contactLabelNames(found);
-      recipientLabels.value[selectedContactId.value] = `Kontak: ${found.firstName} ${found.lastName || ''}${labels ? ' [' + labels + ']' : ''}`;
+      recipientLabels.value[selectedContactId.value] = `Contact: ${found.firstName} ${found.lastName || ''}${labels ? ' [' + labels + ']' : ''}`;
     }
   }
   selectedContactId.value = '';
@@ -401,20 +376,7 @@ const addSelectedLabel = () => {
 
 const chipLabel = (r) => recipientLabels.value[r] || r;
 
-loadGroups().catch(() => {});
-loadContacts().catch(() => {});
-loadLabels().catch(() => {});
-
-function onFile(e) {
-  const file = e.target.files?.[0];
-  mediaFile.value = file || null;
-  if (file && file.type?.startsWith('image')) {
-    mediaPreview.value = URL.createObjectURL(file);
-  } else {
-    mediaPreview.value = '';
-  }
-}
-
+// Add/remove recipients manually
 function addRecipientsFromInput() {
   if (!recipientInput.value) return;
   const items = recipientInput.value
@@ -430,34 +392,14 @@ function removeRecipient(index) {
   recipients.value.splice(index, 1);
 }
 
-const validationError = computed(() => {
-  // Basic validations mirroring backend rules
-  if (!form.value.name) return 'Nama wajib diisi';
-  if (!form.value.message) return 'Pesan wajib diisi';
-  if (!form.value.startDate || !form.value.endDate) return 'Rentang tanggal wajib diisi';
-  const start = new Date(form.value.startDate);
-  const end = new Date(form.value.endDate);
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'Format tanggal tidak valid';
-  if (start > end) return 'Tanggal mulai harus sebelum tanggal selesai';
-  if (!form.value.interval || Number(form.value.interval) <= 0)
-    return 'Interval harus lebih dari 0';
-  if (recipients.value.length === 0) return 'Minimal satu penerima';
-  // Disallow mixing 'all' with labels
-  const hasAll = recipients.value.includes('all');
-  const hasLabel = recipients.value.some((r) => r.startsWith('label'));
-  if (hasAll && hasLabel) return 'Tidak boleh mencampur all dan label_* dalam penerima';
-  return '';
+onMounted(async () => {
+  await Promise.allSettled([loadGroups(), loadContacts(), loadLabels()]);
 });
 
 // Helper function to convert datetime-local to ISO string with proper timezone
 const convertToServerTime = (datetimeLocal) => {
   if (!datetimeLocal) return '';
-  
-  // Create date object from datetime-local input (assumes local timezone)
   const localDate = new Date(datetimeLocal);
-  
-  // Convert to ISO string which includes timezone info
-  // This ensures consistent behavior between local and deployed environments
   return localDate.toISOString();
 };
 
@@ -480,101 +422,80 @@ const formatLocalTime = (isoString) => {
 };
 
 const estimatedCount = computed(() => {
-  // Simple estimation of occurrences between start and end by recurrence + interval
+  return Number(form.value.lessons || 1);
+});
+
+const lastDate = computed(() => {
   try {
-    const start = new Date(form.value.startDate);
-    const end = new Date(form.value.endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 0;
-    let count = 0;
-    const cur = new Date(start);
-    // safety cap to prevent infinite loop in UI
-    const max = 10000;
-    while (cur <= end && count < max) {
-      count++;
-      switch (form.value.recurrence) {
-        case 'minute':
-          cur.setMinutes(cur.getMinutes() + Number(form.value.interval || 1));
-          break;
-        case 'hourly':
-          cur.setHours(cur.getHours() + Number(form.value.interval || 1));
-          break;
-        case 'daily':
-          cur.setDate(cur.getDate() + Number(form.value.interval || 1));
-          break;
-        case 'weekly':
-          cur.setDate(cur.getDate() + 7 * Number(form.value.interval || 1));
-          break;
-        case 'monthly':
-          cur.setMonth(cur.getMonth() + Number(form.value.interval || 1));
-          break;
-      }
-    }
-    return count >= max ? `${max}+` : count;
+    if (!form.value.schedule || !estimatedCount.value) return '';
+    const start = new Date(form.value.schedule);
+    if (isNaN(start.getTime())) return '';
+    const weeks = Math.max(estimatedCount.value - 1, 0);
+    const last = new Date(start);
+    last.setDate(last.getDate() + weeks * 7);
+    // Use formatLocalTime for consistent timezone display
+    return formatLocalTime(last.toISOString());
   } catch {
-    return 0;
+    return '';
   }
 });
 
-async function submit() {
+// Validation
+const validationError = computed(() => {
+  if (!form.value.name) return 'Nama wajib diisi';
+  if (!form.value.message) return 'Pesan wajib diisi';
+  if (!form.value.lessons || Number(form.value.lessons) <= 0) return 'Jumlah lesson minimal 1';
+  if (!form.value.schedule) return 'Tanggal mulai wajib diisi';
+  const sd = new Date(form.value.schedule);
+  if (isNaN(sd.getTime())) return 'Format tanggal mulai tidak valid';
+  if (recipients.value.length === 0) return 'Minimal satu penerima';
+  const hasAll = recipients.value.includes('all');
+  const hasLabel = recipients.value.some((r) => r.startsWith('label'));
+  if (hasAll && hasLabel) return 'Tidak boleh mencampur all dan label_* dalam penerima';
+  return '';
+});
+
+const submit = async () => {
   msg.value = '';
   err.value = '';
   if (validationError.value) {
     err.value = validationError.value;
     return;
   }
-
   loading.value = true;
   try {
-    // Convert dates to proper ISO format
-    const startDateISO = form.value.startDate ? convertToServerTime(form.value.startDate) : '';
-    const endDateISO = form.value.endDate ? convertToServerTime(form.value.endDate) : '';
-    
-    if (!mediaFile.value) {
-      // Send as JSON when no media to ensure recipients stays an array
-      await deviceApi.post('/messages/broadcasts/scheduled', {
-        name: form.value.name,
-        message: form.value.message,
-        delay: form.value.delay ?? 5000,
-        recurrence: form.value.recurrence,
-        interval: form.value.interval,
-        startDate: startDateISO, // Use converted ISO format
-        endDate: endDateISO, // Use converted ISO format
-        recipients: recipients.value,
-      });
-    } else {
-      // Use multipart only when media exists
-      const fd = new FormData();
-      fd.append('name', form.value.name);
-      fd.append('message', form.value.message);
-      fd.append('delay', String(form.value.delay ?? 5000));
-      fd.append('recurrence', form.value.recurrence);
-      fd.append('interval', String(form.value.interval));
-      fd.append('startDate', startDateISO); // Use converted ISO format
-      fd.append('endDate', endDateISO); // Use converted ISO format
-      recipients.value.forEach((r) => fd.append('recipients', r));
-      fd.append('media', mediaFile.value);
-
-      await deviceApi.post('/messages/broadcasts/scheduled', fd);
+    const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : '';
+    const deviceId = await ensureDeviceId();
+    if (!deviceId) {
+      err.value = 'Device tidak ditemukan atau belum login';
+      loading.value = false;
+      return;
     }
-
+    const payload = {
+      name: form.value.name,
+      message: form.value.message,
+      lessons: form.value.lessons,
+      delay: form.value.delay ?? 5000,
+      schedule: scheduleISO,
+      recipients: recipients.value,
+      deviceId, // pass deviceId required by backend
+    };
+    await deviceApi.post('/messages/broadcasts/reminder-algo', payload);
     msg.value = 'Jadwal reminder berhasil dibuat.';
-    // reset minimal
     form.value.name = '';
     form.value.message = '';
+    form.value.lessons = 1;
     form.value.delay = 5000;
-    form.value.interval = 1;
-    form.value.recurrence = 'daily';
-    form.value.startDate = '';
-    form.value.endDate = '';
+    form.value.schedule = '';
     recipients.value = [];
-    mediaFile.value = null;
-    mediaPreview.value = '';
+    recipientLabels.value = {};
   } catch (e) {
-    err.value = 'Gagal membuat jadwal reminder terjadwal (silahkan login WhatsApp)' || (e?.response?.data?.message || e?.response?.data?.error || e?.message || '');
+    const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal reminder';
+    err.value = errorMsg;
   } finally {
     loading.value = false;
   }
-}
+};
 </script>
 
 <style scoped>
@@ -583,10 +504,9 @@ section { margin-top: 16px; }
 .card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,0.04); padding: 12px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .field { display: flex; flex-direction: column; }
-.field span { font-size: 12px; color: #666; }
 .field input, .field textarea, .field select { padding: 8px 10px; border: 1px solid #d6d6d6; border-radius: 8px; }
 .span-2 { grid-column: span 2; }
-.actions { display: flex; justify-content: flex-end; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
 
 .btn { height: 36px; padding: 0 12px; border: 1px solid #d0d5dd; background: #f9fafb; border-radius: 8px; cursor: pointer; font-weight: 500; }
 .btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
@@ -603,8 +523,5 @@ section { margin-top: 16px; }
 .recipients .add input { flex: 1; }
 .recipients .add select { flex: 1; }
 .hint { color: #666; }
-.preview { margin-top: 8px; }
-.preview img { max-width: 220px; max-height: 140px; border-radius: 6px; border: 1px solid #ddd; }
-.file-chip { display: inline-block; background: #f3f3f3; padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; }
 .info { color: #333; display: flex; justify-content: space-between; align-items: center; }
 </style>

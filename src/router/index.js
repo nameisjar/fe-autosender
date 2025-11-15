@@ -4,6 +4,7 @@ import Dashboard from '../views/Dashboard.vue';
 import AddDevice from '../views/AddDevice.vue';
 import ScheduleFeedback from '../views/ScheduleFeedback.vue';
 import ScheduleReminder from '../views/ScheduleReminder.vue';
+import ReminderAlgo from '../views/ReminderAlgo.vue';
 import SentHistory from '../views/SentHistory.vue';
 import Templates from '../views/Templates.vue';
 import AdminTutors from '../views/AdminTutors.vue';
@@ -26,6 +27,7 @@ const routes = [
             { path: 'contacts', name: 'contacts', component: Contacts },
             { path: 'schedule-feedback', name: 'schedule-feedback', component: ScheduleFeedback },
             { path: 'schedule-reminder', name: 'schedule-reminder', component: ScheduleReminder },
+            { path: 'reminder-algo', name: 'reminder-algo', component: ReminderAlgo },
             { path: 'schedules', name: 'schedules', component: Schedules },
             { path: 'broadcasts', name: 'broadcasts', component: Broadcasts },
             // keep legacy paths but protect as admin-only

@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <h2>Jadwal Feedback</h2>
+    <h2>Feedback (Algo)</h2>
 
     <section class="schedule card">
       <!-- <h3>Buat Jadwal Feedback</h3> -->
@@ -8,7 +8,7 @@
         <!-- Tambah kembali Nama -->
         <div class="field">
           <label>Nama</label>
-          <input v-model.trim="form.name" placeholder="Contoh: Nama Kelas" required />
+          <input v-model.trim="form.name" placeholder="Contoh: IND-PS-358-SAT-16.00 {PREM} (H-3)" required />
         </div>
 
         <div class="field">
