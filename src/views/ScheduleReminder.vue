@@ -515,9 +515,31 @@ const addSelectedLabel = () => {
 
 const chipLabel = (r) => recipientLabels.value[r] || r;
 
-loadGroups().catch(() => {});
-loadContacts().catch(() => {});
-loadLabels().catch(() => {});
+// auto-load groups & contacts & labels dengan sistem cache yang optimal
+const initializeData = async () => {
+  // Load grup dari cache terlebih dahulu untuk pengalaman yang lebih cepat
+  const cacheLoaded = loadGroupsFromCache();
+  
+  // Load contacts dan labels secara paralel
+  const promises = [loadContacts().catch(() => {}), loadLabels().catch(() => {})];
+  
+  // Jika tidak ada cache atau cache sudah lama, load grup dari server
+  if (!cacheLoaded) {
+    promises.push(loadGroups().catch(() => {}));
+  }
+  
+  await Promise.allSettled(promises);
+  
+  // Jika ada cache, refresh grup di background untuk update terbaru
+  if (cacheLoaded) {
+    setTimeout(() => {
+      loadGroups().catch(() => {}); // Silent background refresh
+    }, 1000);
+  }
+};
+
+// Panggil inisialisasi data
+initializeData();
 
 function onFile(e) {
   const file = e.target.files?.[0];

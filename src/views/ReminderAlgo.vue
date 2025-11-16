@@ -508,7 +508,25 @@ function removeRecipient(index) {
 }
 
 onMounted(async () => {
-  await Promise.allSettled([loadGroups(), loadContacts(), loadLabels()]);
+  // Load grup dari cache terlebih dahulu untuk pengalaman yang lebih cepat
+  const cacheLoaded = loadGroupsFromCache();
+  
+  // Load contacts dan labels secara paralel
+  const promises = [loadContacts(), loadLabels()];
+  
+  // Jika tidak ada cache atau cache sudah lama, load grup dari server
+  if (!cacheLoaded) {
+    promises.push(loadGroups());
+  }
+  
+  await Promise.allSettled(promises);
+  
+  // Jika ada cache, refresh grup di background untuk update terbaru
+  if (cacheLoaded) {
+    setTimeout(() => {
+      loadGroups().catch(() => {}); // Silent background refresh
+    }, 1000);
+  }
 });
 
 // Helper function to convert datetime-local to ISO string with proper timezone
