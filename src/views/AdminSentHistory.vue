@@ -85,7 +85,7 @@
               <span v-else class="muted">-</span>
             </td>
             <td>
-              <span class="badge" :class="badgeClass(r.status)">{{ r.status }}</span>
+              <span class="badge" :class="badgeClass(r.status)">{{ statusLabel(r.status) }}</span>
             </td>
             <td>
               <span v-if="sourceSimple(r) === 'reminder'" class="chip rm">Reminder</span>
@@ -167,10 +167,25 @@ const normalizeNumber = (to) => String(to || '').replace('@s.whatsapp.net','');
 const badgeClass = (status) => {
   const s = String(status || '').toLowerCase();
   if (s.includes('fail') || s.includes('error')) return 'warn';
-  if (s.includes('sent') || s.includes('success')) return 'ok';
-  if (s.includes('pending')) return 'info';
+  if (s === 'read' || s === 'played' || s === 'delivery_ack') return 'ok';
+  if (s === 'server_ack') return 'info';
+  if (s === 'pending') return 'info';
   return 'info';
 };
+
+const statusLabel = (status) => {
+  const s = String(status || '').toLowerCase();
+  switch (s) {
+    case 'pending': return '🕐'; // jam
+    case 'server_ack': return '✔️'; // centang satu
+    case 'delivery_ack': return '✔️✔️'; // centang dua
+    case 'read': return 'Dibaca'; // centang dua biru
+    case 'played': return 'Diputar'; // audio played
+    case 'error': return 'Gagal'; // error occurred
+    default: return status || 'Pending'; // default status
+  }
+};
+
 const tutorName = (r) => {
   const f = r.tutor?.firstName || r.user?.firstName;
   const l = r.tutor?.lastName || r.user?.lastName;
