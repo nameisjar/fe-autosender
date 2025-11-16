@@ -28,7 +28,7 @@
           <span>Group</span>
           <select v-model="selectedGroupId">
             <option value="" disabled>Pilih group</option>
-            <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
+            <option v-for="g in filteredGroups" :key="g.value" :value="g.value">{{ g.label }}</option>
           </select>
         </label>
         <button class="btn outline" @click="loadGroups" :disabled="loadingGroups">{{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}</button>
@@ -119,7 +119,20 @@ const messageMode = ref('text'); // 'text' | 'media'
 
 const phone = ref('');
 const groups = ref([]); // { value, label }
+const groupsCache = ref(null); // Cache untuk grup
+const groupsCacheTime = ref(0); // Timestamp cache
+const CACHE_DURATION = 5 * 60 * 1000; // 5 menit cache
 const selectedGroupId = ref('');
+const groupSearchTerm = ref(''); // Untuk search/filter grup
+
+// Computed filtered groups untuk performa
+const filteredGroups = computed(() => {
+  if (!groupSearchTerm.value) return groups.value.slice(0, 50); // Batasi 50 grup pertama
+  const term = groupSearchTerm.value.toLowerCase();
+  return groups.value
+    .filter(g => g.label.toLowerCase().includes(term))
+    .slice(0, 20); // Batasi hasil search
+});
 
 const contacts = ref([]); // { value: phone, label: 'Name (phone)', labels: string[] }
 const selectedContacts = ref([]);
@@ -175,6 +188,14 @@ const loadGroups = async () => {
   try {
     loadingGroups.value = true;
     error.value = '';
+
+    // Cek cache
+    const now = Date.now();
+    if (groupsCache.value && (now - groupsCacheTime.value < CACHE_DURATION)) {
+      groups.value = groupsCache.value;
+      return;
+    }
+
     // ensure device api key is available (interceptor does this lazily)
     await userApi.get('/devices').catch(() => {});
     let res;
@@ -192,6 +213,10 @@ const loadGroups = async () => {
       ? payload.data
       : [];
     groups.value = mapGroups(list);
+
+    // Simpan ke cache
+    groupsCache.value = groups.value;
+    groupsCacheTime.value = now;
   } catch (e) {
     console.error('Error loading groups:', e);
     // Jangan tampilkan error jika hanya gagal load groups

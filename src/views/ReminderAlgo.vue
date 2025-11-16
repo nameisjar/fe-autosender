@@ -66,12 +66,27 @@
           <label>Tambah Grup (opsional)</label>
           <div class="recipients">
             <div class="add">
+              <!-- Input pencarian grup -->
+              <input 
+                v-model="groupSearchTerm" 
+                placeholder="Cari grup..." 
+                @input="onGroupSearch"
+                style="margin-bottom: 4px;"
+              />
               <select v-model="selectedGroupId">
-                <option value="" disabled>Pilih group</option>
-                <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
+                <option value="" disabled>
+                  {{ loadingGroups ? 'Memuat grup...' : filteredGroups.length > 0 ? 'Pilih group' : 'Tidak ada grup' }}
+                </option>
+                <option v-for="g in filteredGroups" :key="g.value" :value="g.value">{{ g.label }}</option>
+                <option v-if="groups.length > 50 && !groupSearchTerm" disabled>--- Gunakan pencarian untuk melihat lebih banyak ---</option>
               </select>
               <button type="button" class="btn" @click="addSelectedGroup" :disabled="!selectedGroupId">Tambah Grup</button>
-              <button type="button" class="btn outline" @click="loadGroups" :disabled="loadingGroups">{{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}</button>
+              <button type="button" class="btn outline" @click="() => loadGroups(true)" :disabled="loadingGroups">
+                {{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}
+              </button>
+            </div>
+            <div v-if="groups.length > 0" class="group-info">
+              <small>{{ groups.length }} grup tersedia{{ groupSearchTerm ? ` (${filteredGroups.length} hasil)` : '' }}</small>
             </div>
           </div>
         </div>
@@ -147,11 +162,56 @@ const err = ref('');
 const recipients = ref([]);
 const recipientInput = ref('');
 const groups = ref([]); // { value, label, meta }
+const groupsCache = ref(null); // Cache untuk grup
+const groupsCacheTime = ref(0); // Timestamp cache
+const CACHE_DURATION = 5 * 60 * 1000; // 5 menit cache
 const selectedGroupId = ref('');
 const loadingGroups = ref(false);
+const groupSearchTerm = ref(''); // Untuk search/filter grup
 const recipientLabels = ref({}); // map recipient string -> label for chip
 
+// Fungsi untuk debounce pencarian grup
+let searchTimeout;
+const onGroupSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    // Trigger reactive update untuk filtered groups
+    groupSearchTerm.value = groupSearchTerm.value;
+  }, 300);
+};
+
 const contacts = ref([]);
+
+// Computed filtered groups untuk performa
+const filteredGroups = computed(() => {
+  if (!groupSearchTerm.value) return groups.value.slice(0, 50); // Batasi 50 grup pertama
+  const term = groupSearchTerm.value.toLowerCase();
+  return groups.value
+    .filter(g => g.label.toLowerCase().includes(term))
+    .slice(0, 20); // Batasi hasil search
+});
+
+// Load cache dari localStorage saat halaman dimuat
+const loadGroupsFromCache = () => {
+  try {
+    const cached = localStorage.getItem('groupsCache');
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      const age = Date.now() - timestamp;
+      // Gunakan cache jika tidak lebih dari 1 jam
+      if (age < 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) {
+        groups.value = data;
+        groupsCache.value = data;
+        groupsCacheTime.value = timestamp;
+        return true;
+      }
+    }
+  } catch (_) {
+    // Ignore cache errors
+  }
+  return false;
+};
+
 const selectedContactId = ref('');
 const loadingContacts = ref(false);
 const contactSearch = ref('');
@@ -247,33 +307,88 @@ const mapGroups = (items) => {
     .filter((g) => g.value);
 };
 
-const loadGroups = async () => {
+const loadGroups = async (forceReload = false) => {
   try {
     loadingGroups.value = true;
     err.value = '';
+    
+    const now = Date.now();
+    
+    // Gunakan cache jika masih valid dan tidak force reload
+    if (!forceReload && groupsCache.value && (now - groupsCacheTime.value < CACHE_DURATION)) {
+      groups.value = groupsCache.value;
+      return;
+    }
+
     let res;
     try {
-      res = await deviceApi.get('/messages/get-groups/detail');
+      // Coba endpoint yang lebih efisien terlebih dahulu
+      res = await deviceApi.get('/messages/get-groups', {
+        params: {
+          limit: 100,
+          includeMetadata: false
+        },
+        timeout: 10000
+      });
     } catch (_) {
       try {
-        res = await deviceApi.get('/messages/get-groups');
+        res = await deviceApi.get('/messages/get-groups/detail', {
+          params: { limit: 100 },
+          timeout: 15000
+        });
       } catch (__) {
-        // Fallback jika endpoint tidak ada
-        groups.value = [];
-        return;
+        res = await deviceApi.get('/messages/get-groups');
       }
     }
+    
     const payload = res?.data;
-    const list = Array.isArray(payload)
+    let list = Array.isArray(payload)
       ? payload
       : Array.isArray(payload?.results)
       ? payload.results
       : Array.isArray(payload?.data)
       ? payload.data
       : [];
+
+    // Batasi hasil untuk performa
+    if (list.length > 200) {
+      list = list.slice(0, 200);
+    }
+
     groups.value = mapGroups(list);
+    
+    // Simpan ke cache
+    groupsCache.value = groups.value;
+    groupsCacheTime.value = now;
+    
+    // Simpan ke localStorage sebagai backup cache
+    try {
+      localStorage.setItem('groupsCache', JSON.stringify({
+        data: groups.value,
+        timestamp: now
+      }));
+    } catch (_) {
+      // Ignore localStorage errors
+    }
+    
   } catch (e) {
+    // Coba load dari localStorage cache sebagai fallback
+    try {
+      const cached = localStorage.getItem('groupsCache');
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        if (age < 60 * 60 * 1000 && Array.isArray(data)) {
+          groups.value = data;
+          groupsCache.value = data;
+          groupsCacheTime.value = timestamp;
+          return;
+        }
+      }
+    } catch (_) {}
+    
     err.value = 'Login WhatsApp untuk memuat grup' || e?.response?.data?.message || e?.message;
+    groups.value = [];
   } finally {
     loadingGroups.value = false;
   }
