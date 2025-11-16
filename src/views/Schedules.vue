@@ -114,7 +114,7 @@ const loading = ref(false);
 const err = ref('');
 const msg = ref('');
 const q = ref('');
-const statusFilter = ref('all');
+const statusFilter = ref('upcoming');
 
 const groupsMap = ref({});
 const loadGroupNames = async () => {
