@@ -110,7 +110,17 @@
             </div>
             <div class="field">
               <label>Nomor HP*</label>
-              <input v-model="form.phone" placeholder="cth: 628123456789" required />
+              <input 
+                v-model="form.phone" 
+                type="tel"
+                placeholder="628123456789" 
+                pattern="628[0-9]{8,12}"
+                title="Format: 628xxxxxxxxx (dimulai dengan 628, panjang 11-15 digit)"
+                required 
+              />
+              <small class="help-text">
+                Format WhatsApp Indonesia: 628xxxxxxxxx (tanpa +, dimulai dengan 628)
+              </small>
             </div>
             <div class="field span-2">
               <label>Nama Kelas (Label)</label>
@@ -289,9 +299,32 @@ const editContact = (contact) => {
   labelInput.value = filteredContactLabels(contact).join(', ');
 };
 
+// New: Phone number validation function
+const validatePhoneNumber = (phone) => {
+  // Remove all spaces, dashes, and other non-digit characters
+  const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+  
+  // Check if number starts with 628 and has proper length (11-15 digits total)
+  // 628 + 8-12 digits = 11-15 total digits
+  const whatsappPattern = /^628\d{8,12}$/;
+  
+  return whatsappPattern.test(cleanPhone);
+};
+
+// New: Format phone number for display
+const formatPhoneNumber = (phone) => {
+  return phone.replace(/[\s\-\(\)\+]/g, '');
+};
+
 const saveContact = async () => {
   if (!selectedDeviceId.value) {
     err.value = 'Pilih perangkat terlebih dahulu';
+    return;
+  }
+
+  // Validate phone number format
+  if (!validatePhoneNumber(form.value.phone)) {
+    err.value = 'Format nomor tidak valid. Gunakan format WhatsApp Indonesia yang dimulai dengan 628 (contoh: 628123456789)';
     return;
   }
   
@@ -303,6 +336,7 @@ const saveContact = async () => {
     const labels = labelInput.value.split(',').map(s => s.trim()).filter(Boolean);
     const payload = {
       ...form.value,
+      phone: formatPhoneNumber(form.value.phone), // Clean the phone number
       // pastikan field opsional tetap kosong seperti permintaan
       email: '',
       gender: '',
@@ -541,6 +575,11 @@ onMounted(async () => {
 /* Modal unchanged */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal { background: white; padding: 24px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+
+/* Form styles */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.form-grid .field.span-2 { grid-column: span 2; }
+.help-text { font-size: 11px; color: #6b7280; margin-top: 4px; font-style: italic; }
 
 .success { color: #28a745; margin-top: 12px; }
 .error { color: #dc3545; margin-top: 12px; }
