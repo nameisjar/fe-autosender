@@ -35,15 +35,19 @@
 import { onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
+import { useGroups } from '../composables/useGroups.js';
 
 const router = useRouter();
 const auth = useAuthStore();
+const { clearGroups } = useGroups();
 
 onMounted(() => auth.fetchMe());
 const me = computed(() => auth.me);
 const isAdmin = computed(() => auth.isAdmin);
 
 const logout = () => {
+  // Clear any cached groups immediately in this tab
+  clearGroups();
   localStorage.removeItem('token');
   localStorage.removeItem('device_api_key');
   localStorage.removeItem('device_selected_id');

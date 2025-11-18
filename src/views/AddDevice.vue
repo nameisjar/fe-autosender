@@ -76,6 +76,7 @@
             <tr>
               <th>Nama</th>
               <th class="status-col">Status</th>
+              <th class="group-col">Grup</th>
               <th class="action-col">Aksi</th>
             </tr>
           </thead>
@@ -85,8 +86,31 @@
               <td class="status-col">
                 <span class="status-badge" :class="statusClass(d.status)">{{ humanStatus(d.status) }}</span>
               </td>
+              <td class="group-col">
+                <div class="group-cell">
+                  <template v-if="rowState(d.id).state === 'loading' && currentDeviceId() === String(d.id) && (!groups.length)">
+                    <span class="loader-ring" aria-hidden="true"></span>
+                    <span>Memuat grup...</span>
+                  </template>
+                  <template v-else-if="currentDeviceId() === String(d.id) && groups.length && rowState(d.id).state !== 'error'">
+                    <span class="checkmark" aria-hidden="true">✔</span>
+                    <span>Berhasil dimuat</span>
+                  </template>
+                  <template v-else-if="rowState(d.id).state === 'error' && currentDeviceId() === String(d.id)">
+                    <span class="error">Gagal memuat</span>
+                  </template>
+                  <template v-else>
+                    <span class="dim">—</span>
+                  </template>
+                </div>
+              </td>
               <td class="action-col">
-                <button class="btn danger btn-sm" @click="deleteOne(d)" :disabled="deleting">Hapus</button>
+                <div class="row-btns">
+                  <button class="btn outline btn-sm" @click="loadGroupsFor(d)" :disabled="rowState(d.id).state === 'loading'">
+                    {{ rowState(d.id).state === 'loading' && currentDeviceId() === String(d.id) ? 'Memuat...' : (currentDeviceId() === String(d.id) && groups.length ? 'Reload Grup' : 'Muat Grup') }}
+                  </button>
+                  <button class="btn danger btn-sm" @click="deleteOne(d)" :disabled="deleting">Hapus</button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -101,10 +125,11 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, onUnmounted, watch } from 'vue';
 import { userApi } from '../api/http.js';
 import { useAuthStore } from '../stores/auth.js';
 import QRCode from 'qrcode';
+import { useGroups } from '../composables/useGroups.js';
 
 const auth = useAuthStore();
 const devices = ref([]);
@@ -151,6 +176,15 @@ const fetchDevices = async () => {
     devices.value = data;
     const ids = new Set(devices.value.map((d) => d.id));
     selectedIds.value = selectedIds.value.filter((id) => ids.has(id));
+    // If current selected device is not open, clear groups cache to avoid showing stale groups
+    const curId = localStorage.getItem('device_selected_id');
+    if (curId) {
+      const cur = devices.value.find((d) => String(d.id) === String(curId));
+      if (cur && String(cur.status).toLowerCase() !== 'open') {
+        clearGroups();
+        perRow.value[cur.id] = { state: 'idle' };
+      }
+    }
   } catch (e) {
     console.error(e);
   }
@@ -344,6 +378,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const startPairing = async () => {
   if (!deviceId.value || pairingLoading.value) return;
 
+  // Clear groups cache before re-pairing (old session groups become invalid)
+  clearGroups();
+
   // refresh device list to reflect latest status
   await fetchDevices();
 
@@ -413,6 +450,75 @@ const statusClass = (s) => {
   return 'is-closed';
 };
 
+// Grup loader per device (visual only)
+const { refreshGroups, errGroups, groups, clearGroups } = useGroups();
+const perRow = ref({}); // id -> { state: 'idle'|'loading'|'success'|'error' }
+const rowState = (id) => perRow.value[id] || { state: 'idle' };
+const prevStatuses = ref({});
+
+const currentDeviceId = () => localStorage.getItem('device_selected_id') || '';
+
+const selectDeviceForApi = (d) => {
+  try {
+    if (d?.apiKey) localStorage.setItem('device_api_key', d.apiKey);
+    if (d?.id) localStorage.setItem('device_selected_id', d.id);
+    if (d?.name) localStorage.setItem('device_selected_name', d.name);
+  } catch (_) {}
+};
+
+const loadGroupsFor = async (d) => {
+  if (!d) return;
+  // If this device is already current and groups cached, just show success
+  if (currentDeviceId() === String(d.id) && Array.isArray(groups.value) && groups.value.length > 0) {
+    perRow.value[d.id] = { state: 'success' };
+    return;
+  }
+  if (perRow.value[d.id]?.state === 'loading') return; // prevent duplicate
+  selectDeviceForApi(d);
+  perRow.value[d.id] = { state: 'loading' };
+  try {
+    await refreshGroups();
+    // Network error indicated by errGroups; otherwise treat (even empty) as success cache
+    if (errGroups?.value) {
+      perRow.value[d.id] = { state: 'error' };
+    } else {
+      perRow.value[d.id] = { state: 'success' };
+    }
+  } catch (_) {
+    perRow.value[d.id] = { state: 'error' };
+  }
+};
+
+// Auto-load groups when a device just became 'open'
+watch(devices, (list) => {
+  const prev = prevStatuses.value;
+  list.forEach((d) => {
+    const oldStatus = prev[d.id];
+    const newStatus = String(d.status).toLowerCase();
+    if (newStatus === 'open' && oldStatus !== 'open') {
+      loadGroupsFor(d); // session just opened
+    }
+    // Any transition from open to non-open must clear groups
+    if (oldStatus === 'open' && newStatus !== 'open') {
+      clearGroups();
+      perRow.value[d.id] = { state: 'idle' };
+    }
+  });
+  const next = {};
+  list.forEach((d) => { next[d.id] = String(d.status).toLowerCase(); });
+  prevStatuses.value = next;
+}, { deep: true });
+
+// Helper to decide display state (template relies on rowState but we refine logic here)
+const isGroupsLoadedForDevice = (d) => currentDeviceId() === String(d.id) && Array.isArray(groups.value) && groups.value.length > 0;
+
+// cleanup timers on unmount
+onUnmounted(() => {
+  Object.values(perRow.value).forEach((r) => {
+    if (r && r.t) clearTimeout(r.t);
+  });
+});
+
 onMounted(async () => {
   if (!auth.me) {
     try { await auth.fetchMe(); } catch (_) {}
@@ -473,6 +579,13 @@ onMounted(async () => {
 .empty-state { border: 1px dashed #d8dbe3; border-radius: 8px; padding: 16px; text-align: center; color: #666; background: #fbfcfe; }
 .empty-state p { margin: 0 0 4px 0; font-weight: 500; }
 .empty-state small { color: #888; }
+
+/* Group column styles */
+.group-col { width: 30%; }
+.group-cell { display: inline-flex; align-items: center; gap: 8px; }
+.dim { color: #98a2b3; }
+.loader-ring { width: 16px; height: 16px; border: 2px solid rgba(37,99,235,.2); border-top-color: #2563eb; border-radius: 50%; animation: spin .9s linear infinite; display: inline-block; }
+.checkmark { color: #16a34a; font-weight: 700; }
 
 @media (max-width: 720px) {
   .toolbar .filters { grid-template-columns: 1fr; }

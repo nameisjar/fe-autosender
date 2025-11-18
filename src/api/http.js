@@ -99,25 +99,48 @@ userApi.interceptors.response.use(
 
 export const deviceApi = axios.create({ baseURL: API_BASE + '/api' });
 
+// Helper to fetch device detail (multiple possible endpoints)
+async function fetchDeviceDetail(id) {
+    if (!id) return null;
+    const paths = [
+        `/devices/${encodeURIComponent(id)}`,
+        `/tutors/devices/${encodeURIComponent(id)}`,
+    ];
+    for (const p of paths) {
+        try {
+            const { data } = await userApi.get(p);
+            if (data && typeof data === 'object') return data;
+        } catch (_) { /* try next */ }
+    }
+    return null;
+}
+
+// Enhance deviceApi interceptor to robustly obtain apiKey for admin accounts
 deviceApi.interceptors.request.use(async (config) => {
-    // space out requests globally
     await scheduler.schedule();
     let key = localStorage.getItem('device_api_key');
     if (!key) {
         try {
             const { data: devices } = await userApi.get('/devices');
-            if (Array.isArray(devices) && devices.length) {
-                const current = devices.find((d) => d.status === 'open') || devices[0];
-                if (current && current.apiKey) {
-                    key = current.apiKey;
-                    localStorage.setItem('device_api_key', key);
-                    localStorage.setItem('device_selected_id', current.id);
-                    localStorage.setItem('device_selected_name', current.name || '');
+            const list = Array.isArray(devices) ? devices : [];
+            if (list.length) {
+                const current = list.find((d) => d.status === 'open') || list[0];
+                if (current) {
+                    let apiKey = current.apiKey;
+                    // If apiKey missing attempt detail endpoints (admin often lacks apiKey in list response)
+                    if (!apiKey) {
+                        const detail = await fetchDeviceDetail(current.id);
+                        apiKey = detail?.apiKey || apiKey;
+                    }
+                    if (apiKey) {
+                        key = apiKey;
+                        localStorage.setItem('device_api_key', key);
+                        localStorage.setItem('device_selected_id', current.id);
+                        localStorage.setItem('device_selected_name', current.name || detail?.name || '');
+                    }
                 }
             }
-        } catch (_) {
-            // ignore
-        }
+        } catch (_) {}
     }
     if (key) config.headers['X-Forwardin-Key-Device'] = key;
     return config;
@@ -128,7 +151,12 @@ deviceApi.interceptors.response.use(
     async (err) => {
         if (err && err.response && err.response.status === 401) {
             console.warn('Device API unauthorized. Periksa API Key device dan sesi.');
+            const hadKey = localStorage.getItem('device_api_key');
             localStorage.removeItem('device_api_key');
+            try {
+                // notify current tab listeners to invalidate caches immediately
+                window.dispatchEvent(new CustomEvent('wa:device-session-closed'));
+            } catch (_) {}
             return Promise.reject(err);
         }
         // Retry/backoff for 429/503

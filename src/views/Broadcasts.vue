@@ -77,27 +77,12 @@
           <label>Tambah Grup (opsional)</label>
           <div class="recipients">
             <div class="add">
-              <!-- Input pencarian grup -->
-              <input 
-                v-model="groupSearchTerm" 
-                placeholder="Cari grup..." 
-                @input="onGroupSearch"
-                style="margin-bottom: 4px;"
-              />
               <select v-model="selectedGroupId">
-                <option value="" disabled>
-                  {{ loadingGroups ? 'Memuat grup...' : filteredGroups.length > 0 ? 'Pilih group' : 'Tidak ada grup' }}
-                </option>
-                <option v-for="g in filteredGroups" :key="g.value" :value="g.value">{{ g.label }}</option>
-                <option v-if="groups.length > 50 && !groupSearchTerm" disabled>--- Gunakan pencarian untuk melihat lebih banyak ---</option>
+                <option value="" disabled>Pilih group</option>
+                <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
               </select>
               <button type="button" class="btn" @click="addSelectedGroup" :disabled="!selectedGroupId">Tambah Grup</button>
-              <button type="button" class="btn outline" @click="() => loadGroups(true)" :disabled="loadingGroups">
-                {{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}
-              </button>
-            </div>
-            <div v-if="groups.length > 0" class="group-info">
-              <small>{{ groups.length }} grup tersedia{{ groupSearchTerm ? ` (${filteredGroups.length} hasil)` : '' }}</small>
+              <button type="button" class="btn outline" @click="loadGroups" :disabled="loadingGroups">{{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}</button>
             </div>
           </div>
         </div>
@@ -132,6 +117,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
+import { useGroups } from '../composables/useGroups.js';
 
 // Pastikan ada device terpilih sebelum memuat data berbasis device (labels/kontak)
 const ensureDeviceId = async () => {
@@ -234,140 +220,12 @@ function removeRecipient(index) {
   recipients.value.splice(index, 1);
 }
 
-const groups = ref([]); // { value, label }
-const groupsCache = ref(null); // Cache untuk grup
-const groupsCacheTime = ref(0); // Timestamp cache
-const CACHE_DURATION = 5 * 60 * 1000; // 5 menit cache
+// Use cached groups across app
+const { groups, loadingGroups, loadGroups, ensureFullGroupJid } = useGroups();
 const selectedGroupId = ref('');
-const loadingGroups = ref(false);
-const groupSearchTerm = ref(''); // Untuk search/filter grup
 const recipientLabels = ref({}); // map recipient string -> label for chip
 
-// Computed filtered groups untuk performa
-const filteredGroups = computed(() => {
-  if (!groupSearchTerm.value) return groups.value.slice(0, 50); // Batasi 50 grup pertama
-  const term = groupSearchTerm.value.toLowerCase();
-  return groups.value
-    .filter(g => g.label.toLowerCase().includes(term))
-    .slice(0, 20); // Batasi hasil search
-});
-
-// Load cache dari localStorage saat halaman dimuat
-const loadGroupsFromCache = () => {
-  try {
-    const cached = localStorage.getItem('groupsCache');
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      const age = Date.now() - timestamp;
-      // Gunakan cache jika tidak lebih dari 1 jam
-      if (age < 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) {
-        groups.value = data;
-        groupsCache.value = data;
-        groupsCacheTime.value = timestamp;
-        return true;
-      }
-    }
-  } catch (_) {
-    // Ignore cache errors
-  }
-  return false;
-};
-
-// Fungsi untuk debounce pencarian grup
-let searchTimeout;
-const onGroupSearch = () => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    // Trigger reactive update untuk filtered groups
-    groupSearchTerm.value = groupSearchTerm.value;
-  }, 300);
-};
-
-const normalizeGroupValue = (g) => {
-  const full = g.id || g.jid || '';
-  const short = g.idShort || g.shortId || g.groupId || '';
-  const chosen = full || short || '';
-  if (!chosen) return '';
-  return chosen.includes('@') ? chosen : `${chosen}@g.us`;
-};
-
-const mapGroups = (items) => {
-  const arr = Array.isArray(items) ? items : [];
-  return arr
-    .map((g) => ({
-      value: normalizeGroupValue(g),
-      label: g.subject || g.name || g.title || g.id || g.jid || 'Tanpa Nama',
-    }))
-    .filter((g) => g.value);
-};
-
-const loadGroups = async () => {
-  try {
-    loadingGroups.value = true;
-    err.value = '';
-    if (loadGroupsFromCache()) {
-      loadingGroups.value = false;
-      return;
-    }
-    let res;
-    try {
-      res = await deviceApi.get('/messages/get-groups/detail');
-    } catch (_) {
-      try {
-        res = await deviceApi.get('/messages/get-groups');
-      } catch (__) {
-        // Fallback jika endpoint tidak ada
-        groups.value = [];
-        return;
-      }
-    }
-    const payload = res?.data;
-    const list = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.results)
-      ? payload.results
-      : Array.isArray(payload?.data)
-      ? payload.data
-      : [];
-    groups.value = mapGroups(list);
-    // Simpan ke cache
-    groupsCache.value = groups.value;
-    groupsCacheTime.value = Date.now();
-    localStorage.setItem('groupsCache', JSON.stringify({ data: groups.value, timestamp: Date.now() }));
-  } catch (e) {
-    err.value = 'Login WhatsApp untuk memuat grup' || e?.response?.data?.message || e?.message;
-  } finally {
-    loadingGroups.value = false;
-  }
-};
-
-const ensureFullGroupJid = async (jidOrId) => {
-  let val = String(jidOrId || '').trim();
-  if (!val) return '';
-  if (!val.includes('@')) val = `${val}@g.us`;
-  if (val.split('@')[0].includes('-')) return val;
-  try {
-    const clean = val.replace(/@g\.us$/i, '');
-    const byId = await deviceApi.get(`/messages/get-groups/${encodeURIComponent(clean)}`);
-    const full = byId?.data?.id || byId?.data?.jid || '';
-    if (full && full.split('@')[0].includes('-')) return full.includes('@g.us') ? full : `${full}@g.us`;
-  } catch (_) {}
-  try {
-    const res = await deviceApi.get('/messages/get-groups/detail');
-    const items = Array.isArray(res?.data?.results) ? res.data.results : Array.isArray(res?.data) ? res.data : [];
-    const clean = val.replace(/@g\.us$/i, '');
-    const match = items.find((g) => {
-      const id = (g.id || '').replace(/@g\.us$/i, '');
-      const shortId = (g.shortId || g.idShort || '').replace(/@g\.us$/i, '');
-      return id === clean || shortId === clean;
-    });
-    if (match?.id) {
-      const full = match.id;
-      return full.includes('@g.us') ? full : `${full}@g.us`;
-    }
-  } catch (_) {}
-  return val;
-};
+const chipLabel = (r) => recipientLabels.value[r] || r;
 
 const addSelectedGroup = async () => {
   if (!selectedGroupId.value) return;
@@ -381,7 +239,7 @@ const addSelectedGroup = async () => {
   selectedGroupId.value = '';
 };
 
-// auto-load groups initially (best-effort)
+// auto-load groups initially (fast cached)
 loadGroups().catch(() => {});
 
 const contacts = ref([]); // { id, firstName, lastName, phone }
