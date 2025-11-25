@@ -37,9 +37,10 @@
             <th>Nama</th>
             <th>Jadwal</th>
             <th>Status</th>
-            <th>Penerima</th>
             <th>Pesan</th>
             <th>Media</th>
+            <th>Penerima</th>
+            <th>Gagal Terkirim</th>
           </tr>
         </thead>
         <tbody>
@@ -63,13 +64,7 @@
                 @click="confirmDelete(g.name)"
               >Hapus</button>
             </td>
-            <td>
-              <div class="chips">
-                <span v-for="lbl in groupRecipientLabels(selectedOf(g))" :key="'g-'+lbl" class="chip">{{ lbl }}</span>
-                <span v-for="lbl in labelRecipientLabels(selectedOf(g))" :key="'l-'+lbl" class="chip chip-label">Label: {{ lbl }}</span>
-                <span v-for="num in phoneRecipients(selectedOf(g))" :key="'p-'+num" class="chip chip-num">{{ normalizeNumber(num) }}</span>
-              </div>
-            </td>
+           
             <td class="msg-cell">
               <div class="msg-text" v-if="selectedOf(g)?.message">{{ selectedOf(g).message }}</div>
               <div v-else class="dim">-</div>
@@ -86,9 +81,47 @@
               </template>
               <span v-else class="dim">-</span>
             </td>
+            <td>
+              <div class="chips">
+                <span v-for="lbl in groupRecipientLabels(selectedOf(g))" :key="'g-'+lbl" class="chip">{{ lbl }}</span>
+                <span v-for="lbl in labelRecipientLabels(selectedOf(g))" :key="'l-'+lbl" class="chip chip-label">Label: {{ lbl }}</span>
+                <span v-for="num in phoneRecipients(selectedOf(g))" :key="'p-'+num" class="chip chip-num">{{ getPhoneDisplay(num) }}</span>
+              </div>
+            </td>
+            <td class="failed-cell">
+              <template v-if="getFailedInfo(selectedOf(g)).count > 0">
+                <div class="failed-info">
+                  <!-- <div class="failed-count">
+                    <span class="badge-failed">{{ getFailedInfo(selectedOf(g)).count }} gagal</span>
+                  </div> -->
+                  <div class="failed-groups" v-if="getFailedInfo(selectedOf(g)).groups.length > 0">
+                    <!-- <small class="dim">Group:</small> -->
+                    <div class="chips">
+                      <span v-for="grp in getFailedInfo(selectedOf(g)).groups" :key="grp" class="chip chip-failed">
+                        {{ grp }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="failed-phones" v-if="getFailedInfo(selectedOf(g)).phones.length > 0">
+                    <!-- <small class="dim">Nomor:</small> -->
+                    <div class="chips">
+                      <span v-for="phone in getFailedInfo(selectedOf(g)).phones" :key="phone" class="chip chip-failed-phone">
+                        {{ phone }}
+                      </span>
+                    </div>
+                  </div>
+                  <!-- <div v-if="selectedOf(g)?.lastError" class="failed-error">
+                    <small class="error-text" :title="selectedOf(g).lastError">
+                      {{ truncateError(selectedOf(g).lastError) }}
+                    </small>
+                  </div> -->
+                </div>
+              </template>
+              <span v-else class="dim">-</span>
+            </td>
           </tr>
           <tr v-if="!loading && visibleGroups.length === 0">
-            <td colspan="6" class="empty">Tidak ada data</td>
+            <td colspan="7" class="empty">Tidak ada data</td>
           </tr>
         </tbody>
       </table>
@@ -119,19 +152,50 @@ const statusFilter = ref('upcoming');
 const groupsMap = ref({});
 const loadGroupNames = async () => {
   try {
-    let res;
-    try { res = await deviceApi.get('/messages/get-groups/detail'); }
-    catch { res = await deviceApi.get('/messages/get-groups'); }
-    const raw = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.data || []);
-    const map = {};
-    for (const g of raw) {
-      const id = (g.id || g.jid || '').toString();
-      const full = id.includes('@') ? id : `${id}@g.us`;
-      const name = g.subject || g.name || g.title || g.id || 'Tanpa Nama';
-      map[full] = name;
+    const deviceId = localStorage.getItem('device_selected_id') || '';
+    if (!deviceId) {
+      console.log('No device selected');
+      return;
     }
+
+    // Ambil data group dari database melalui API
+    const { data } = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
+    const groups = Array.isArray(data?.data) ? data.data : [];
+    
+    const map = {};
+    for (const g of groups) {
+      const groupId = g.groupId || '';
+      const groupName = g.groupName || 'Tanpa Nama';
+      
+      // Simpan dengan berbagai format ID untuk memudahkan pencarian
+      map[groupId] = groupName;
+      
+      // Jika groupId tidak mengandung @g.us, tambahkan juga versi dengan @g.us
+      if (!groupId.includes('@')) {
+        map[`${groupId}@g.us`] = groupName;
+      }
+    }
+    
     groupsMap.value = map;
-  } catch (_) { /* ignore */ }
+    console.log(`Loaded ${groups.length} groups from database`);
+  } catch (error) {
+    console.error('Error loading groups from database:', error);
+    // Fallback ke method lama jika API database gagal
+    try {
+      let res;
+      try { res = await deviceApi.get('/messages/get-groups/detail'); }
+      catch { res = await deviceApi.get('/messages/get-groups'); }
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.data || []);
+      const map = {};
+      for (const g of raw) {
+        const id = (g.id || g.jid || '').toString();
+        const full = id.includes('@') ? id : `${id}@g.us`;
+        const name = g.subject || g.name || g.title || g.id || 'Tanpa Nama';
+        map[full] = name;
+      }
+      groupsMap.value = map;
+    } catch (_) { /* ignore */ }
+  }
 };
 
 const contacts = ref([]);
@@ -164,6 +228,66 @@ const labelToPhones = computed(() => {
   }
   return map;
 });
+
+// Map nomor telepon ke nama kontak
+const phoneToContactMap = computed(() => {
+  const map = {};
+  for (const c of contacts.value || []) {
+    const phone = String(c.phone || '').trim();
+    if (!phone) continue;
+    
+    // Gabungkan firstName dan lastName untuk nama lengkap
+    const firstName = String(c.firstName || '').trim();
+    const lastName = String(c.lastName || '').trim();
+    const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+    const displayName = fullName || phone;
+    
+    // Normalisasi nomor untuk pencocokan yang lebih baik
+    const normalized = phone.replace(/@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
+    
+    // Simpan dengan berbagai format untuk matching yang lebih baik
+    map[phone] = displayName;
+    map[normalized] = displayName;
+    map[`${phone}@s.whatsapp.net`] = displayName;
+    map[`${normalized}@s.whatsapp.net`] = displayName;
+    
+    // Tambahkan format dengan +62 jika dimulai dengan 62
+    if (normalized.startsWith('62')) {
+      map[`+${normalized}`] = displayName;
+    }
+  }
+  return map;
+});
+
+// Fungsi untuk mendapatkan display name dari nomor (nama kontak atau nomor)
+const getPhoneDisplay = (phoneNum) => {
+  if (!phoneNum) return '';
+  
+  const phoneStr = String(phoneNum).trim();
+  
+  // Coba cari langsung
+  if (phoneToContactMap.value[phoneStr]) {
+    return phoneToContactMap.value[phoneStr];
+  }
+  
+  // Coba dengan normalisasi
+  const normalized = phoneStr.replace(/@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
+  if (phoneToContactMap.value[normalized]) {
+    return phoneToContactMap.value[normalized];
+  }
+  
+  // Coba cari dengan suffix @s.whatsapp.net
+  if (phoneToContactMap.value[`${phoneStr}@s.whatsapp.net`]) {
+    return phoneToContactMap.value[`${phoneStr}@s.whatsapp.net`];
+  }
+  
+  if (phoneToContactMap.value[`${normalized}@s.whatsapp.net`]) {
+    return phoneToContactMap.value[`${normalized}@s.whatsapp.net`];
+  }
+  
+  // Jika tidak ditemukan di kontak, tampilkan nomor yang sudah dinormalisasi
+  return normalizeNumber(phoneStr);
+};
 
 const selections = ref({});
 const pickDefault = (arr) => {
@@ -251,7 +375,26 @@ const groupRecipientLabels = (b) => {
   const arr = Array.isArray(b.recipients) ? b.recipients : [];
   return arr
     .filter((r) => typeof r === 'string' && r.includes('@g.us'))
-    .map((jid) => groupsMap.value[jid] || jid);
+    .map((jid) => {
+      // Normalisasi jid untuk mencocokkan dengan groupsMap
+      const normalizedJid = jid.includes('@') ? jid : `${jid}@g.us`;
+      
+      // Cek di groupsMap dengan berbagai variasi
+      if (groupsMap.value[normalizedJid]) {
+        return groupsMap.value[normalizedJid];
+      }
+      
+      // Coba cari dengan ID tanpa suffix
+      const idOnly = jid.split('@')[0];
+      for (const [key, value] of Object.entries(groupsMap.value)) {
+        if (key.startsWith(idOnly)) {
+          return value;
+        }
+      }
+      
+      // Jika tidak ditemukan, tampilkan ID yang lebih bersih (tanpa @g.us)
+      return idOnly;
+    });
 };
 
 const labelRecipientLabels = (b) => {
@@ -283,6 +426,7 @@ const load = async () => {
   try {
     const { data } = await deviceApi.get('/messages/broadcasts');
     items.value = Array.isArray(data) ? data : [];
+    await loadGroupNames(); // Reload group names when loading broadcasts
   } catch (e) {
     // err.value = '';
     err.value = 'Gagal memuat jadwal (silahkan login WhatsApp)' || e?.response?.data?.message || e?.message;
@@ -373,6 +517,7 @@ const onDeviceChange = () => {
     localStorage.setItem('device_selected_name', dev.name || '');
     load();
     loadContacts();
+    loadGroupNames(); // Reload group names when device changes
   }
 };
 
@@ -421,6 +566,114 @@ const mediaUrl = (p) => {
 
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || '');
 
+// Fungsi untuk mendapatkan informasi pesan yang gagal terkirim
+const getFailedInfo = (b) => {
+  if (!b) return { count: 0, groups: [], phones: [] };
+  
+  const failedCount = b.failedCount || 0;
+  
+  if (failedCount === 0) {
+    return { count: 0, groups: [], phones: [] };
+  }
+  
+  const failedGroups = [];
+  const failedPhones = [];
+  
+  // Ekstrak JID dari lastError jika ada
+  const lastError = b.lastError || '';
+  const jidMatches = lastError.match(/(\d+)@g\.us/g) || [];
+  
+  if (jidMatches.length > 0) {
+    // Ada JID group di error message, ekstrak dan konversi ke nama
+    for (const jidMatch of jidMatches) {
+      const groupName = groupsMap.value[jidMatch];
+      
+      if (groupName) {
+        if (!failedGroups.includes(groupName)) {
+          failedGroups.push(groupName);
+        }
+      } else {
+        // Coba cari dengan ID saja (tanpa @g.us)
+        const idOnly = jidMatch.split('@')[0];
+        let found = false;
+        
+        for (const [key, value] of Object.entries(groupsMap.value)) {
+          if (key.includes(idOnly)) {
+            if (!failedGroups.includes(value)) {
+              failedGroups.push(value);
+            }
+            found = true;
+            break;
+          }
+        }
+        
+        // Jika tetap tidak ditemukan, tampilkan nama generic
+        if (!found) {
+          failedGroups.push(`Group (${idOnly.substring(0, 8)}...)`);
+        }
+      }
+    }
+  } else {
+    // Tidak ada JID di error, gunakan logic lama
+    const groupRecipients = (b.recipients || [])
+      .filter((r) => typeof r === 'string' && r.includes('@g.us'));
+    
+    const phoneRecipients = (b.recipients || [])
+      .filter((r) => typeof r === 'string' && !r.includes('@g.us') && !r.toLowerCase().startsWith('label'));
+    
+    if (failedCount >= groupRecipients.length && groupRecipients.length > 0) {
+      for (const jid of groupRecipients) {
+        const normalizedJid = jid.includes('@') ? jid : `${jid}@g.us`;
+        const groupName = groupsMap.value[normalizedJid];
+        
+        if (groupName) {
+          failedGroups.push(groupName);
+        } else {
+          const idOnly = jid.split('@')[0];
+          let found = false;
+          for (const [key, value] of Object.entries(groupsMap.value)) {
+            if (key.startsWith(idOnly)) {
+              failedGroups.push(value);
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            failedGroups.push(`Group (${idOnly.substring(0, 8)}...)`);
+          }
+        }
+      }
+    }
+    
+    const remainingFailed = failedCount - failedGroups.length;
+    if (remainingFailed > 0 && phoneRecipients.length > 0) {
+      const phonesToShow = Math.min(remainingFailed, 3);
+      for (let i = 0; i < phonesToShow && i < phoneRecipients.length; i++) {
+        const phone = normalizeNumber(phoneRecipients[i]);
+        failedPhones.push(phone);
+      }
+      
+      if (phoneRecipients.length > phonesToShow) {
+        failedPhones.push(`+${phoneRecipients.length - phonesToShow} lainnya`);
+      }
+    }
+  }
+  
+  return {
+    count: failedCount,
+    groups: failedGroups,
+    phones: failedPhones
+  };
+};
+
+// Fungsi untuk memotong pesan error jika terlalu panjang
+const truncateError = (error) => {
+  if (!error) return '';
+  const maxLength = 100;
+  if (error.length <= maxLength) return error;
+  return error.substring(0, maxLength) + '...';
+};
+
 watch([q, statusFilter, sortBy, sortDir, pageSize], () => { page.value = 1; });
 
 const goPrev = () => { if (page.value > 1) page.value -= 1; };
@@ -466,4 +719,55 @@ onMounted(async () => {
 .media-cell { min-width: 120px; }
 .media-link { display:inline-block; margin-right:6px; font-size:12px; }
 .thumb { max-height: 48px; max-width: 80px; border:1px solid #ddd; border-radius:4px; display:block; margin-top:4px; }
+
+/* Failed Cell Styles */
+.failed-cell { min-width: 200px; max-width: 300px; }
+.failed-info { display: flex; flex-direction: column; gap: 8px; }
+.failed-count { display: flex; align-items: center; }
+.badge-failed { 
+  background: #fee; 
+  color: #c00; 
+  border: 1px solid #fcc;
+  padding: 4px 10px; 
+  border-radius: 12px; 
+  font-size: 12px; 
+  font-weight: 600;
+}
+.failed-groups { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 4px; 
+  margin-top: 4px;
+}
+.chip-failed { 
+  background: #fff0f0; 
+  border-color: #ffcccc; 
+  color: #cc0000; 
+  font-weight: 500;
+}
+.failed-error { 
+  margin-top: 4px; 
+  padding: 6px 8px;
+  background: #fff9e6;
+  border-left: 3px solid #ffa500;
+  border-radius: 4px;
+}
+.error-text { 
+  color: #8a4b0f; 
+  font-size: 11px; 
+  font-style: italic;
+  word-break: break-word;
+}
+.failed-phones { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 4px; 
+  margin-top: 4px;
+}
+.chip-failed-phone { 
+  background: #fff0f0; 
+  border-color: #ffcccc; 
+  color: #cc0000; 
+  font-weight: 500;
+}
 </style>

@@ -10,9 +10,9 @@
       <form v-else @submit.prevent="createDevice" class="form-inline">
         <label class="field">
           <span>Nama Device</span>
-          <input v-model="name" placeholder="Contoh: Device Tutor" />
+          <input v-model="name" placeholder="Contoh: Device Tutor" required />
         </label>
-        <button class="btn primary" :disabled="loading || tutorReachedLimit">{{ loading ? 'Menyimpan...' : 'Buat Device' }}</button>
+        <button class="btn primary" :disabled="loading || tutorReachedLimit || !name.trim()">{{ loading ? 'Menyimpan...' : 'Buat Device' }}</button>
       </form>
       <p v-if="error" class="error">{{ error }}</p>
       <p v-if="success" class="success">{{ success }}</p>
@@ -24,7 +24,7 @@
         <div class="filters">
           <div class="field">
             <label>Device</label>
-            <select v-model="deviceId" :disabled="pairingLoading">
+            <select v-model="deviceId" :disabled="pairingLoading || selectedStatus === 'open'">
               <option value="" disabled>Pilih device</option>
               <option v-for="d in devices" :key="d.id" :value="String(d.id)">{{ d.name }}</option>
             </select>
@@ -32,19 +32,67 @@
           <div class="field">
             <label>&nbsp;</label>
             <div class="row-btns">
-              <button class="btn primary" @click="startPairing" :disabled="!deviceId || pairingLoading">{{ pairingLoading ? 'Menunggu QR...' : 'Mulai' }}</button>
-              <button v-if="controller" class="btn outline" @click="stopPairing">Hentikan</button>
+              <!-- Tombol Mulai: 
+                   - Hilang jika: single device (tutor) DAN status open
+                   - Muncul jika: multi device (admin) ATAU status bukan open
+              -->
+              <button 
+                v-if="devices.length > 1 || selectedStatus !== 'open'"
+                class="btn primary" 
+                @click="startPairing" 
+                :disabled="!deviceId || pairingLoading || selectedStatus === 'open'">
+                {{ pairingLoading ? 'Menunggu QR...' : 'Mulai' }}
+              </button>
+              <button 
+                v-if="controller && selectedStatus !== 'open'" 
+                class="btn outline" 
+                @click="stopPairing">
+                Hentikan
+              </button>
             </div>
           </div>
         </div>
       </div>
-      <p class="hint">Scan QR dari WhatsApp di ponsel Anda. QR mungkin diperbarui beberapa kali.</p>
-      <p v-if="selectedStatus === 'open'" class="hint success">Device sudah terhubung. Logout sesi dari hp jika ingin terhubung ulang</p>
-      <p v-if="statusText">Status: {{ statusText }}</p>
-      <p v-if="apiError" class="error">{{ apiError }}</p>
+      <p class="hint">Scan QR dari WhatsApp di ponsel Anda. Jika sudah terhubung, jangan lupa direfresh.</p>
+      
+      <!-- Success Connection Display -->
+      <div v-if="selectedStatus === 'open'" class="connection-success">
+        <div class="success-icon">✅</div>
+        <div class="success-content">
+          <h4>WhatsApp Berhasil Terhubung!</h4>
+          <p>Device sudah siap digunakan untuk mengirim pesan dan broadcast.</p>
+          <div class="success-features">
+            <div class="feature-item">
+              <span class="feature-icon">💬</span>
+              <span>Feedback</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">📢</span>
+              <span>Broadcast</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">👥</span>
+              <span>Grup Tersinkron</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">📱</span>
+              <span>Reminder</span>
+            </div>
+          </div>
+          <p class="success-note">💡 1 Device hanya untuk 1 akun WhatsApp</p>
+        </div>
+      </div>
+      
+      <!-- Status Display with Auto-refresh indicator -->
+      <div v-else-if="statusText && statusText !== 'Dihentikan'" class="status-display">
+        <span class="status-icon">⛷️</span> 
+        <span>{{ statusText }}</span>
+      </div>
+      
+      <p v-if="apiError" class="error">❌ {{ apiError }}</p>
 
-      <!-- QR Code Display -->
-      <div v-if="qr" class="qr-container">
+      <!-- QR Code Display - Only show if NOT connected and have QR -->
+      <div v-if="qr && selectedStatus !== 'open'" class="qr-container">
         <h4>QR Code WhatsApp</h4>
         <div class="qr">
           <img :src="qr" alt="QR Code" @error="onQRImageError" />
@@ -52,13 +100,13 @@
         <p class="qr-instructions">Buka WhatsApp di ponsel Anda → Ketuk titik tiga → Perangkat Tertaut → Tautkan Perangkat → Scan QR code di atas</p>
       </div>
 
-      <div v-else-if="asciiQr" class="qr-ascii">
+      <div v-else-if="asciiQr && selectedStatus !== 'open'" class="qr-ascii">
         <h4>QR Code (Text)</h4>
         <pre>{{ asciiQr }}</pre>
       </div>
 
-      <!-- Loading indicator when waiting for QR -->
-      <div v-else-if="pairingLoading && !apiError" class="loading-qr">
+      <!-- Loading indicator when waiting for QR - Only if NOT connected -->
+      <div v-else-if="pairingLoading && !apiError && selectedStatus !== 'open'" class="loading-qr">
         <div class="spinner"></div>
         <p>Menunggu QR Code...</p>
       </div>
@@ -88,27 +136,17 @@
               </td>
               <td class="group-col">
                 <div class="group-cell">
-                  <template v-if="rowState(d.id).state === 'loading' && currentDeviceId() === String(d.id) && (!groups.length)">
-                    <span class="loader-ring" aria-hidden="true"></span>
-                    <span>Memuat grup...</span>
-                  </template>
-                  <template v-else-if="currentDeviceId() === String(d.id) && groups.length && rowState(d.id).state !== 'error'">
+                  <template v-if="d.status === 'open'">
                     <span class="checkmark" aria-hidden="true">✔</span>
-                    <span>Berhasil dimuat</span>
-                  </template>
-                  <template v-else-if="rowState(d.id).state === 'error' && currentDeviceId() === String(d.id)">
-                    <span class="error">Gagal memuat</span>
+                    <span>Grup tersinkron otomatis</span>
                   </template>
                   <template v-else>
-                    <span class="dim">—</span>
+                    <span class="dim">Belum terhubung</span>
                   </template>
                 </div>
               </td>
               <td class="action-col">
                 <div class="row-btns">
-                  <button class="btn outline btn-sm" @click="loadGroupsFor(d)" :disabled="rowState(d.id).state === 'loading'">
-                    {{ rowState(d.id).state === 'loading' && currentDeviceId() === String(d.id) ? 'Memuat...' : (currentDeviceId() === String(d.id) && groups.length ? 'Reload Grup' : 'Muat Grup') }}
-                  </button>
                   <button class="btn danger btn-sm" @click="deleteOne(d)" :disabled="deleting">Hapus</button>
                 </div>
               </td>
@@ -130,6 +168,9 @@ import { userApi } from '../api/http.js';
 import { useAuthStore } from '../stores/auth.js';
 import QRCode from 'qrcode';
 import { useGroups } from '../composables/useGroups.js';
+import { listenToDeviceStatus } from '../api/socket.js';
+import { cache } from '../utils/cache.js';
+import { debounce } from '../utils/debounce.js';
 
 const auth = useAuthStore();
 const devices = ref([]);
@@ -147,78 +188,135 @@ const statusText = ref('');
 const pairingLoading = ref(false);
 const apiError = ref('');
 let controller = null;
+let socketCleanupFunctions = [];
+
+const CACHE_KEY = 'devices_list';
+const CACHE_TTL = 30; // 30 seconds
 
 const isTutor = computed(() => auth.roleName === 'cs');
 const tutorReachedLimit = computed(() => isTutor.value && devices.value.length >= 1);
 
-// selection state
-const selectedIds = ref([]); // string[]
-const isSelected = (id) => selectedIds.value.includes(id);
-const allSelected = computed(() => devices.value.length > 0 && selectedIds.value.length === devices.value.length);
-const toggleOne = (id) => {
-  if (isSelected(id)) {
-    selectedIds.value = selectedIds.value.filter((x) => x !== id);
-  } else {
-    selectedIds.value = [...selectedIds.value, id];
-  }
-};
-const toggleAll = () => {
-  if (allSelected.value) {
-    selectedIds.value = [];
-  } else {
-    selectedIds.value = devices.value.map((d) => d.id);
-  }
-};
+// Simplified group handling - groups are automatically synced when device connects
+const { clearGroups } = useGroups();
 
-const fetchDevices = async () => {
+// Pairing helpers
+const selectedDevice = computed(() => devices.value.find(d => String(d.id) === String(deviceId.value)));
+const selectedStatus = computed(() => selectedDevice.value?.status || '');
+// expose for template tests
+// eslint-disable-next-line no-undef
+defineExpose({ selectedStatus });
+
+// Fetch devices dengan cache layer
+const fetchDevices = async (forceRefresh = false) => {
   try {
+    // Check cache first (kecuali force refresh)
+    if (!forceRefresh) {
+      const cachedDevices = cache.get(CACHE_KEY);
+      if (cachedDevices) {
+        devices.value = cachedDevices;
+        console.log('[Fetch] Using cached devices, no API call needed');
+        
+        // Auto-select device jika ada
+        autoSelectDevice();
+        
+        // Setup socket listeners dengan data cache
+        setupSocketListeners();
+        return;
+      }
+    }
+
+    console.log('[Fetch] Cache miss atau force refresh, calling API...');
     const { data } = await userApi.get('/devices');
     devices.value = data;
-    const ids = new Set(devices.value.map((d) => d.id));
-    selectedIds.value = selectedIds.value.filter((id) => ids.has(id));
-    // If current selected device is not open, clear groups cache to avoid showing stale groups
+    
+    // Save to cache
+    cache.set(CACHE_KEY, data, CACHE_TTL);
+    
+    // Auto-select device jika ada
+    autoSelectDevice();
+    
+    // Setup socket listeners after fetching devices
+    setupSocketListeners();
+    
+    // Clear groups cache if current device is not connected
     const curId = localStorage.getItem('device_selected_id');
     if (curId) {
       const cur = devices.value.find((d) => String(d.id) === String(curId));
       if (cur && String(cur.status).toLowerCase() !== 'open') {
         clearGroups();
-        perRow.value[cur.id] = { state: 'idle' };
       }
     }
   } catch (e) {
-    console.error(e);
+    console.error('[Fetch] Error:', e);
   }
 };
+
+// Auto-select device saat load halaman
+const autoSelectDevice = () => {
+  if (!devices.value.length) return;
+  
+  // Jika hanya ada 1 device, langsung pilih
+  if (devices.value.length === 1) {
+    deviceId.value = String(devices.value[0].id);
+    console.log('[Auto-Select] Otomatis memilih device:', devices.value[0].name);
+    return;
+  }
+  
+  // Jika ada device yang sudah open, pilih yang itu
+  const openDevice = devices.value.find(d => d.status === 'open');
+  if (openDevice) {
+    deviceId.value = String(openDevice.id);
+    console.log('[Auto-Select] Otomatis memilih device terhubung:', openDevice.name);
+    return;
+  }
+  
+  // Jika ada device tersimpan di localStorage, gunakan itu
+  const savedDeviceId = localStorage.getItem('device_selected_id');
+  if (savedDeviceId) {
+    const savedDevice = devices.value.find(d => String(d.id) === savedDeviceId);
+    if (savedDevice) {
+      deviceId.value = savedDeviceId;
+      console.log('[Auto-Select] Menggunakan device tersimpan:', savedDevice.name);
+      return;
+    }
+  }
+  
+  // Default: pilih device pertama
+  deviceId.value = String(devices.value[0].id);
+  console.log('[Auto-Select] Memilih device pertama:', devices.value[0].name);
+};
+
+// Debounced version untuk mencegah multiple calls
+const debouncedFetchDevices = debounce(fetchDevices, 1000);
 
 const createDevice = async () => {
   error.value = '';
   success.value = '';
+  
+  if (!name.value.trim()) {
+    error.value = 'Nama device tidak boleh kosong';
+    return;
+  }
+  
   if (tutorReachedLimit.value) {
     error.value = 'Tutor hanya dapat memiliki 1 device';
     return;
   }
+  
   loading.value = true;
   try {
     await userApi.post('/tutors/devices', { name: name.value });
     success.value = 'Device berhasil dibuat';
     name.value = '';
-    await fetchDevices();
+    
+    // Invalidate cache dan fetch ulang
+    cache.invalidate(CACHE_KEY);
+    await fetchDevices(true);
   } catch (e) {
     error.value = (e && e.response && e.response.data && e.response.data.message) || 'Gagal membuat device';
   } finally {
     loading.value = false;
   }
-};
-
-const clearCurrentIfDeleted = (ids) => {
-  try {
-    const currentId = localStorage.getItem('device_selected_id');
-    if (currentId && ids.includes(currentId)) {
-      localStorage.removeItem('device_api_key');
-      localStorage.removeItem('device_selected_id');
-      localStorage.removeItem('device_selected_name');
-    }
-  } catch (_) {}
 };
 
 const doDelete = async (ids) => {
@@ -230,10 +328,11 @@ const doDelete = async (ids) => {
   deleting.value = true;
   try {
     await userApi.delete('/devices', { data: { deviceIds: ids } });
-    clearCurrentIfDeleted(ids);
     success.value = 'Device berhasil dihapus';
-    selectedIds.value = [];
-    await fetchDevices();
+    
+    // Invalidate cache dan fetch ulang
+    cache.invalidate(CACHE_KEY);
+    await fetchDevices(true);
   } catch (e) {
     error.value = (e && e.response && e.response.data && e.response.data.message) || 'Gagal menghapus device';
   } finally {
@@ -241,20 +340,9 @@ const doDelete = async (ids) => {
   }
 };
 
-const deleteSelected = async () => {
-  await doDelete(selectedIds.value);
-};
-
 const deleteOne = async (d) => {
   await doDelete([d.id]);
 };
-
-// Pairing helpers
-const selectedDevice = computed(() => devices.value.find(d => String(d.id) === String(deviceId.value)));
-const selectedStatus = computed(() => selectedDevice.value?.status || '');
-// expose for template tests
-// eslint-disable-next-line no-undef
-defineExpose({ selectedStatus });
 
 const onQRImageError = () => {
   console.error('QR image failed to load');
@@ -381,7 +469,7 @@ const startPairing = async () => {
   // Clear groups cache before re-pairing (old session groups become invalid)
   clearGroups();
 
-  // refresh device list to reflect latest status
+  // Refresh device list to reflect latest status (use cache if available)
   await fetchDevices();
 
   // prevent parallel streams
@@ -416,7 +504,10 @@ const startPairing = async () => {
   } finally {
     pairingLoading.value = false;
     controller = null;
-    await fetchDevices();
+    
+    // Invalidate cache setelah pairing selesai untuk pastikan data fresh
+    cache.invalidate(CACHE_KEY);
+    await fetchDevices(true);
   }
 };
 
@@ -440,9 +531,11 @@ const humanStatus = (s) => {
     pending: 'Menunggu…',
     closed: 'Terputus',
     disconnected: 'Terputus',
+    close: 'Terputus',
   };
   return map[key] || (s || '-');
 };
+
 const statusClass = (s) => {
   const key = String(s || '').toLowerCase();
   if (key === 'open' || key === 'connected') return 'is-open';
@@ -450,80 +543,145 @@ const statusClass = (s) => {
   return 'is-closed';
 };
 
-// Grup loader per device (visual only)
-const { refreshGroups, errGroups, groups, clearGroups } = useGroups();
-const perRow = ref({}); // id -> { state: 'idle'|'loading'|'success'|'error' }
-const rowState = (id) => perRow.value[id] || { state: 'idle' };
-const prevStatuses = ref({});
-
-const currentDeviceId = () => localStorage.getItem('device_selected_id') || '';
-
-const selectDeviceForApi = (d) => {
-  try {
-    if (d?.apiKey) localStorage.setItem('device_api_key', d.apiKey);
-    if (d?.id) localStorage.setItem('device_selected_id', d.id);
-    if (d?.name) localStorage.setItem('device_selected_name', d.name);
-  } catch (_) {}
-};
-
-const loadGroupsFor = async (d) => {
-  if (!d) return;
-  // If this device is already current and groups cached, just show success
-  if (currentDeviceId() === String(d.id) && Array.isArray(groups.value) && groups.value.length > 0) {
-    perRow.value[d.id] = { state: 'success' };
-    return;
+// Watch for status changes and auto-refresh
+watch(selectedStatus, async (newStatus, oldStatus) => {
+  if (oldStatus && newStatus !== oldStatus) {
+    console.log(`✅ Status berubah dari ${oldStatus} ke ${newStatus}`);
+    
+    // Update cache dengan status baru (no API call needed)
+    const cachedDevices = cache.get(CACHE_KEY);
+    if (cachedDevices) {
+      const deviceIndex = cachedDevices.findIndex(d => d.id === selectedDevice.value.id);
+      if (deviceIndex !== -1) {
+        cachedDevices[deviceIndex].status = newStatus;
+        cache.set(CACHE_KEY, cachedDevices, CACHE_TTL);
+        console.log('[Cache] Updated device status in cache');
+      }
+    }
+    
+    // Jika berubah menjadi open (terhubung)
+    if (newStatus === 'open') {
+      statusText.value = 'Berhasil terhubung! ✅';
+      qr.value = '';
+      asciiQr.value = '';
+      pairingLoading.value = false;
+      
+      // Stop controller
+      if (controller) {
+        try { controller.abort(); } catch (e) { console.error('Error aborting:', e); }
+        controller = null;
+      }
+      
+      // Show success message
+      success.value = 'Device berhasil terhubung dengan WhatsApp!';
+      setTimeout(() => { success.value = ''; }, 5000);
+    }
+    
+    // Jika berubah menjadi closed/disconnected (terputus)
+    if ((oldStatus === 'open' || oldStatus === 'connected') && 
+        (newStatus === 'close' || newStatus === 'closed' || newStatus === 'disconnected')) {
+      
+      // Reset semua state pairing
+      pairingLoading.value = false;
+      qr.value = '';
+      asciiQr.value = '';
+      statusText.value = '';
+      
+      // Stop controller jika masih ada
+      if (controller) {
+        try { controller.abort(); } catch (e) { console.error('Error aborting:', e); }
+        controller = null;
+      }
+      
+      // Clear success message jika masih ada
+      success.value = '';
+      
+      // Show error message
+      error.value = 'Device terputus dari WhatsApp. Silakan lakukan pairing ulang.';
+      setTimeout(() => { error.value = ''; }, 5000);
+      
+      console.log('⚠️ Device terputus, UI telah direset ke state awal');
+    }
   }
-  if (perRow.value[d.id]?.state === 'loading') return; // prevent duplicate
-  selectDeviceForApi(d);
-  perRow.value[d.id] = { state: 'loading' };
-  try {
-    await refreshGroups();
-    // Network error indicated by errGroups; otherwise treat (even empty) as success cache
-    if (errGroups?.value) {
-      perRow.value[d.id] = { state: 'error' };
-    } else {
-      perRow.value[d.id] = { state: 'success' };
-    }
-  } catch (_) {
-    perRow.value[d.id] = { state: 'error' };
-  }
-};
-
-// Auto-load groups when a device just became 'open'
-watch(devices, (list) => {
-  const prev = prevStatuses.value;
-  list.forEach((d) => {
-    const oldStatus = prev[d.id];
-    const newStatus = String(d.status).toLowerCase();
-    if (newStatus === 'open' && oldStatus !== 'open') {
-      loadGroupsFor(d); // session just opened
-    }
-    // Any transition from open to non-open must clear groups
-    if (oldStatus === 'open' && newStatus !== 'open') {
-      clearGroups();
-      perRow.value[d.id] = { state: 'idle' };
-    }
-  });
-  const next = {};
-  list.forEach((d) => { next[d.id] = String(d.status).toLowerCase(); });
-  prevStatuses.value = next;
-}, { deep: true });
-
-// Helper to decide display state (template relies on rowState but we refine logic here)
-const isGroupsLoadedForDevice = (d) => currentDeviceId() === String(d.id) && Array.isArray(groups.value) && groups.value.length > 0;
-
-// cleanup timers on unmount
-onUnmounted(() => {
-  Object.values(perRow.value).forEach((r) => {
-    if (r && r.t) clearTimeout(r.t);
-  });
 });
 
+// Watch deviceId untuk save ke localStorage
+watch(deviceId, (newDeviceId) => {
+  if (newDeviceId) {
+    localStorage.setItem('device_selected_id', newDeviceId);
+    const device = devices.value.find(d => String(d.id) === newDeviceId);
+    if (device) {
+      localStorage.setItem('device_selected_name', device.name);
+    }
+  }
+});
+
+// Setup Socket.IO listeners for all devices - PURE REAL-TIME (NO POLLING)
+const setupSocketListeners = () => {
+  // Clean up existing listeners first
+  cleanupSocketListeners();
+  
+  console.log(`[Socket.IO] Setting up listeners for ${devices.value.length} devices`);
+  
+  // Setup listener untuk setiap device
+  devices.value.forEach((device) => {
+    const cleanup = listenToDeviceStatus(device.id, async (newStatus) => {
+      console.log(`[Socket.IO] Device ${device.id} status: ${newStatus}`);
+      
+      // Update device status in local state TANPA API call
+      const deviceIndex = devices.value.findIndex(d => d.id === device.id);
+      if (deviceIndex !== -1) {
+        const oldStatus = devices.value[deviceIndex].status;
+        devices.value[deviceIndex].status = newStatus;
+        
+        // Trigger Vue reactivity
+        devices.value = [...devices.value];
+        
+        // Update cache juga
+        const cachedDevices = cache.get(CACHE_KEY);
+        if (cachedDevices) {
+          const cachedIndex = cachedDevices.findIndex(d => d.id === device.id);
+          if (cachedIndex !== -1) {
+            cachedDevices[cachedIndex].status = newStatus;
+            cache.set(CACHE_KEY, cachedDevices, CACHE_TTL);
+          }
+        }
+        
+        console.log(`[Socket.IO] ✅ Updated: ${oldStatus} -> ${newStatus} (0 API calls)`);
+      }
+    });
+    
+    socketCleanupFunctions.push(cleanup);
+  });
+  
+  console.log('[Socket.IO] ✅ All listeners active, monitoring real-time via WebSocket');
+};
+
+const cleanupSocketListeners = () => {
+  socketCleanupFunctions.forEach(cleanup => cleanup());
+  socketCleanupFunctions = [];
+};
+
 onMounted(async () => {
+  console.log('[Mount] 🚀 Optimasi Ekstrem Active: Socket.IO + Cache (No Polling)');
+  
   if (!auth.me) {
     try { await auth.fetchMe(); } catch (_) {}
   }
+  
+  // Initial fetch (akan pakai cache jika tersedia)
   await fetchDevices();
+});
+
+// Cleanup on unmount
+onUnmounted(() => {
+  console.log('[Unmount] Cleaning up...');
+  
+  if (controller) {
+    try { controller.abort(); } catch (e) { console.error('Error aborting controller on unmount:', e); }
+  }
+  
+  cleanupSocketListeners();
 });
 </script>
 
@@ -555,12 +713,30 @@ onMounted(async () => {
  tbody tr:hover { background: #f6faff; }
 
 /* Pairing styles and QR remain */
-.hint { color:#666; margin-top:8px; }
-.success { color: #0a0; }
-.error { color: #c00; }
+.hint { color:#666; margin-top:8px; font-size: 14px; }
+.success { color: #0a0; margin-top: 8px; font-weight: 500; }
+.error { color: #c00; margin-top: 8px; font-weight: 500; }
+.info { 
+  padding: 12px 16px; 
+  background: #fff3cd; 
+  border: 1px solid #ffc107; 
+  border-radius: 8px; 
+  color: #856404; 
+  font-size: 14px; 
+  line-height: 1.5;
+}
 .qr-container { margin-top: 20px; text-align: center; }
 .qr { margin: 12px 0; display: flex; justify-content: center; }
 .qr img { width: 320px; height: 320px; object-fit: contain; border: 2px solid #eee; border-radius: 8px; padding: 16px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.qr-instructions { 
+  margin-top: 12px; 
+  color: #475569; 
+  font-size: 14px; 
+  line-height: 1.6; 
+  max-width: 500px; 
+  margin-left: auto; 
+  margin-right: auto;
+}
 .qr-ascii { margin-top: 12px; border: 1px solid #eee; background: #fff; padding: 8px; border-radius: 4px; }
 .qr-ascii pre { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; line-height: 10px; white-space: pre; color: #000; }
 .loading-qr { display: flex; flex-direction: column; align-items: center; margin: 20px 0; padding: 20px; }
@@ -587,7 +763,111 @@ onMounted(async () => {
 .loader-ring { width: 16px; height: 16px; border: 2px solid rgba(37,99,235,.2); border-top-color: #2563eb; border-radius: 50%; animation: spin .9s linear infinite; display: inline-block; }
 .checkmark { color: #16a34a; font-weight: 700; }
 
+/* Success Connection Display */
+.connection-success {
+  margin: 20px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%);
+  border: 2px solid #4ade80;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.15);
+}
+
+.success-icon {
+  font-size: 32px;
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.success-content h4 {
+  margin: 0 0 8px 0;
+  color: #16a34a;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.success-content p {
+  margin: 0 0 16px 0;
+  color: #15803d;
+  line-height: 1.5;
+}
+
+.success-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(74, 222, 128, 0.1);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #15803d;
+}
+
+.feature-icon {
+  font-size: 16px;
+}
+
+.success-note {
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(74, 222, 128, 0.1);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #15803d;
+  border-left: 3px solid #4ade80;
+}
+
+/* Status Display with Auto-refresh */
+.status-display {
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.status-icon {
+  font-size: 16px;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 720px) {
   .toolbar .filters { grid-template-columns: 1fr; }
+  
+  .connection-success {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .success-features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .status-display {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 }
 </style>

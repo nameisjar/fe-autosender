@@ -1,7 +1,7 @@
-// Reusable groups loader with cache (memory + localStorage)
-// Speeds up group dropdowns across pages.
+// Reusable groups loader from database (no cache, always fresh from DB)
+// Uses database-stored WhatsApp groups instead of cache
 import { ref } from 'vue';
-import { deviceApi } from '../api/http.js';
+import { userApi } from '../api/http.js';
 
 // Singleton state (module-scoped)
 const groupsState = ref([]); // { value, label, meta }
@@ -9,15 +9,14 @@ const loadingState = ref(false);
 const errorState = ref('');
 let inFlight = null;
 
-const CACHE_KEY = 'wa_groups_cache_v1';
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const getDeviceId = () => {
+  try { return localStorage.getItem('device_selected_id') || ''; } catch { return ''; }
+};
 
 const normalizeGroupValue = (g) => {
-  const full = g?.id || g?.jid || '';
-  const short = g?.idShort || g?.shortId || g?.groupId || '';
-  const chosen = full || short || '';
-  if (!chosen) return '';
-  return chosen.includes('@') ? chosen : `${chosen}@g.us`;
+  const groupId = g?.groupId || g?.id || g?.jid || '';
+  if (!groupId) return '';
+  return groupId.includes('@') ? groupId : `${groupId}@g.us`;
 };
 
 const mapGroups = (items) => {
@@ -25,97 +24,80 @@ const mapGroups = (items) => {
   return arr
     .map((g) => ({
       value: normalizeGroupValue(g),
-      label: g?.subject || g?.name || g?.title || g?.id || g?.jid || 'Tanpa Nama',
-      meta: { id: g?.id, shortId: g?.shortId || g?.idShort, jid: g?.jid },
+      label: g?.groupName || g?.subject || g?.name || g?.title || g?.groupId || 'Tanpa Nama',
+      meta: { 
+        id: g?.id, 
+        groupId: g?.groupId, 
+        isActive: g?.isActive,
+        participants: g?.participants || 0,
+        sessionId: g?.sessionId
+      },
     }))
     .filter((g) => g.value);
 };
 
-// Device-aware caching additions
-let lastDeviceId = null;
-const getDeviceId = () => {
-  try { return localStorage.getItem('device_selected_id') || ''; } catch { return ''; }
-};
-const cacheKey = (id) => `wa_groups_cache_v1_${id || 'none'}`;
+const fetchGroupsFromDatabase = async () => {
+  const deviceId = getDeviceId();
+  if (!deviceId) {
+    throw new Error('Device ID tidak ditemukan. Silakan pilih device terlebih dahulu.');
+  }
 
-const removeCacheFor = (id) => {
-  try { localStorage.removeItem(cacheKey(id)); } catch { }
+  console.log('Fetching groups for device ID:', deviceId);
+  console.log('API endpoint will be:', `/whatsapp-groups/device/${deviceId}/active`);
+
+  try {
+    // Fetch active groups from database
+    const res = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
+    console.log('Groups API response:', res.data);
+    console.log('Full API response status:', res.status);
+    console.log('API response headers:', res.headers);
+    
+    const payload = res?.data;
+    
+    if (!payload?.status) {
+      const errorMsg = payload?.message || 'Gagal mengambil data grup dari server';
+      console.error('Groups API error:', errorMsg);
+      console.error('Full payload:', payload);
+      throw new Error(errorMsg);
+    }
+    
+    const list = Array.isArray(payload?.data) ? payload.data : [];
+    console.log('Raw groups data:', list);
+    console.log('Number of groups found:', list.length);
+    
+    if (list.length === 0) {
+      console.warn('⚠️ No groups returned from API. Checking if device ID exists and has groups...');
+    }
+    
+    const mappedGroups = mapGroups(list);
+    console.log('Mapped groups:', mappedGroups);
+    
+    return mappedGroups;
+  } catch (error) {
+    console.error('Error in fetchGroupsFromDatabase:', error);
+    console.error('Error response:', error?.response);
+    throw error;
+  }
 };
 
 const clearGroups = () => {
-  // also remove cache for current device
-  const id = getDeviceId();
-  removeCacheFor(id);
   groupsState.value = [];
   errorState.value = '';
   inFlight = null;
 };
 
-// Override readCache / writeCache to be device-specific
-const readCache = (id) => {
-  try {
-    const raw = localStorage.getItem(cacheKey(id));
-    if (!raw) return null;
-    const { ts, data, deviceId } = JSON.parse(raw);
-    if (deviceId && deviceId !== id) return null; // safety
-    if (!ts || !Array.isArray(data)) return null;
-    if (Date.now() - ts > CACHE_TTL_MS) return null;
-    return data;
-  } catch { return null; }
-};
-
-const writeCache = (id, data) => {
-  try {
-    localStorage.setItem(
-      cacheKey(id),
-      JSON.stringify({ ts: Date.now(), data, deviceId: id })
-    );
-  } catch {}
-};
-
-// Attach storage listener to invalidate cache on device change from other tabs
+// Listen for device changes to clear groups
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
-    if (e.key === 'device_selected_id') {
-      const newId = e.newValue || '';
-      if (newId !== lastDeviceId) {
-        clearGroups();
-        lastDeviceId = newId;
-      }
-    }
-    // If device_api_key removed (session closed), clear groups cache
-    if (e.key === 'device_api_key' && !e.newValue) {
+    if (e.key === 'device_selected_id' || e.key === 'device_api_key') {
       clearGroups();
     }
   });
-  // same-tab event when device session closed
+  
   window.addEventListener('wa:device-session-closed', () => {
     clearGroups();
   });
 }
-
-const fetchGroups = async () => {
-  // Prefer the lighter endpoint; fallback to detail
-  let res;
-  try {
-    res = await deviceApi.get('/messages/get-groups');
-  } catch (_) {
-    try {
-      res = await deviceApi.get('/messages/get-groups/detail');
-    } catch (__) {
-      return [];
-    }
-  }
-  const payload = res?.data;
-  const list = Array.isArray(payload)
-    ? payload
-    : Array.isArray(payload?.results)
-    ? payload.results
-    : Array.isArray(payload?.data)
-    ? payload.data
-    : [];
-  return mapGroups(list);
-};
 
 export function useGroups() {
   const groups = groupsState;
@@ -124,44 +106,40 @@ export function useGroups() {
 
   const loadGroups = async ({ force = false } = {}) => {
     error.value = '';
-    const currentId = getDeviceId();
-    if (lastDeviceId && currentId !== lastDeviceId) {
-      // Device switched; invalidate memory
-      clearGroups();
-    }
-    lastDeviceId = currentId;
-
+    
     if (!force && groups.value && groups.value.length > 0) {
-      // If session key missing, invalidate cache
-      if (!localStorage.getItem('device_api_key')) {
-        clearGroups();
-      } else {
-        return groups.value;
-      }
+      console.log('Using cached groups:', groups.value.length, 'groups');
+      return groups.value;
     }
 
-    if (!force && (!groups.value || groups.value.length === 0)) {
-      const cached = readCache(currentId);
-      if (cached && cached.length > 0 && localStorage.getItem('device_api_key')) {
-        groups.value = cached;
-        return groups.value;
-      }
+    if (inFlight && !force) {
+      console.log('Groups already loading, waiting for existing request...');
+      return inFlight;
     }
-
-    if (inFlight) return inFlight;
+    
     loading.value = true;
+    console.log('Starting to load groups from database...');
+    
     inFlight = (async () => {
       try {
-        const data = await fetchGroups();
-        // Determine live device id after request (may be set by interceptors)
-        const liveId = getDeviceId();
+        const data = await fetchGroupsFromDatabase();
         groups.value = data;
-        // Write cache with the best-known id
-        writeCache(liveId || currentId, data);
-        lastDeviceId = liveId || currentId || null;
+        console.log('Successfully loaded', data.length, 'groups');
+        
+        if (data.length === 0) {
+          console.warn('No groups found. Make sure WhatsApp is connected and groups exist.');
+        }
+        
         return groups.value;
       } catch (e) {
-        error.value = e?.response?.data?.message || e?.message || 'Gagal memuat grup';
+        const errorMsg = e?.response?.data?.message || e?.message || 'Gagal memuat grup dari database';
+        error.value = errorMsg;
+        console.error('Error loading groups from database:', e);
+        console.error('Error details:', {
+          status: e?.response?.status,
+          statusText: e?.response?.statusText,
+          data: e?.response?.data
+        });
         return [];
       } finally {
         loading.value = false;
@@ -171,26 +149,55 @@ export function useGroups() {
     return inFlight;
   };
 
-  const refreshGroups = async () => loadGroups({ force: true });
+  const refreshGroups = async () => {
+    console.log('Refreshing groups (force reload)...');
+    return loadGroups({ force: true });
+  };
 
   const ensureFullGroupJid = async (jidOrId) => {
-    // Resolve using cached groups first (no network)
+    // Resolve using loaded groups first
     let val = String(jidOrId || '').trim();
     if (!val) return '';
     const clean = val.replace(/@g\.us$/i, '');
 
     const found = (groups.value || []).find((g) => {
-      const id = (g.meta?.id || '').replace(/@g\.us$/i, '');
-      const shortId = (g.meta?.shortId || '').replace(/@g\.us$/i, '');
+      const groupId = (g.meta?.groupId || '').replace(/@g\.us$/i, '');
       const value = (g.value || '').replace(/@g\.us$/i, '');
-      return id === clean || shortId === clean || value === clean;
+      return groupId === clean || value === clean;
     });
+    
     if (found?.value) {
       return found.value.includes('@g.us') ? found.value : `${found.value}@g.us`;
     }
 
-    // Fallback: just normalize format without extra calls
+    // Fallback: just normalize format
     return val.includes('@') ? val : `${val}@g.us`;
+  };
+
+  // Sync groups manually (trigger backend sync)
+  const syncGroups = async () => {
+    const deviceId = getDeviceId();
+    if (!deviceId) {
+      throw new Error('Device ID tidak ditemukan');
+    }
+    
+    console.log('Syncing groups for device:', deviceId);
+    
+    try {
+      loading.value = true;
+      const res = await userApi.post(`/whatsapp-groups/device/${deviceId}/sync`);
+      console.log('Sync response:', res.data);
+      
+      // After sync, reload groups from database
+      await loadGroups({ force: true });
+    } catch (e) {
+      const errorMsg = e?.response?.data?.message || e?.message || 'Gagal sinkronisasi grup';
+      error.value = errorMsg;
+      console.error('Error syncing groups:', e);
+      throw e;
+    } finally {
+      loading.value = false;
+    }
   };
 
   return {
@@ -201,6 +208,6 @@ export function useGroups() {
     refreshGroups,
     ensureFullGroupJid,
     clearGroups,
-    removeCacheFor,
+    syncGroups,
   };
 }

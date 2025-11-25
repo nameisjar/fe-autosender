@@ -1,6 +1,8 @@
 <template>
   <div class="wrapper">
     <h2>Feedback (Algo)</h2>
+    <small class="hint">Pengiriman akan berulang tiap minggu untuk setiap lesson. Waktu akan dikirim sesuai persis dengan input Anda.</small>
+
 
     <section class="schedule card">
       <!-- <h3>Buat Jadwal Feedback</h3> -->
@@ -21,21 +23,32 @@
 
         <div class="field">
           <label>Mulai dari Lesson ke-</label>
-          <input v-model.number="form.startLesson" type="number" min="1" required />
+          <select v-model.number="form.startLesson" required :disabled="!form.courseName">
+            <option value="" disabled>{{ form.courseName ? 'Pilih lesson' : 'Pilih course terlebih dahulu' }}</option>
+            <option v-for="lessonNum in availableLessons" :key="lessonNum" :value="lessonNum">
+              Lesson {{ lessonNum }}
+            </option>
+          </select>
         </div>
-
-        <!-- Delay diset default (disembunyikan) -->
-        <!-- <div class="field">
-          <label>Delay per penerima (ms)</label>
-          <input v-model.number="form.delay" type="number" min="0" step="100" />
-        </div> -->
 
         <div class="field">
           <label>Tanggal mulai</label>
           <input v-model="form.schedule" type="datetime-local" required />
-          <small class="hint">Pengiriman akan berulang tiap minggu untuk setiap lesson.</small>
         </div>
-
+        <!-- Tambah Preview Pesan -->
+        <div v-if="previewMessage" class="field span-2 preview-section">
+          <label>Preview Pesan Lesson {{ form.startLesson }}</label>
+          <div class="preview-box">
+            <pre>{{ previewMessage }}</pre>
+          </div>
+        </div>
+        
+        <div v-else-if="form.courseName && form.startLesson" class="field span-2 preview-section">
+          <div class="preview-box no-preview">
+            <p>Tidak ada template untuk Lesson {{ form.startLesson }} di course "{{ form.courseName }}"</p>
+          </div>
+        </div>
+        
         <div class="field span-2">
           <label>Penerima</label>
           <div class="recipients">
@@ -123,6 +136,12 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { 
+  convertToServerTime, 
+  formatLocalTime, 
+  isValidDateTime,
+  addInterval 
+} from '../utils/datetime.js';
 
 // Pastikan deviceId tersedia/tersimpan sebelum memuat label/kontak
 const ensureDeviceId = async () => {
@@ -158,8 +177,8 @@ const err = ref('');
 const recipients = ref([]);
 const recipientInput = ref('');
 
-// Use cached groups across app
-const { groups, loadingGroups, loadGroups, ensureFullGroupJid } = useGroups();
+// Use database-based groups instead of cache
+const { groups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups } = useGroups();
 const selectedGroupId = ref('');
 const recipientLabels = ref({}); // map recipient string -> label for chip
 
@@ -380,7 +399,7 @@ onMounted(async () => {
   await Promise.allSettled([loadTemplates(), loadGroups(), loadContacts(), loadLabels()]);
 });
 
-// Estimation helpers
+// Estimation helpers - perbaiki dengan utility functions
 const lessonsForCourse = computed(() => {
   if (!form.value.courseName) return [];
   return (templates.value || [])
@@ -388,35 +407,23 @@ const lessonsForCourse = computed(() => {
     .sort((a, b) => Number(a.lesson) - Number(b.lesson));
 });
 
-// Helper function to convert datetime-local to ISO string with proper timezone
-const convertToServerTime = (datetimeLocal) => {
-  if (!datetimeLocal) return '';
-  
-  // Create date object from datetime-local input (assumes local timezone)
-  const localDate = new Date(datetimeLocal);
-  
-  // Convert to ISO string which includes timezone info
-  // This ensures consistent behavior between local and deployed environments
-  return localDate.toISOString();
-};
+// Daftar lesson yang tersedia untuk course yang dipilih
+const availableLessons = computed(() => {
+  if (!form.value.courseName) return [];
+  const lessons = lessonsForCourse.value.map((t) => Number(t.lesson));
+  return lessons.length > 0 ? lessons : [];
+});
 
-// Helper to format for display with local timezone
-const formatLocalTime = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString('id-ID', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Jakarta'
-    });
-  } catch {
-    return '';
+// Watch untuk reset startLesson ketika course berubah
+watch(() => form.value.courseName, (newCourse) => {
+  if (newCourse) {
+    // Reset ke lesson pertama yang tersedia atau 1
+    const lessons = availableLessons.value;
+    form.value.startLesson = lessons.length > 0 ? lessons[0] : 1;
+  } else {
+    form.value.startLesson = 1;
   }
-};
+});
 
 const estimatedCount = computed(() => {
   const start = Number(form.value.startLesson || 1);
@@ -427,12 +434,14 @@ const estimatedCount = computed(() => {
 const lastDate = computed(() => {
   try {
     if (!form.value.schedule || !estimatedCount.value) return '';
+    
+    if (!isValidDateTime(form.value.schedule)) return '';
+    
     const start = new Date(form.value.schedule);
-    if (isNaN(start.getTime())) return '';
     const weeks = Math.max(estimatedCount.value - 1, 0);
-    const last = new Date(start);
-    last.setDate(last.getDate() + weeks * 7);
-    // Use formatLocalTime for consistent timezone display
+    const last = addInterval(start, 'weekly', weeks);
+    
+    // Use formatLocalTime untuk konsistensi timezone display
     return formatLocalTime(last.toISOString());
   } catch {
     return '';
@@ -445,8 +454,9 @@ const validationError = computed(() => {
   if (!form.value.courseName) return 'Course wajib dipilih';
   if (!form.value.startLesson || Number(form.value.startLesson) <= 0) return 'Start lesson minimal 1';
   if (!form.value.schedule) return 'Tanggal mulai wajib diisi';
-  const sd = new Date(form.value.schedule);
-  if (isNaN(sd.getTime())) return 'Format tanggal mulai tidak valid';
+  
+  if (!isValidDateTime(form.value.schedule)) return 'Format tanggal mulai tidak valid';
+  
   if (recipients.value.length === 0) return 'Minimal satu penerima';
   const hasAll = recipients.value.includes('all');
   const hasLabel = recipients.value.some((r) => r.startsWith('label'));
@@ -463,7 +473,9 @@ const submit = async () => {
   }
   loading.value = true;
   try {
-    const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : '';
+    // Convert schedule menggunakan utility function
+    const scheduleISO = convertToServerTime(form.value.schedule);
+    
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
       err.value = 'Device tidak ditemukan atau belum login';
@@ -475,7 +487,7 @@ const submit = async () => {
       courseName: form.value.courseName,
       startLesson: form.value.startLesson,
       delay: form.value.delay ?? 5000,
-      schedule: scheduleISO,
+      schedule: scheduleISO, // Waktu sudah dinormalisasi
       recipients: recipients.value,
       deviceId, // pass deviceId required by backend
     };
@@ -495,6 +507,28 @@ const submit = async () => {
     loading.value = false;
   }
 };
+
+const handleSyncGroups = async () => {
+  try {
+    err.value = '';
+    await syncGroups();
+    msg.value = 'Grup berhasil disinkronkan dari WhatsApp';
+  } catch (e) {
+    err.value = e?.message || 'Gagal sinkronisasi grup';
+  }
+};
+
+// Preview pesan berdasarkan course dan lesson yang dipilih
+const previewMessage = computed(() => {
+  if (!form.value.courseName || !form.value.startLesson) return '';
+  
+  const template = templates.value.find(
+    (t) => t.courseName === form.value.courseName && 
+           Number(t.lesson) === Number(form.value.startLesson)
+  );
+  
+  return template?.message || '';
+});
 </script>
 
 <style scoped>
@@ -527,4 +561,38 @@ section { margin-top: 16px; }
 .templates { margin-top: 24px; }
 .filter { margin: 8px 0; display: flex; gap: 8px; align-items: center; }
 ul { padding-left: 16px; }
+
+.preview-section {
+  margin-top: 8px;
+}
+
+.preview-box {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.preview-box pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.preview-box.no-preview {
+  background: #fff8e1;
+  border-color: #ffd54f;
+}
+
+.preview-box.no-preview p {
+  margin: 0;
+  color: #f57c00;
+  font-size: 14px;
+}
 </style>

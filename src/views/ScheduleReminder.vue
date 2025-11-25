@@ -44,10 +44,12 @@
         <div class="field">
           <label>Mulai</label>
           <input v-model="form.startDate" type="datetime-local" required />
+          <small class="hint">Waktu akan dikirim sesuai persis dengan input Anda</small>
         </div>
         <div class="field">
           <label>Selesai</label>
           <input v-model="form.endDate" type="datetime-local" required />
+          <small class="hint">Jadwal terakhir sebelum waktu ini</small>
         </div>
 
         <div class="field span-2">
@@ -132,8 +134,13 @@
 import { ref, computed } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { 
+  convertToServerTime, 
+  formatLocalTime, 
+  isValidDateTime,
+  calculateEstimatedCount 
+} from '../utils/datetime.js';
 
-// Pastikan deviceId tersedia di localStorage agar pemuatan labels/kontak tepat sasaran
 const ensureDeviceId = async () => {
   let deviceId = localStorage.getItem('device_selected_id');
   if (deviceId) return deviceId;
@@ -175,12 +182,11 @@ const loading = ref(false);
 const msg = ref('');
 const err = ref('');
 
-// Use cached groups across app
-const { groups, loadingGroups, loadGroups, ensureFullGroupJid } = useGroups();
+const { groups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups } = useGroups();
 const selectedGroupId = ref('');
-const recipientLabels = ref({}); // map recipient string -> label for chip
+const recipientLabels = ref({});
 
-const contacts = ref([]); // { id, firstName, lastName, phone }
+const contacts = ref([]);
 const selectedContactId = ref('');
 const loadingContacts = ref(false);
 const contactSearch = ref('');
@@ -194,8 +200,7 @@ const filteredContacts = computed(() => {
   );
 });
 
-// labels (kelas)
-const labels = ref([]); // { value: 'label_<slugOrName>', label: 'Name' }
+const labels = ref([]);
 const selectedLabelValue = ref('');
 const loadingLabels = ref(false);
 const labelSearch = ref('');
@@ -221,7 +226,6 @@ const mapLabels = (items) => {
     .filter(Boolean);
 };
 
-// NEW: derive labels from contacts when API returns none
 const deriveLabelsFromContacts = () => {
   const names = new Set();
   (contacts.value || []).forEach((c) => {
@@ -240,7 +244,6 @@ const loadLabels = async () => {
     const res = await userApi.get('/contacts/labels', { params: deviceId ? { deviceId } : {} });
     const data = res?.data;
     let list = Array.isArray(data?.labels) ? data.labels : Array.isArray(data) ? data : [];
-    // Fallback: derive from contacts if empty
     if (!Array.isArray(list) || list.length === 0) {
       if (!contacts.value || contacts.value.length === 0) {
         await loadContacts().catch(() => {});
@@ -283,6 +286,16 @@ const addSelectedGroup = async () => {
     if (found) recipientLabels.value[fullJid] = `Group: ${found.label}`;
   }
   selectedGroupId.value = '';
+};
+
+const handleSyncGroups = async () => {
+  try {
+    err.value = '';
+    await syncGroups();
+    msg.value = 'Grup berhasil disinkronkan dari WhatsApp';
+  } catch (e) {
+    err.value = e?.message || 'Gagal sinkronisasi grup';
+  }
 };
 
 const contactLabelNames = (c) => {
@@ -353,88 +366,31 @@ function removeRecipient(index) {
 }
 
 const validationError = computed(() => {
-  // Basic validations mirroring backend rules
   if (!form.value.name) return 'Nama wajib diisi';
   if (!form.value.message) return 'Pesan wajib diisi';
   if (!form.value.startDate || !form.value.endDate) return 'Rentang tanggal wajib diisi';
+  if (!isValidDateTime(form.value.startDate) || !isValidDateTime(form.value.endDate)) {
+    return 'Format tanggal tidak valid';
+  }
   const start = new Date(form.value.startDate);
   const end = new Date(form.value.endDate);
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'Format tanggal tidak valid';
   if (start > end) return 'Tanggal mulai harus sebelum tanggal selesai';
   if (!form.value.interval || Number(form.value.interval) <= 0)
     return 'Interval harus lebih dari 0';
   if (recipients.value.length === 0) return 'Minimal satu penerima';
-  // Disallow mixing 'all' with labels
   const hasAll = recipients.value.includes('all');
   const hasLabel = recipients.value.some((r) => r.startsWith('label'));
   if (hasAll && hasLabel) return 'Tidak boleh mencampur all dan label_* dalam penerima';
   return '';
 });
 
-// Helper function to convert datetime-local to ISO string with proper timezone
-const convertToServerTime = (datetimeLocal) => {
-  if (!datetimeLocal) return '';
-  
-  // Create date object from datetime-local input (assumes local timezone)
-  const localDate = new Date(datetimeLocal);
-  
-  // Convert to ISO string which includes timezone info
-  // This ensures consistent behavior between local and deployed environments
-  return localDate.toISOString();
-};
-
-// Helper to format for display with local timezone
-const formatLocalTime = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString('id-ID', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Jakarta'
-    });
-  } catch {
-    return '';
-  }
-};
-
 const estimatedCount = computed(() => {
-  // Simple estimation of occurrences between start and end by recurrence + interval
-  try {
-    const start = new Date(form.value.startDate);
-    const end = new Date(form.value.endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 0;
-    let count = 0;
-    const cur = new Date(start);
-    // safety cap to prevent infinite loop in UI
-    const max = 10000;
-    while (cur <= end && count < max) {
-      count++;
-      switch (form.value.recurrence) {
-        case 'minute':
-          cur.setMinutes(cur.getMinutes() + Number(form.value.interval || 1));
-          break;
-        case 'hourly':
-          cur.setHours(cur.getHours() + Number(form.value.interval || 1));
-          break;
-        case 'daily':
-          cur.setDate(cur.getDate() + Number(form.value.interval || 1));
-          break;
-        case 'weekly':
-          cur.setDate(cur.getDate() + 7 * Number(form.value.interval || 1));
-          break;
-        case 'monthly':
-          cur.setMonth(cur.getMonth() + Number(form.value.interval || 1));
-          break;
-      }
-    }
-    return count >= max ? `${max}+` : count;
-  } catch {
-    return 0;
-  }
+  return calculateEstimatedCount(
+    form.value.startDate,
+    form.value.endDate, 
+    form.value.recurrence,
+    form.value.interval
+  );
 });
 
 async function submit() {
@@ -447,32 +403,29 @@ async function submit() {
 
   loading.value = true;
   try {
-    // Convert dates to proper ISO format
-    const startDateISO = form.value.startDate ? convertToServerTime(form.value.startDate) : '';
-    const endDateISO = form.value.endDate ? convertToServerTime(form.value.endDate) : '';
+    const startDateISO = convertToServerTime(form.value.startDate);
+    const endDateISO = convertToServerTime(form.value.endDate);
     
     if (!mediaFile.value) {
-      // Send as JSON when no media to ensure recipients stays an array
       await deviceApi.post('/messages/broadcasts/scheduled', {
         name: form.value.name,
         message: form.value.message,
         delay: form.value.delay ?? 5000,
         recurrence: form.value.recurrence,
         interval: form.value.interval,
-        startDate: startDateISO, // Use converted ISO format
-        endDate: endDateISO, // Use converted ISO format
+        startDate: startDateISO,
+        endDate: endDateISO,
         recipients: recipients.value,
       });
     } else {
-      // Use multipart only when media exists
       const fd = new FormData();
       fd.append('name', form.value.name);
       fd.append('message', form.value.message);
       fd.append('delay', String(form.value.delay ?? 5000));
       fd.append('recurrence', form.value.recurrence);
       fd.append('interval', String(form.value.interval));
-      fd.append('startDate', startDateISO); // Use converted ISO format
-      fd.append('endDate', endDateISO); // Use converted ISO format
+      fd.append('startDate', startDateISO);
+      fd.append('endDate', endDateISO);
       recipients.value.forEach((r) => fd.append('recipients', r));
       fd.append('media', mediaFile.value);
 
@@ -480,7 +433,6 @@ async function submit() {
     }
 
     msg.value = 'Jadwal reminder berhasil dibuat.';
-    // reset minimal
     form.value.name = '';
     form.value.message = '';
     form.value.delay = 5000;
@@ -492,7 +444,7 @@ async function submit() {
     mediaFile.value = null;
     mediaPreview.value = '';
   } catch (e) {
-    err.value = 'Gagal membuat jadwal reminder terjadwal (silahkan login WhatsApp)' || (e?.response?.data?.message || e?.response?.data?.error || e?.message || '');
+    err.value = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal reminder terjadwal (silahkan login WhatsApp)';
   } finally {
     loading.value = false;
   }

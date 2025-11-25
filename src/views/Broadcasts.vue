@@ -9,13 +9,6 @@
           <input v-model.trim="form.name" placeholder="Contoh: EC Minggu" required />
         </div>
 
-        <!-- Delay disembunyikan; gunakan default di kode -->
-        <!-- <div class="field">
-          <label>Delay per penerima (ms)</label>
-          <input v-model.number="form.delay" type="number" min="0" step="100" />
-          <small class="dim">Default: 5000 ms</small>
-        </div> -->
-
         <div class="field span-2">
           <label>Pesan</label>
           <textarea v-model.trim="form.message" rows="4" placeholder="Tulis pesan yang akan dikirim" required />
@@ -24,7 +17,7 @@
         <div class="field">
           <label>Jadwal</label>
           <input v-model="form.schedule" type="datetime-local" />
-          <small class="dim" v-if="form.schedule">Tanggal terpilih: {{ fmt(form.schedule) }}</small>
+          <small class="dim" v-if="form.schedule">Tanggal terpilih: {{ formatLocalTime(convertToServerTime(form.schedule)) }}</small>
         </div>
 
         <div class="field">
@@ -60,7 +53,6 @@
           <label>Tambah Kontak (opsional)</label>
           <div class="recipients">
             <div class="add">
-              <!-- <input v-model.trim="contactSearch" placeholder="Cari nama/nomor..." /> -->
               <select v-model="selectedContactId">
                 <option value="" disabled>Pilih kontak</option>
                 <option v-for="c in filteredContacts" :key="c.id" :value="c.phone">
@@ -91,7 +83,6 @@
           <label>Tambah Kelas (Label) (opsional)</label>
           <div class="recipients">
             <div class="add">
-              <!-- <input v-model.trim="labelSearch" placeholder="Cari kelas..." /> -->
               <select v-model="selectedLabelValue">
                 <option value="" disabled>Pilih label</option>
                 <option v-for="l in filteredLabels" :key="l.value" :value="l.value">{{ l.label }}</option>
@@ -118,8 +109,12 @@
 import { ref, computed } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { 
+  convertToServerTime, 
+  formatLocalTime, 
+  isValidDateTime 
+} from '../utils/datetime.js';
 
-// Pastikan ada device terpilih sebelum memuat data berbasis device (labels/kontak)
 const ensureDeviceId = async () => {
   let deviceId = localStorage.getItem('device_selected_id');
   if (deviceId) return deviceId;
@@ -158,43 +153,6 @@ const loading = ref(false);
 const msg = ref('');
 const err = ref('');
 
-const fmt = (d) => {
-  try {
-    const dd = new Date(d);
-    return isNaN(dd.getTime()) ? '-' : dd.toLocaleString();
-  } catch { return '-'; }
-};
-
-// Helper function to convert datetime-local to ISO string with proper timezone
-const convertToServerTime = (datetimeLocal) => {
-  if (!datetimeLocal) return '';
-  
-  // Create date object from datetime-local input (assumes local timezone)
-  const localDate = new Date(datetimeLocal);
-  
-  // Convert to ISO string which includes timezone info
-  // This ensures consistent behavior between local and deployed environments
-  return localDate.toISOString();
-};
-
-// Helper to format for display with local timezone
-const formatLocalTime = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString('id-ID', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Jakarta'
-    });
-  } catch {
-    return '';
-  }
-};
-
 function onFile(e) {
   const file = e.target.files?.[0];
   mediaFile.value = file || null;
@@ -220,10 +178,9 @@ function removeRecipient(index) {
   recipients.value.splice(index, 1);
 }
 
-// Use cached groups across app
-const { groups, loadingGroups, loadGroups, ensureFullGroupJid } = useGroups();
+const { groups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups } = useGroups();
 const selectedGroupId = ref('');
-const recipientLabels = ref({}); // map recipient string -> label for chip
+const recipientLabels = ref({});
 
 const chipLabel = (r) => recipientLabels.value[r] || r;
 
@@ -239,10 +196,19 @@ const addSelectedGroup = async () => {
   selectedGroupId.value = '';
 };
 
-// auto-load groups initially (fast cached)
+const handleSyncGroups = async () => {
+  try {
+    err.value = '';
+    await syncGroups();
+    msg.value = 'Grup berhasil disinkronkan dari WhatsApp';
+  } catch (e) {
+    err.value = e?.message || 'Gagal sinkronisasi grup';
+  }
+};
+
 loadGroups().catch(() => {});
 
-const contacts = ref([]); // { id, firstName, lastName, phone }
+const contacts = ref([]);
 const selectedContactId = ref('');
 const loadingContacts = ref(false);
 const contactSearch = ref('');
@@ -295,8 +261,7 @@ const addSelectedContact = () => {
   selectedContactId.value = '';
 };
 
-// Labels (kelas)
-const labels = ref([]); // { value: 'label_<slugOrName>', label: 'Name' }
+const labels = ref([]);
 const selectedLabelValue = ref('');
 const loadingLabels = ref(false);
 const labelSearch = ref('');
@@ -341,7 +306,6 @@ const loadLabels = async () => {
     const data = res?.data;
     let list = Array.isArray(data?.labels) ? data.labels : Array.isArray(data) ? data : [];
     if (!Array.isArray(list) || list.length === 0) {
-      // fallback dari contacts jika API labels kosong
       if (!contacts.value || contacts.value.length === 0) {
         await loadContacts();
       }
@@ -349,7 +313,6 @@ const loadLabels = async () => {
     }
     labels.value = mapLabels(list);
   } catch (_) {
-    // fallback dari contacts jika gagal
     if (!contacts.value || contacts.value.length === 0) {
       await loadContacts().catch(() => {});
     }
@@ -371,7 +334,6 @@ const addSelectedLabel = () => {
   selectedLabelValue.value = '';
 };
 
-// auto-load groups & contacts & labels
 loadGroups().catch(() => {});
 loadContacts().catch(() => {});
 loadLabels().catch(() => {});
@@ -380,6 +342,11 @@ const validationError = computed(() => {
   if (!form.value.name) return 'Nama wajib diisi';
   if (!form.value.message) return 'Pesan wajib diisi';
   if (recipients.value.length === 0) return 'Minimal satu penerima';
+  
+  if (form.value.schedule && !isValidDateTime(form.value.schedule)) {
+    return 'Format jadwal tidak valid';
+  }
+  
   const hasAll = recipients.value.includes('all');
   const hasLabel = recipients.value.some((r) => String(r).startsWith('label'));
   if (hasAll && hasLabel) return 'Tidak boleh mencampur all dan label_* dalam penerima';
@@ -397,11 +364,9 @@ async function submit() {
   try {
     const payloadDelay = form.value.delay ?? 5000;
     
-    // Convert schedule to proper ISO format if provided
     const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : undefined;
     
     if (!mediaFile.value) {
-      // JSON payload when no media
       await deviceApi.post('/messages/broadcasts', {
         name: form.value.name,
         message: form.value.message,
@@ -410,7 +375,6 @@ async function submit() {
         recipients: recipients.value,
       });
     } else {
-      // Multipart when media exists
       const fd = new FormData();
       fd.append('name', form.value.name);
       fd.append('message', form.value.message);
@@ -422,7 +386,6 @@ async function submit() {
     }
 
     msg.value = 'Broadcast berhasil dikirim/dijadwalkan.';
-    // reset minimal
     form.value.name = '';
     form.value.message = '';
     form.value.delay = 5000;
@@ -431,7 +394,7 @@ async function submit() {
     mediaFile.value = null;
     mediaPreview.value = '';
   } catch (e) {
-    err.value = 'Gagal mengirim broadcast (silahkan login WhatsApp)' || e?.response?.data?.message || e?.message;
+    err.value = e?.response?.data?.message || e?.message || 'Gagal mengirim broadcast (silahkan login WhatsApp)';
   } finally {
     loading.value = false;
   }

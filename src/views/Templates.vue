@@ -42,9 +42,9 @@
           <button class="btn outline" @click="loadFeedbacks" :disabled="loading">{{ loading ? 'Memuat...' : 'Muat' }}</button>
           <button class="btn" @click="expandAll">Buka Semua</button>
           <button class="btn" @click="collapseAll">Tutup Semua</button>
-          <button class="btn" @click="exportCSV" :disabled="!feedbacks.length">Export CSV</button>
-          <button class="btn" @click="triggerTplImport" :disabled="!isAdmin || importBusy">{{ importBusy ? 'Mengimpor...' : 'Import CSV' }}</button>
-          <input ref="tplFileInput" type="file" accept=".csv,text/csv" style="display:none" @change="onTplImportFileChange" />
+          <button class="btn" @click="exportXLSX" :disabled="!feedbacks.length">Export XLSX</button>
+          <button class="btn" @click="triggerTplImport" :disabled="!isAdmin || importBusy">{{ importBusy ? 'Mengimpor...' : 'Import CSV/XLSX' }}</button>
+          <input ref="tplFileInput" type="file" accept=".csv,text/csv,.xlsx,.xls" style="display:none" @change="onTplImportFileChange" />
         </div>
       </div>
 
@@ -227,26 +227,22 @@ const deleteFeedback = async (t) => {
   }
 };
 
-// CSV export for visible data
-const exportCSV = () => {
+// XLSX export for visible data
+const exportXLSX = () => {
   const rows = [];
   rows.push(['Course Name', 'Lesson', 'Message']);
   for (const c of courses.value) {
     for (const t of grouped.value[c]) {
-      rows.push([t.courseName, String(t.lesson ?? ''), (t.message ?? '').replace(/\n/g, ' ') ]);
+      rows.push([t.courseName, String(t.lesson ?? ''), t.message ?? '']);
     }
   }
-  const csv = rows.map((r) => r.map((cell) => '"' + String(cell).replace(/"/g, '""') + '"').join(',')).join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'feedback-templates.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Feedback Templates');
+  XLSX.writeFile(wb, 'feedback-templates.xlsx');
 };
 
-// CSV import for Templates (admin)
+// CSV/XLSX import for Templates (admin)
 const triggerTplImport = () => {
   if (!isAdmin.value) {
     err.value = 'Hanya admin yang dapat mengimpor template';
@@ -260,8 +256,8 @@ const triggerTplImport = () => {
 const onTplImportFileChange = async (e) => {
   const file = e?.target?.files?.[0];
   if (!file) return;
-  if (!/\.csv$/i.test(file.name)) {
-    err.value = 'Pilih file CSV';
+  if (!/\.csv$|\.xlsx$/i.test(file.name)) {
+    err.value = 'Pilih file CSV atau XLSX';
     e.target.value = '';
     return;
   }
@@ -428,3 +424,4 @@ loadFeedbacks();
   .message-preview { max-width: 250px; }
 }
 </style>
+``` 

@@ -1,7 +1,7 @@
 <template>
   <div class="wrapper">
     <h2>Reminder (Algo)</h2>
-
+    <small class="hint">Pengiriman akan berulang setiap minggu. Waktu akan dikirim sesuai persis dengan input Anda. Bisa digunakan untuk pengingat 1 hari sebelum kelas dan 3 jam sebelum kelas.</small>
     <section class="schedule card">
       <form @submit.prevent="submit" class="form-grid">
         <!-- Nama -->
@@ -25,7 +25,16 @@
         <div class="field">
           <label>Tanggal mulai</label>
           <input v-model="form.schedule" type="datetime-local" required />
-          <small class="hint">Pengiriman akan berulang setiap minggu</small>
+        </div>
+
+        <div class="field span-2">
+          <label>Media (opsional)</label>
+          <input type="file" @change="onFile" :accept="acceptTypes" />
+          <div v-if="mediaPreview" class="preview">
+            <img v-if="isImage" :src="mediaPreview" alt="preview" />
+            <div v-else class="file-chip">{{ mediaName }}</div>
+            <button type="button" class="btn-remove" @click="removeMedia">Hapus Media</button>
+          </div>
         </div>
 
         <div class="field span-2">
@@ -113,6 +122,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { 
+  convertToServerTime, 
+  formatLocalTime, 
+  isValidDateTime,
+  addInterval 
+} from '../utils/datetime.js';
 
 // Pastikan deviceId tersedia/tersimpan sebelum memuat label/kontak
 const ensureDeviceId = async () => {
@@ -144,12 +159,35 @@ const loading = ref(false);
 const msg = ref('');
 const err = ref('');
 
+// Media handling
+const mediaFile = ref(null);
+const mediaPreview = ref('');
+const acceptTypes = '.png,.jpg,.jpeg,.webp,.gif,.mp4,.mp3,.wav,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+
+const isImage = computed(() => mediaFile.value && mediaFile.value.type?.startsWith('image'));
+const mediaName = computed(() => mediaFile.value?.name || '');
+
+function onFile(e) {
+  const file = e.target.files?.[0];
+  mediaFile.value = file || null;
+  if (file && file.type?.startsWith('image')) {
+    mediaPreview.value = URL.createObjectURL(file);
+  } else {
+    mediaPreview.value = '';
+  }
+}
+
+function removeMedia() {
+  mediaFile.value = null;
+  mediaPreview.value = '';
+}
+
 // Recipients (same behaviour as ScheduleReminder)
 const recipients = ref([]);
 const recipientInput = ref('');
 
 // Use cached groups across app
-const { groups, loadingGroups, loadGroups, ensureFullGroupJid } = useGroups();
+const { groups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups } = useGroups();
 const selectedGroupId = ref('');
 const recipientLabels = ref({}); // map recipient string -> label for chip
 
@@ -261,6 +299,17 @@ const addSelectedGroup = async () => {
   selectedGroupId.value = '';
 };
 
+// Sync groups from WhatsApp (database will be updated)
+const handleSyncGroups = async () => {
+  try {
+    err.value = '';
+    await syncGroups();
+    msg.value = 'Grup berhasil disinkronkan dari WhatsApp';
+  } catch (e) {
+    err.value = e?.message || 'Gagal sinkronisasi grup';
+  }
+};
+
 const contactLabelNames = (c) => {
   try {
     const arr = (c?.ContactLabel || []).map((x) => x?.label?.name).filter((n) => n && !String(n).startsWith('device_'));
@@ -319,31 +368,6 @@ onMounted(async () => {
   await Promise.allSettled([loadGroups(), loadContacts(), loadLabels()]);
 });
 
-// Helper function to convert datetime-local to ISO string with proper timezone
-const convertToServerTime = (datetimeLocal) => {
-  if (!datetimeLocal) return '';
-  const localDate = new Date(datetimeLocal);
-  return localDate.toISOString();
-};
-
-// Helper to format for display with local timezone
-const formatLocalTime = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString('id-ID', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Jakarta'
-    });
-  } catch {
-    return '';
-  }
-};
-
 const estimatedCount = computed(() => {
   return Number(form.value.lessons || 1);
 });
@@ -351,12 +375,14 @@ const estimatedCount = computed(() => {
 const lastDate = computed(() => {
   try {
     if (!form.value.schedule || !estimatedCount.value) return '';
+    
+    if (!isValidDateTime(form.value.schedule)) return '';
+    
     const start = new Date(form.value.schedule);
-    if (isNaN(start.getTime())) return '';
     const weeks = Math.max(estimatedCount.value - 1, 0);
-    const last = new Date(start);
-    last.setDate(last.getDate() + weeks * 7);
-    // Use formatLocalTime for consistent timezone display
+    const last = addInterval(start, 'weekly', weeks);
+    
+    // Use formatLocalTime untuk konsistensi timezone display
     return formatLocalTime(last.toISOString());
   } catch {
     return '';
@@ -369,8 +395,9 @@ const validationError = computed(() => {
   if (!form.value.message) return 'Pesan wajib diisi';
   if (!form.value.lessons || Number(form.value.lessons) <= 0) return 'Jumlah lesson minimal 1';
   if (!form.value.schedule) return 'Tanggal mulai wajib diisi';
-  const sd = new Date(form.value.schedule);
-  if (isNaN(sd.getTime())) return 'Format tanggal mulai tidak valid';
+  
+  if (!isValidDateTime(form.value.schedule)) return 'Format tanggal mulai tidak valid';
+  
   if (recipients.value.length === 0) return 'Minimal satu penerima';
   const hasAll = recipients.value.includes('all');
   const hasLabel = recipients.value.some((r) => r.startsWith('label'));
@@ -387,23 +414,42 @@ const submit = async () => {
   }
   loading.value = true;
   try {
-    const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : '';
+    // Convert schedule menggunakan utility function
+    const scheduleISO = convertToServerTime(form.value.schedule);
+    
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
       err.value = 'Device tidak ditemukan atau belum login';
       loading.value = false;
       return;
     }
-    const payload = {
-      name: form.value.name,
-      message: form.value.message,
-      lessons: form.value.lessons,
-      delay: form.value.delay ?? 5000,
-      schedule: scheduleISO,
-      recipients: recipients.value,
-      deviceId, // pass deviceId required by backend
-    };
-    await deviceApi.post('/messages/broadcasts/reminder-algo', payload);
+    
+    if (!mediaFile.value) {
+      // Kirim tanpa media (JSON)
+      const payload = {
+        name: form.value.name,
+        message: form.value.message,
+        lessons: form.value.lessons,
+        delay: form.value.delay ?? 5000,
+        schedule: scheduleISO,
+        recipients: recipients.value,
+        deviceId,
+      };
+      await deviceApi.post('/messages/broadcasts/reminder-algo', payload);
+    } else {
+      // Kirim dengan media (FormData)
+      const fd = new FormData();
+      fd.append('name', form.value.name);
+      fd.append('message', form.value.message);
+      fd.append('lessons', String(form.value.lessons));
+      fd.append('delay', String(form.value.delay ?? 5000));
+      fd.append('schedule', scheduleISO);
+      fd.append('deviceId', deviceId);
+      recipients.value.forEach((r) => fd.append('recipients', r));
+      fd.append('media', mediaFile.value);
+      await deviceApi.post('/messages/broadcasts/reminder-algo', fd);
+    }
+    
     msg.value = 'Jadwal reminder berhasil dibuat.';
     form.value.name = '';
     form.value.message = '';
@@ -412,6 +458,8 @@ const submit = async () => {
     form.value.schedule = '';
     recipients.value = [];
     recipientLabels.value = {};
+    mediaFile.value = null;
+    mediaPreview.value = '';
   } catch (e) {
     const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal reminder';
     err.value = errorMsg;
@@ -419,6 +467,9 @@ const submit = async () => {
     loading.value = false;
   }
 };
+
+// auto-load groups initially (fast cached)
+loadGroups().catch(() => {});
 </script>
 
 <style scoped>
@@ -447,4 +498,10 @@ section { margin-top: 16px; }
 .recipients .add select { flex: 1; }
 .hint { color: #666; }
 .info { color: #333; display: flex; justify-content: space-between; align-items: center; }
+
+.preview { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.preview img { max-width: 220px; max-height: 140px; border-radius: 6px; border: 1px solid #ddd; }
+.file-chip { display: inline-block; background: #f3f3f3; padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; }
+.btn-remove { padding: 4px 8px; background: #fee; border: 1px solid #fcc; color: #c00; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-remove:hover { background: #fdd; }
 </style>
