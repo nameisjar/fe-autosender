@@ -1,136 +1,293 @@
 <template>
   <div class="wrapper">
-    <h2>Jadwal Saya</h2>
-
-    <div class="toolbar card">
-      <input v-model="q" placeholder="Cari nama..." />
-      <select v-model="statusFilter">
-        <option value="all">Semua</option>
-        <option value="upcoming">Proses Dikirim</option>
-        <option value="sent">Sudah Dikirim</option>
-        <option value="inactive">Nonaktif</option>
-      </select>
-      <select v-model="selectedDeviceId" @change="onDeviceChange">
-        <option value="">Pilih Perangkat</option>
-        <option v-for="d in devices" :key="d.id" :value="d.id">{{ d.name || d.id }} — {{ d.status }}</option>
-      </select>
-      <select v-model="sortBy" title="Urutkan berdasarkan">
-        <option value="schedule">Jadwal Terdekat</option>
-        <option value="name">Nama</option>
-      </select>
-      <select v-model="sortDir" title="Arah urutan">
-        <option value="asc">↑</option>
-        <option value="desc">↓</option>
-      </select>
-      <select v-model.number="pageSize" title="Jumlah baris per halaman">
-        <option :value="10">10</option>
-        <option :value="25">25</option>
-        <option :value="50">50</option>
-      </select>
-      <button class="btn outline" @click="load" :disabled="loading">{{ loading ? 'Memuat...' : 'Muat Ulang' }}</button>
+    <div class="page-header">
+      <div class="header-content">
+        <h2>
+          <svg class="header-icon" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M16 2V6M8 2V6M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Jadwal Saya
+        </h2>
+        <p class="subtitle">Kelola dan pantau jadwal broadcast Anda</p>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <div>
+            <div class="stat-value">{{ sortedGroups.filter(g => selectedOf(g)?.isSent).length }}</div>
+            <div class="stat-label">Terkirim</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <div>
+            <div class="stat-value">{{ sortedGroups.filter(g => !selectedOf(g)?.isSent && selectedOf(g)?.status !== false).length }}</div>
+            <div class="stat-label">Terjadwal</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          <div>
+            <div class="stat-value">{{ sortedGroups.filter(g => selectedOf(g)?.status === false).length }}</div>
+            <div class="stat-label">Nonaktif</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="table-wrap card">
-      <table>
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Jadwal</th>
-            <th>Status</th>
-            <th>Pesan</th>
-            <th>Media</th>
-            <th>Penerima</th>
-            <th>Gagal Terkirim</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="g in visibleGroups" :key="g.name">
-            <td>
-              <div class="name">{{ displayName(g) }}</div>
-              <small class="dim">Total: {{ g.broadcasts.length }} jadwal</small>
-            </td>
-            <td>
-              <select v-model="selections[g.name]">
+    <div class="toolbar-card">
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input v-model="q" placeholder="Cari nama jadwal..." />
+        </div>
+        
+        <div class="filter-group">
+          <select v-model="statusFilter" class="filter-select">
+            <option value="all">📋 Semua Status</option>
+            <option value="upcoming">⏰ Proses Dikirim</option>
+            <option value="sent">✅ Sudah Dikirim</option>
+            <option value="inactive">❌ Nonaktif</option>
+          </select>
+          
+          <select v-model="selectedDeviceId" @change="onDeviceChange" class="filter-select">
+            <option value="">📱 Pilih Perangkat</option>
+            <option v-for="d in devices" :key="d.id" :value="d.id">{{ d.name || d.id }} — {{ d.status }}</option>
+          </select>
+          
+          <select v-model="sortBy" class="filter-select" title="Urutkan berdasarkan">
+            <option value="schedule">📅 Jadwal Terdekat</option>
+            <option value="name">🔤 Nama</option>
+          </select>
+          
+          <select v-model="sortDir" class="filter-select sort-dir" title="Arah urutan">
+            <option value="asc">↑ Naik</option>
+            <option value="desc">↓ Turun</option>
+          </select>
+          
+          <select v-model.number="pageSize" class="filter-select" title="Jumlah baris per halaman">
+            <option :value="10">10 baris</option>
+            <option :value="25">25 baris</option>
+            <option :value="50">50 baris</option>
+          </select>
+        </div>
+        
+        <button class="btn-reload" @click="load" :disabled="loading">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loading }">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          {{ loading ? 'Memuat...' : 'Muat Ulang' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="schedule-grid">
+      <div v-for="g in visibleGroups" :key="g.name" class="schedule-card">
+        <div class="card-header">
+          <div class="header-left">
+            <h3 class="schedule-name">{{ displayName(g) }}</h3>
+            <span class="schedule-count">{{ g.broadcasts.length }} jadwal</span>
+          </div>
+          <div class="header-right">
+            <span class="status-badge" :class="badgeClass(selectedOf(g))">
+              <span class="badge-dot"></span>
+              {{ badgeText(selectedOf(g)) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="info-row">
+            <div class="info-item full-width">
+              <label class="info-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <path d="M16 2V6M8 2V6M3 10H21"/>
+                </svg>
+                Pilih Jadwal
+              </label>
+              <select v-model="selections[g.name]" class="schedule-select">
                 <option v-for="b in g.broadcasts" :key="b.id" :value="b.id">
                   {{ fmtWithDay(b.schedule) }} — {{ statusShort(b) }}
                 </option>
               </select>
-            </td>
-            <td>
-              <span class="badge" :class="badgeClass(selectedOf(g))">{{ badgeText(selectedOf(g)) }}</span>
-              <button
-                class="btn-small danger"
-                v-if="canDelete(selectedOf(g))"
-                @click="confirmDelete(g.name)"
-              >Hapus</button>
-            </td>
-           
-            <td class="msg-cell">
-              <div class="msg-text" v-if="selectedOf(g)?.message">{{ selectedOf(g).message }}</div>
-              <div v-else class="dim">-</div>
-            </td>
-            <td class="media-cell">
-              <template v-if="selectedOf(g)?.mediaPath">
-                <a :href="mediaUrl(selectedOf(g).mediaPath)" target="_blank" rel="noopener" class="media-link">Lihat</a>
+            </div>
+          </div>
+
+          <div class="info-row" v-if="selectedOf(g)?.message">
+            <div class="info-item full-width">
+              <label class="info-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Pesan
+              </label>
+              <div class="message-preview">{{ selectedOf(g).message }}</div>
+            </div>
+          </div>
+
+          <div class="info-row" v-if="selectedOf(g)?.mediaPath">
+            <div class="info-item full-width">
+              <label class="info-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="m21 15-5-5L5 21"/>
+                </svg>
+                Media
+              </label>
+              <div class="media-preview">
+                <a :href="mediaUrl(selectedOf(g).mediaPath)" target="_blank" rel="noopener" class="media-link">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                  Lihat Media
+                </a>
                 <img
                   v-if="isImagePath(selectedOf(g).mediaPath)"
                   :src="mediaUrl(selectedOf(g).mediaPath)"
                   alt="media"
-                  class="thumb"
+                  class="media-thumb"
                 />
-              </template>
-              <span v-else class="dim">-</span>
-            </td>
-            <td>
-              <div class="chips">
-                <span v-for="lbl in groupRecipientLabels(selectedOf(g))" :key="'g-'+lbl" class="chip">{{ lbl }}</span>
-                <span v-for="lbl in labelRecipientLabels(selectedOf(g))" :key="'l-'+lbl" class="chip chip-label">Label: {{ lbl }}</span>
-                <span v-for="num in phoneRecipients(selectedOf(g))" :key="'p-'+num" class="chip chip-num">{{ getPhoneDisplay(num) }}</span>
               </div>
-            </td>
-            <td class="failed-cell">
-              <template v-if="getFailedInfo(selectedOf(g)).count > 0">
-                <div class="failed-info">
-                  <!-- <div class="failed-count">
-                    <span class="badge-failed">{{ getFailedInfo(selectedOf(g)).count }} gagal</span>
-                  </div> -->
-                  <div class="failed-groups" v-if="getFailedInfo(selectedOf(g)).groups.length > 0">
-                    <!-- <small class="dim">Group:</small> -->
-                    <div class="chips">
-                      <span v-for="grp in getFailedInfo(selectedOf(g)).groups" :key="grp" class="chip chip-failed">
-                        {{ grp }}
-                      </span>
-                    </div>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-item full-width">
+              <label class="info-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Penerima
+              </label>
+              <div class="recipients-grid">
+                <span v-for="lbl in groupRecipientLabels(selectedOf(g))" :key="'g-'+lbl" class="recipient-chip group-chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  {{ lbl }}
+                </span>
+                <span v-for="lbl in labelRecipientLabels(selectedOf(g))" :key="'l-'+lbl" class="recipient-chip label-chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                  </svg>
+                  {{ lbl }}
+                </span>
+                <span v-for="num in phoneRecipients(selectedOf(g))" :key="'p-'+num" class="recipient-chip phone-chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  {{ getPhoneDisplay(num) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-row" v-if="getFailedInfo(selectedOf(g)).count > 0">
+            <div class="info-item full-width">
+              <label class="info-label error-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                Gagal Terkirim ({{ getFailedInfo(selectedOf(g)).count }})
+              </label>
+              <div class="failed-container">
+                <div v-if="getFailedInfo(selectedOf(g)).groups.length > 0" class="failed-section">
+                  <div class="recipients-grid">
+                    <span v-for="grp in getFailedInfo(selectedOf(g)).groups" :key="grp" class="recipient-chip failed-chip">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                      </svg>
+                      {{ grp }}
+                    </span>
                   </div>
-                  <div class="failed-phones" v-if="getFailedInfo(selectedOf(g)).phones.length > 0">
-                    <!-- <small class="dim">Nomor:</small> -->
-                    <div class="chips">
-                      <span v-for="phone in getFailedInfo(selectedOf(g)).phones" :key="phone" class="chip chip-failed-phone">
-                        {{ phone }}
-                      </span>
-                    </div>
-                  </div>
-                  <!-- <div v-if="selectedOf(g)?.lastError" class="failed-error">
-                    <small class="error-text" :title="selectedOf(g).lastError">
-                      {{ truncateError(selectedOf(g).lastError) }}
-                    </small>
-                  </div> -->
                 </div>
-              </template>
-              <span v-else class="dim">-</span>
-            </td>
-          </tr>
-          <tr v-if="!loading && visibleGroups.length === 0">
-            <td colspan="7" class="empty">Tidak ada data</td>
-          </tr>
-        </tbody>
-      </table>
+                <div v-if="getFailedInfo(selectedOf(g)).phones.length > 0" class="failed-section">
+                  <div class="recipients-grid">
+                    <span v-for="phone in getFailedInfo(selectedOf(g)).phones" :key="phone" class="recipient-chip failed-chip">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                      </svg>
+                      {{ phone }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer" v-if="canDelete(selectedOf(g))">
+          <button class="btn-delete" @click="confirmDelete(g.name)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+            Hapus Jadwal
+          </button>
+        </div>
+      </div>
+
+      <div v-if="!loading && visibleGroups.length === 0" class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <path d="M16 2V6M8 2V6M3 10H21"/>
+        </svg>
+        <h3>Tidak Ada Jadwal</h3>
+        <p>Belum ada jadwal broadcast yang ditemukan</p>
+      </div>
     </div>
 
-    <div class="pager" v-if="meta.totalPages > 1">
-      <button class="btn" :disabled="page<=1 || loading" @click="goPrev">Prev</button>
-      <span>Halaman {{ page }} / {{ meta.totalPages }}</span>
-      <button class="btn" :disabled="!meta.hasMore || loading" @click="goNext">Next</button>
+    <div class="pagination" v-if="meta.totalPages > 1">
+      <button class="btn-page" :disabled="page<=1 || loading" @click="goPrev">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Sebelumnya
+      </button>
+      <div class="page-info">
+        <span class="current-page">{{ page }}</span>
+        <span class="page-separator">/</span>
+        <span class="total-pages">{{ meta.totalPages }}</span>
+      </div>
+      <button class="btn-page" :disabled="!meta.hasMore || loading" @click="goNext">
+        Selanjutnya
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
     </div>
 
     <p v-if="msg" class="success">{{ msg }}</p>
@@ -689,172 +846,807 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.wrapper { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-.toolbar { display: flex; gap: 8px; margin: 8px 0 16px; align-items: center; flex-wrap: wrap; }
-.card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,0.04); padding: 10px; }
-.toolbar input, .toolbar select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
-.btn { height: 36px; padding: 0 12px; border: 1px solid #d0d5dd; background: #f9fafb; border-radius: 8px; cursor: pointer; font-weight: 500; }
-.btn.outline { background: #fff; }
-.table-wrap { overflow: auto; border: 1px solid #eee; border-radius: 12px; }
- table { width: 100%; border-collapse: collapse; }
- thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
- th, td { padding: 10px; border-bottom: 1px solid #f0f0f0; text-align: left; }
-.name { font-weight: 600; }
-.dim { color: #777; }
-.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
-.badge.ok { background: #e7f8ec; color: #1a7f37; }
-.badge.info { background: #eaf2ff; color: #1d4ed8; }
-.badge.warn { background: #fff4e5; color: #8a4b0f; }
-.empty { text-align: center; color: #777; }
-.error { color: #c00; margin-top: 8px; }
-.success { color: #0a0; margin-top: 8px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.chip { background: #eef6ff; color: #0a4; border: 1px solid #bfe; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
-.more { color: #555; font-size: 12px; }
-.btn-small { margin-left: 8px; padding: 4px 8px; border-radius: 6px; border: 1px solid #c33; background: #e74c3c; color: #fff; cursor: pointer; font-size: 12px; }
-.btn-small.danger { border-color: #c33; background: #e74c3c; }
-.chip-num { background: #f7fff2; border-color: #cfe9bf; color: #2f7a1f; }
-.chip-label { background: #fff7f0; border-color: #ffd8b5; color: #8a4b0f; }
-.pager { display:flex; gap:8px; align-items:center; margin-top:12px; justify-content: center; }
-.msg-cell { max-width: 280px; }
-.msg-text { white-space: nowrap; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
-.media-cell { min-width: 120px; }
-.media-link { display:inline-block; margin-right:6px; font-size:12px; }
-.thumb { max-height: 48px; max-width: 80px; border:1px solid #ddd; border-radius:4px; display:block; margin-top:4px; }
-
-/* Failed Cell Styles */
-.failed-cell { min-width: 200px; max-width: 300px; }
-.failed-info { display: flex; flex-direction: column; gap: 8px; }
-.failed-count { display: flex; align-items: center; }
-.badge-failed { 
-  background: #fee; 
-  color: #c00; 
-  border: 1px solid #fcc;
-  padding: 4px 10px; 
-  border-radius: 12px; 
-  font-size: 12px; 
-  font-weight: 600;
+/* Base Styles - Konsisten dengan menu Broadcast */
+.wrapper { 
+  max-width: 1400px; 
+  margin: 0 auto; 
+  padding: 0 24px;
 }
-.failed-groups { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 4px; 
+
+/* Page Header - Konsisten dengan Broadcast */
+.page-header {
+  margin-bottom: 32px;
+}
+
+.header-content {
+  margin-bottom: 24px;
+}
+
+.header-content h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.header-icon {
+  width: 32px;
+  height: 32px;
+  color: #3b82f6;
+  stroke-width: 2.5;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+/* Stats Row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.stat-card svg {
+  width: 40px;
+  height: 40px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #64748b;
   margin-top: 4px;
 }
-.chip-failed { 
-  background: #fff0f0; 
-  border-color: #ffcccc; 
-  color: #cc0000; 
+
+/* Toolbar Card */
+.toolbar-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 250px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 14px;
+  width: 20px;
+  height: 20px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
   font-weight: 500;
+  color: #475569;
 }
-.failed-error { 
-  margin-top: 4px; 
-  padding: 6px 8px;
-  background: #fff9e6;
-  border-left: 3px solid #ffa500;
-  border-radius: 4px;
+
+.filter-select:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
 }
-.error-text { 
-  color: #8a4b0f; 
-  font-size: 11px; 
-  font-style: italic;
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.sort-dir {
+  min-width: 100px;
+}
+
+.btn-reload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-reload:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-reload:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-reload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-reload svg {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Schedule Grid */
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.schedule-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.schedule-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-name {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
   word-break: break-word;
 }
-.failed-phones { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 4px; 
-  margin-top: 4px;
-}
-.chip-failed-phone { 
-  background: #fff0f0; 
-  border-color: #ffcccc; 
-  color: #cc0000; 
-  font-weight: 500;
+
+.schedule-count {
+  display: inline-block;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #64748b;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
 }
 
-@media (max-width: 1024px) {
-  .toolbar {
-    grid-template-columns: repeat(3, 1fr);
+.header-right {
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-badge.ok {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.status-badge.ok .badge-dot {
+  background: #15803d;
+}
+
+.status-badge.info {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.status-badge.info .badge-dot {
+  background: #1e40af;
+}
+
+.status-badge.warn {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.status-badge.warn .badge-dot {
+  background: #92400e;
+}
+
+.card-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-label svg {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.error-label {
+  color: #dc2626;
+}
+
+.error-label svg {
+  color: #dc2626;
+}
+
+.schedule-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: #334155;
+}
+
+.schedule-select:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.schedule-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.message-preview {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #334155;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.media-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.media-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  text-decoration: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+  border: 1.5px solid #cbd5e1;
+}
+
+.media-link:hover {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.media-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.media-thumb {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.recipients-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recipient-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+.recipient-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.recipient-chip svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.group-chip {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.label-chip {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+  border-color: #a5b4fc;
+}
+
+.phone-chip {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.failed-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.failed-section {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+}
+
+.failed-chip {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.card-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-color: #f87171;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+}
+
+.btn-delete:active {
+  transform: translateY(0);
+}
+
+.btn-delete svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Empty State */
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.empty-state svg {
+  width: 64px;
+  height: 64px;
+  color: #cbd5e1;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ffffff;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-page svg {
+  width: 18px;
+  height: 18px;
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 10px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.current-page {
+  font-size: 20px;
+}
+
+.page-separator {
+  opacity: 0.7;
+}
+
+.total-pages {
+  opacity: 0.9;
+}
+
+/* Messages */
+.error, .success {
+  margin-top: 20px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 14px;
+  border: 1px solid;
+}
+
+.error {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.success {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .wrapper {
+    padding: 0 20px;
+  }
+
+  .schedule-grid {
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .wrapper {
-    padding: 0 12px;
+    padding: 0 16px;
   }
-  
-  h2 {
-    font-size: 20px;
+
+  .header-content h2 {
+    font-size: 24px;
   }
-  
+
+  .header-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-grid {
+    grid-template-columns: 1fr;
+  }
+
   .toolbar {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    flex-direction: column;
   }
-  
-  .toolbar input,
-  .toolbar select,
-  .toolbar button {
+
+  .search-box {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .filter-group {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .filter-select {
     width: 100%;
   }
-  
-  .card {
-    padding: 8px;
+
+  .btn-reload {
+    width: 100%;
+    justify-content: center;
   }
-  
-  table {
-    font-size: 13px;
-    min-width: 800px;
+
+  .info-row {
+    grid-template-columns: 1fr;
   }
-  
-  th, td {
-    padding: 8px;
+
+  .pagination {
+    flex-direction: column;
+    gap: 12px;
   }
-  
-  .msg-cell {
-    max-width: 200px;
+
+  .btn-page {
+    width: 100%;
+    justify-content: center;
   }
-  
-  .failed-cell {
-    max-width: 250px;
+
+  .card-header,
+  .card-body,
+  .card-footer {
+    padding: 20px;
   }
 }
 
 @media (max-width: 480px) {
-  h2 {
-    font-size: 18px;
+  .wrapper {
+    padding: 0 12px;
   }
-  
-  .toolbar {
-    grid-template-columns: 1fr;
+
+  .header-content h2 {
+    font-size: 20px;
   }
-  
-  .card {
-    padding: 6px;
+
+  .stat-card {
+    padding: 16px;
   }
-  
-  table {
-    font-size: 12px;
+
+  .stat-card svg {
+    width: 32px;
+    height: 32px;
   }
-  
-  th, td {
-    padding: 6px;
+
+  .stat-value {
+    font-size: 24px;
   }
-  
-  .btn {
-    height: 34px;
-    font-size: 13px;
+
+  .schedule-card {
+    border-radius: 12px;
   }
-  
-  .chip {
-    font-size: 11px;
-    padding: 2px 6px;
+
+  .card-header,
+  .card-body,
+  .card-footer {
+    padding: 16px;
   }
-  
-  .badge {
-    font-size: 11px;
+
+  .schedule-name {
+    font-size: 16px;
+  }
+
+  .toolbar-card {
+    padding: 16px;
   }
 }
 </style>

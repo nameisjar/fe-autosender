@@ -1,111 +1,307 @@
 <template>
   <div class="wrapper">
-    <h2>Template Feedback</h2>
-
-    <section class="tpl">
-      <!-- <h3>Kelola Template Feedback</h3> -->
-      <div v-if="isAdmin" class="form card">
-        <div class="form-row">
-          <label class="field field-course">
-            <span>Course name</span>
-            <input v-model="fb.courseName" placeholder="Course name" />
-          </label>
-          <label class="field field-lesson">
-            <span>Lesson</span>
-            <input v-model.number="fb.lesson" type="number" min="1" placeholder="1" />
-          </label>
-        </div>
-        <div class="form-row">
-          <label class="field field-message">
-            <span>Message</span>
-            <textarea 
-              v-model="fb.message" 
-              placeholder="Tulis pesan feedback di sini..."
-              rows="4"
-            ></textarea>
-          </label>
-        </div>
-        <div class="form-actions">
-          <button class="btn primary" @click="createFeedback" :disabled="submitting">{{ submitting ? 'Menyimpan...' : 'Tambah' }}</button>
-        </div>
+    <div class="page-header">
+      <div class="header-content">
+        <h2>
+          <svg class="header-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+            <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+            <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+            <polyline points="10 9 9 9 8 9" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          Template Feedback
+        </h2>
+        <p class="subtitle">Kelola template pesan feedback untuk berbagai course</p>
       </div>
-      <div v-else class="hint">Hanya admin yang dapat mengelola template feedback.</div>
-
-      <div class="toolbar card">
-        <div class="filters">
-          <div class="field grow">
-            <label>Filter course</label>
-            <input v-model="fbFilter" placeholder="Filter course" />
+      <div class="stats-row">
+        <div class="stat-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <div>
+            <div class="stat-value">{{ feedbacks.length }}</div>
+            <div class="stat-label">Total Template</div>
           </div>
         </div>
-        <div class="actions">
-          <button class="btn outline" @click="loadFeedbacks" :disabled="loading">{{ loading ? 'Memuat...' : 'Muat' }}</button>
-          <button class="btn" @click="expandAll">Buka Semua</button>
-          <button class="btn" @click="collapseAll">Tutup Semua</button>
-          <button class="btn" @click="exportXLSX" :disabled="!feedbacks.length">Export XLSX</button>
-          <button class="btn" @click="triggerTplImport" :disabled="!isAdmin || importBusy">{{ importBusy ? 'Mengimpor...' : 'Import CSV/XLSX' }}</button>
+        <div class="stat-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+          </svg>
+          <div>
+            <div class="stat-value">{{ courses.length }}</div>
+            <div class="stat-label">Total Course</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <div>
+            <div class="stat-value">{{ mostLessons }}</div>
+            <div class="stat-label">Max Lesson</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section v-if="isAdmin" class="create-card">
+      <div class="card-header-section">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          Tambah Template Baru
+        </h3>
+      </div>
+      <form @submit.prevent="createFeedback" class="form-grid">
+        <div class="form-group">
+          <label>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+            Nama Course
+          </label>
+          <input v-model="fb.courseName" placeholder="Contoh: Algorithmics" required />
+        </div>
+        <div class="form-group compact">
+          <label>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            Lesson
+          </label>
+          <input v-model.number="fb.lesson" type="number" min="1" placeholder="1" required />
+        </div>
+        <div class="form-group full-width">
+          <label>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Pesan Template
+          </label>
+          <textarea 
+            v-model="fb.message" 
+            placeholder="Tulis pesan feedback di sini... (Gunakan enter untuk baris baru)"
+            rows="5"
+            required
+          ></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn-submit" type="submit" :disabled="submitting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            {{ submitting ? 'Menyimpan...' : 'Tambah Template' }}
+          </button>
+        </div>
+      </form>
+      <div class="form-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        Format pesan akan dipertahankan seperti yang Anda ketik (termasuk baris baru dan spasi)
+      </div>
+      <p v-if="msg" class="success-message">{{ msg }}</p>
+      <p v-if="err" class="error-message">{{ err }}</p>
+    </section>
+
+    <div v-else class="admin-only-card">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <p>Hanya admin yang dapat mengelola template feedback</p>
+    </div>
+
+    <section class="list-card">
+      <div class="card-header-section">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Daftar Template ({{ feedbacks.length }})
+        </h3>
+        <button class="btn-reload" @click="loadFeedbacks" :disabled="loading">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loading }">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          {{ loading ? 'Memuat...' : 'Muat Ulang' }}
+        </button>
+      </div>
+
+      <div class="toolbar-section">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input v-model="fbFilter" placeholder="Cari nama course..." />
+        </div>
+        <div class="action-buttons">
+          <button class="btn-action collapse" @click="collapseAll" v-if="courses.length">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 14 10 14 10 20"/>
+              <polyline points="20 10 14 10 14 4"/>
+              <line x1="14" y1="10" x2="21" y2="3"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            Tutup Semua
+          </button>
+          <button class="btn-action expand" @click="expandAll" v-if="courses.length">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 3 21 3 21 9"/>
+              <polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            Buka Semua
+          </button>
+          <button class="btn-action export" @click="exportXLSX" :disabled="!feedbacks.length">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export XLSX
+          </button>
+          <button class="btn-action import" @click="triggerTplImport" :disabled="!isAdmin || importBusy" v-if="isAdmin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            {{ importBusy ? 'Mengimpor...' : 'Import CSV/XLSX' }}
+          </button>
           <input ref="tplFileInput" type="file" accept=".csv,text/csv,.xlsx,.xls" style="display:none" @change="onTplImportFileChange" />
         </div>
       </div>
 
-      <div class="groups" v-if="courses.length">
-        <div class="group card" v-for="c in courses" :key="c">
-          <div class="group-header" @click="toggleGroup(c)">
-            <div class="title">
-              <span class="caret" :class="{ open: !collapsed[c] }">▸</span>
-              <strong>{{ c }}</strong>
-              <span class="dim"> ({{ grouped[c].length }} items)</span>
+      <div class="templates-container" v-if="courses.length">
+        <div v-for="c in courses" :key="c" class="course-group">
+          <div class="course-header" @click="toggleGroup(c)">
+            <div class="header-left">
+              <svg class="chevron-icon" :class="{ open: !collapsed[c] }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+              <div class="course-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+              </div>
+              <h4>{{ c }}</h4>
+              <span class="course-count">{{ grouped[c].length }} template</span>
             </div>
           </div>
-          <div class="group-body" v-show="!collapsed[c]">
-            <div class="table-wrap">
-              <table class="tbl">
-                <thead>
-                  <tr>
-                    <th style="width:90px">Lesson</th>
-                    <th>Message</th>
-                    <th v-if="isAdmin" style="width:160px">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="t in grouped[c]" :key="t.id">
-                    <template v-if="editId === t.id">
-                      <td><input type="number" v-model.number="ed.lesson" min="1" style="width:80px" /></td>
-                      <td>
+
+          <div class="course-body" v-show="!collapsed[c]">
+            <div class="templates-grid">
+              <div v-for="t in grouped[c]" :key="t.id" class="template-card">
+                <template v-if="editId === t.id">
+                  <div class="edit-mode">
+                    <div class="edit-header">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                      <h5>Edit Template</h5>
+                    </div>
+                    <div class="edit-form">
+                      <div class="form-group">
+                        <label>Lesson</label>
+                        <input type="number" v-model.number="ed.lesson" min="1" />
+                      </div>
+                      <div class="form-group">
+                        <label>Pesan</label>
                         <textarea 
                           v-model="ed.message" 
-                          placeholder="Message" 
-                          class="full" 
-                          rows="3"
-                          style="resize: vertical; white-space: pre-wrap;"
+                          placeholder="Pesan template" 
+                          rows="6"
                         ></textarea>
-                      </td>
-                      <td v-if="isAdmin">
-                        <button class="btn small" @click="saveEdit" :disabled="submitting">Simpan</button>
-                        <button class="btn small" @click="cancelEdit" :disabled="submitting">Batal</button>
-                      </td>
-                    </template>
-                    <template v-else>
-                      <td>Lesson {{ t.lesson }}</td>
-                      <td class="text message-preview">
-                        <div class="message-content">{{ t.message }}</div>
-                      </td>
-                      <td v-if="isAdmin">
-                        <button class="btn small" @click="startEditInline(t)">Edit</button>
-                        <button class="btn small danger" @click="deleteFeedback(t)" :disabled="submitting">Hapus</button>
-                      </td>
-                    </template>
-                  </tr>
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    <div class="edit-actions">
+                      <button class="btn-save" @click="saveEdit" :disabled="submitting">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                          <polyline points="17 21 17 13 7 13 7 21"/>
+                          <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        {{ submitting ? 'Menyimpan...' : 'Simpan' }}
+                      </button>
+                      <button class="btn-cancel" @click="cancelEdit" :disabled="submitting">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="15" y1="9" x2="9" y2="15"/>
+                          <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="template-header">
+                    <div class="lesson-badge">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                      </svg>
+                      Lesson {{ t.lesson }}
+                    </div>
+                  </div>
+                  <div class="template-body">
+                    <div class="message-label">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      Pesan Template
+                    </div>
+                    <div class="message-preview">{{ t.message }}</div>
+                  </div>
+                  <div class="template-footer" v-if="isAdmin">
+                    <button class="btn-edit" @click="startEditInline(t)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                      Edit
+                    </button>
+                    <button class="btn-delete" @click="deleteFeedback(t)" :disabled="submitting">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                      {{ submitting ? 'Menghapus...' : 'Hapus' }}
+                    </button>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div v-else class="hint">Tidak ada template.</div>
 
-      <p v-if="msg" class="success">{{ msg }}</p>
-      <p v-if="err" class="error">{{ err }}</p>
+      <div v-else class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <h3>Belum Ada Template</h3>
+        <p>Mulai dengan menambahkan template feedback baru</p>
+      </div>
     </section>
   </div>
 </template>
@@ -154,6 +350,15 @@ const collapsed = ref({});
 const toggleGroup = (c) => { collapsed.value[c] = !collapsed.value[c]; };
 const expandAll = () => { courses.value.forEach((c) => (collapsed.value[c] = false)); };
 const collapseAll = () => { courses.value.forEach((c) => (collapsed.value[c] = true)); };
+
+const mostLessons = computed(() => {
+  let max = 0;
+  for (const c of courses.value) {
+    const lessons = grouped.value[c].map(t => t.lesson);
+    max = Math.max(max, ...lessons);
+  }
+  return max;
+});
 
 const loadFeedbacks = async () => {
   loading.value = true;
@@ -295,265 +500,927 @@ loadFeedbacks();
 </script>
 
 <style scoped>
-.wrapper { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-.tpl { margin-top: 16px; }
-
-.card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,0.04); padding: 12px; }
-.form-inline { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field.grow { min-width: 240px; flex: 1; }
-.field span, .field label { font-size: 12px; color: #667085; }
-.field input, .field select { height: 36px; padding: 6px 10px; border: 1px solid #d8dde6; border-radius: 8px; background: #fff; }
-
-.toolbar { display:flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
-.toolbar .filters { display: grid; grid-template-columns: repeat(6, minmax(140px, 1fr)); gap: 10px; flex: 1 1 600px; }
-.toolbar .actions { display:flex; gap:8px; }
-
-.btn { height: 36px; padding: 0 12px; border: 1px solid #d0d5dd; background: #f9fafb; border-radius: 8px; cursor: pointer; font-weight: 500; }
-.btn.small { height: 30px; padding: 0 10px; font-size: 13px; }
-.btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-.btn.outline { background: #fff; }
-.btn.danger { background: #e74c3c; border-color: #e74c3c; color: #fff; }
-
-.hint { color:#666; margin: 6px 0; }
-.success { color: #0a0; margin-top: 8px; }
-.error { color: #c00; margin-top: 8px; }
-
-.groups { margin-top: 8px; display: flex; flex-direction: column; gap: 10px; }
-.group { overflow: hidden; }
-.group-header { background: #f8fafc; padding: 10px 12px; cursor: pointer; display:flex; align-items:center; }
-.group-header .title { display:flex; align-items:center; gap:8px; }
-.caret { display:inline-block; transition: transform .15s ease; }
-.caret.open { transform: rotate(90deg); }
-.group-body { padding: 8px 12px 12px; }
-.table-wrap { overflow:auto; border-radius: 8px; }
-.tbl { width: 100%; border-collapse: collapse; }
-.tbl thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
-.tbl th, .tbl td { border-bottom: 1px solid #f0f0f0; padding: 8px; text-align: left; vertical-align: top; }
-.tbl .text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 680px; }
-.tbl input.full { width: 100%; }
-
-/* Message content styling for better WhatsApp format preservation */
-.message-preview {
-  white-space: normal !important;
-  max-width: 400px;
-  overflow: visible !important;
-  text-overflow: initial !important;
+/* Base Styles */
+.wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
-.message-content {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  line-height: 1.4;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  padding: 8px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #e9ecef;
-  max-height: 120px;
-  overflow-y: auto;
+/* Page Header */
+.page-header {
+  margin-bottom: 32px;
 }
 
-/* Textarea styling for better input experience */
-.field textarea {
-  padding: 8px 10px;
-  border: 1px solid #d8dde6;
-  border-radius: 8px;
-  background: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.4;
-  min-height: 80px;
+.header-content {
+  margin-bottom: 24px;
 }
 
-.tbl textarea.full {
-  width: 100%;
-  min-height: 60px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+.header-content h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
-/* Form layout styling to match the image */
-.form {
+.header-icon {
+  width: 32px;
+  height: 32px;
+  color: #3b82f6;
+  stroke-width: 2.5;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+/* Stats Row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.stat-card svg {
+  width: 40px;
+  height: 40px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Create Card */
+.create-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.form-row {
-  display: flex; 
+.card-header-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.card-header-section h3 svg {
+  width: 22px;
+  height: 22px;
+  color: #3b82f6;
+}
+
+.btn-reload {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-reload:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-reload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-reload svg {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 16px;
   margin-bottom: 16px;
 }
 
-.form-row:last-of-type {
-  margin-bottom: 12px;
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.field-course {
-  flex: 1;
-  max-width: 300px;
+.form-group.compact {
+  max-width: 150px;
 }
 
-.field-lesson {
-  flex: 0 0 120px;
+.form-group.full-width {
+  grid-column: 1 / -1;
 }
 
-.field-message {
-  flex: 1;
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
 }
 
-.field-message textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 100px;
+.form-group label svg {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
   line-height: 1.5;
   white-space: pre-wrap;
 }
 
 .form-actions {
   display: flex;
+  align-items: flex-end;
+  grid-column: 1 / -1;
   justify-content: flex-end;
-  margin-top: 16px;
 }
 
-/* Responsive design for smaller screens */
-@media (max-width: 1024px) {
-  .toolbar .filters {
-    grid-template-columns: repeat(3, 1fr);
+.btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-submit svg {
+  width: 18px;
+  height: 18px;
+}
+
+.form-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  color: #0c4a6e;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.form-hint svg {
+  width: 18px;
+  height: 18px;
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.success-message {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.error-message {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+/* Admin Only Card */
+.admin-only-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1.5px solid #fcd34d;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.admin-only-card svg {
+  width: 48px;
+  height: 48px;
+  color: #92400e;
+  margin-bottom: 12px;
+}
+
+.admin-only-card p {
+  margin: 0;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* List Card */
+.list-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Toolbar Section */
+.toolbar-section {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 250px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 14px;
+  width: 20px;
+  height: 20px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1.5px solid;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-action.collapse,
+.btn-action.expand {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.btn-action.collapse:hover:not(:disabled),
+.btn-action.expand:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+}
+
+.btn-action.export {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.btn-action.export:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.2);
+}
+
+.btn-action.import {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.btn-action.import:hover:not(:disabled) {
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.2);
+}
+
+/* Templates Container */
+.templates-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.course-group {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.course-group:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.course-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.course-header:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #f8fafc 100%);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chevron-icon {
+  width: 20px;
+  height: 20px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chevron-icon.open {
+  transform: rotate(90deg);
+}
+
+.course-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.course-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #1e40af;
+}
+
+.header-left h4 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.course-count {
+  padding: 4px 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.course-body {
+  padding: 20px;
+}
+
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 16px;
+}
+
+.template-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.template-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.template-header {
+  padding: 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.lesson-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+  border: 1px solid #a5b4fc;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lesson-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.template-body {
+  padding: 16px;
+}
+
+.message-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.message-label svg {
+  width: 14px;
+  height: 14px;
+  color: #3b82f6;
+}
+
+.message-preview {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.template-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit,
+.btn-delete {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1.5px solid;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
+
+.btn-edit:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  transform: translateY(-1px);
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  transform: translateY(-1px);
+}
+
+.btn-edit svg,
+.btn-delete svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Edit Mode */
+.edit-mode {
+  padding: 16px;
+}
+
+.edit-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.edit-header svg {
+  width: 18px;
+  height: 18px;
+  color: #3b82f6;
+}
+
+.edit-header h5 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.edit-form .form-group label {
+  font-size: 12px;
+}
+
+.edit-form .form-group input,
+.edit-form .form-group textarea {
+  font-size: 13px;
+  padding: 10px 12px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-save,
+.btn-cancel {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1.5px solid;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+  transform: translateY(-1px);
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+}
+
+.btn-save svg,
+.btn-cancel svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-save:disabled,
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.empty-state svg {
+  width: 64px;
+  height: 64px;
+  color: #cbd5e1;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #475569;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .templates-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
-  
-  .toolbar .actions {
-    flex-wrap: wrap;
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.compact {
+    max-width: 100%;
   }
 }
 
 @media (max-width: 768px) {
   .wrapper {
-    padding: 0 12px;
+    padding: 0 16px;
   }
-  
-  h2 {
-    font-size: 20px;
+
+  .header-content h2 {
+    font-size: 24px;
   }
-  
-  .card {
-    padding: 10px;
+
+  .header-icon {
+    width: 28px;
+    height: 28px;
   }
-  
-  .toolbar {
+
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-section {
     flex-direction: column;
     align-items: stretch;
   }
-  
-  .toolbar .filters {
-    grid-template-columns: 1fr;
+
+  .search-box {
+    width: 100%;
+    min-width: unset;
   }
-  
-  .toolbar .actions {
+
+  .action-buttons {
     width: 100%;
     justify-content: stretch;
   }
-  
-  .toolbar .actions button {
+
+  .btn-action {
     flex: 1;
   }
-  
-  .form-row {
-    flex-direction: column;
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .field-course,
-  .field-lesson {
-    max-width: 100%;
+
+  .form-actions {
+    justify-content: stretch;
   }
-  
-  .table-wrap {
-    border-radius: 8px;
-  }
-  
-  .tbl {
-    font-size: 13px;
-    min-width: 600px;
-  }
-  
-  .tbl th,
-  .tbl td {
-    padding: 6px 8px;
-  }
-  
-  .message-preview {
-    max-width: 300px;
-  }
-  
-  .message-content {
-    max-height: 100px;
-    font-size: 13px;
+
+  .btn-submit {
+    width: 100%;
+    justify-content: center;
   }
 }
 
 @media (max-width: 480px) {
-  h2 {
-    font-size: 18px;
+  .header-content h2 {
+    font-size: 20px;
   }
-  
-  .card {
-    padding: 8px;
+
+  .stat-card {
+    padding: 16px;
   }
-  
-  .field input,
-  .field textarea,
-  .field select {
-    padding: 6px 8px;
-    font-size: 13px;
+
+  .stat-card svg {
+    width: 32px;
+    height: 32px;
   }
-  
-  .btn {
-    height: 34px;
-    font-size: 13px;
+
+  .stat-value {
+    font-size: 24px;
   }
-  
-  .btn.small {
-    height: 28px;
-    font-size: 12px;
+
+  .course-header {
+    padding: 16px;
   }
-  
-  .toolbar .actions {
+
+  .course-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .course-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .header-left h4 {
+    font-size: 15px;
+  }
+
+  .course-body {
+    padding: 16px;
+  }
+
+  .action-buttons {
     flex-direction: column;
   }
-  
-  .toolbar .actions button {
+
+  .btn-action {
     width: 100%;
   }
-  
-  .tbl {
-    font-size: 12px;
-  }
-  
-  .message-preview {
-    max-width: 200px;
-  }
-  
-  .message-content {
-    font-size: 12px;
-  }
-  
-  .group-header {
-    padding: 8px 10px;
-  }
-}
-
-@media (max-width: 768px) {
-  .form-row {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .field-course,
-  .field-lesson {
-    flex: 1;
-  }
-}
-
-@media (max-width: 800px) {
-  .toolbar .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .message-preview { max-width: 250px; }
 }
 </style>

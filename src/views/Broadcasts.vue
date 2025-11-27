@@ -1,107 +1,410 @@
 <template>
   <div class="wrapper">
-    <h2>Broadcast</h2>
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Broadcast Pesan
+        </h2>
+        <p class="subtitle">Kirim pesan ke banyak penerima sekaligus dengan mudah</p>
+      </div>
+    </div>
 
-    <section class="form card">
-      <form @submit.prevent="submit" class="grid">
-        <div class="field">
-          <label>Nama</label>
-          <input v-model.trim="form.name" placeholder="Contoh: EC Minggu" required />
+    <!-- Main Form -->
+    <form @submit.prevent="submit" class="broadcast-form">
+      <!-- Card 1: Basic Info -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Informasi Dasar
+          </h3>
         </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">
+                Nama Broadcast <span class="required">*</span>
+              </label>
+              <input 
+                v-model.trim="form.name" 
+                placeholder="Contoh: Pengumuman Promo Bulan Ini" 
+                required 
+                class="form-input"
+              />
+            </div>
 
-        <div class="field span-2">
-          <label>Pesan</label>
-          <textarea v-model.trim="form.message" rows="4" placeholder="Tulis pesan yang akan dikirim" required />
-        </div>
+            <div class="form-group">
+              <label class="form-label">
+                Jadwal Kirim <span class="optional">(Opsional)</span>
+              </label>
+              <input 
+                v-model="form.schedule" 
+                type="datetime-local" 
+                class="form-input"
+              />
+            </div>
+          </div>
 
-        <div class="field">
-          <label>Jadwal</label>
-          <input v-model="form.schedule" type="datetime-local" />
-          <small class="dim" v-if="form.schedule">Tanggal terpilih: {{ formatLocalTime(convertToServerTime(form.schedule)) }}</small>
-        </div>
-
-        <div class="field">
-          <label>Media (opsional)</label>
-          <input type="file" @change="onFile" :accept="acceptTypes" />
-          <div v-if="mediaPreview" class="preview">
-            <img v-if="isImage" :src="mediaPreview" alt="preview" />
-            <div v-else class="file-chip">{{ mediaName }}</div>
+          <div class="form-group">
+            <label class="form-label">
+              Pesan <span class="required">*</span>
+            </label>
+            <textarea 
+              v-model.trim="form.message" 
+              rows="4" 
+              placeholder="Tulis pesan yang akan dikirim ke semua penerima..." 
+              required 
+              class="form-textarea"
+            />
+            <div class="form-help">
+              {{ form.message.length }} karakter
+              <span v-if="form.schedule"> • Dijadwalkan: {{ formatLocalTime(convertToServerTime(form.schedule)) }}</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div class="field span-2">
-          <label>Penerima</label>
-          <div class="recipients">
-            <div class="chips">
-              <span v-for="(r, i) in recipients" :key="r + i" class="chip">
-                {{ chipLabel(r) }}
-                <button type="button" class="chip-x" @click="removeRecipient(i)">×</button>
+      <!-- Card 2: Media Upload with Enhanced Drag & Drop -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Media
+          </h3>
+          <span class="badge-optional">Opsional</span>
+        </div>
+        <div class="card-body">
+          <div 
+            class="upload-zone"
+            :class="{ 
+              'is-dragover': isDragOver, 
+              'has-media': mediaFile,
+              'is-empty': !mediaFile 
+            }"
+            @drop.prevent="onDrop"
+            @dragover.prevent="isDragOver = true"
+            @dragleave.prevent="isDragOver = false"
+            @dragend.prevent="isDragOver = false"
+            @click="!mediaFile && triggerFileInput()"
+          >
+            <input 
+              ref="fileInput"
+              type="file" 
+              @change="onFile" 
+              :accept="acceptTypes"
+              hidden
+            />
+            
+            <!-- Empty State -->
+            <div v-if="!mediaFile" class="upload-empty">
+              <div class="upload-icon-wrapper">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <div class="upload-text">
+                <p class="upload-title">{{ isDragOver ? 'Lepaskan file di sini' : 'Drag & Drop file atau klik untuk upload' }}</p>
+                <p class="upload-subtitle">Mendukung: Gambar, Video, Audio, dan Dokumen</p>
+              </div>
+              <button type="button" class="btn-upload" @click.stop="triggerFileInput">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Pilih File
+              </button>
+            </div>
+
+            <!-- File Preview -->
+            <div v-else class="media-preview-wrapper">
+              <!-- Image Preview -->
+              <div v-if="isImage" class="media-preview image-preview">
+                <img :src="mediaPreview" alt="Preview" />
+                <div class="preview-overlay">
+                  <button type="button" class="btn-change" @click.stop="triggerFileInput">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Ganti
+                  </button>
+                  <button type="button" class="btn-remove" @click.stop="removeMedia">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Hapus
+                  </button>
+                </div>
+              </div>
+
+              <!-- Document Preview -->
+              <div v-else class="media-preview document-preview">
+                <div class="doc-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                  </svg>
+                </div>
+                <div class="doc-details">
+                  <p class="doc-name">{{ mediaName }}</p>
+                  <p class="doc-size">{{ formatFileSize(mediaFile.size) }}</p>
+                </div>
+                <div class="doc-actions">
+                  <button type="button" class="btn-icon" @click.stop="triggerFileInput" title="Ganti file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="btn-icon btn-icon-danger" @click.stop="removeMedia" title="Hapus file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Recipients -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Penerima
+          </h3>
+          <span class="badge-count" v-if="recipients.length > 0">{{ recipients.length }} dipilih</span>
+        </div>
+        <div class="card-body">
+          <!-- Selected Recipients -->
+          <div v-if="recipients.length > 0" class="selected-recipients">
+            <div class="recipients-chips">
+              <span v-for="(r, i) in recipients" :key="r + i" class="recipient-chip">
+                <span class="chip-label">{{ chipLabel(r) }}</span>
+                <button type="button" class="chip-close" @click="removeRecipient(i)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
               </span>
             </div>
-            <div class="add">
-              <input
-                v-model="recipientInput"
-                @keydown.enter.prevent="addRecipientsFromInput"
-                placeholder="cth: 62812... jika banyak: 62812...,62813...,62814..."
-              />
-              <button type="button" class="btn" @click="addRecipientsFromInput">Tambah</button>
+          </div>
+
+          <!-- Add Recipients Tabs -->
+          <div class="recipient-tabs">
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'manual' }"
+              @click="activeTab = 'manual'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Manual
+            </button>
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'contacts' }"
+              @click="activeTab = 'contacts'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Kontak
+            </button>
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'groups' }"
+              @click="activeTab = 'groups'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Grup
+            </button>
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'labels' }"
+              @click="activeTab = 'labels'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+              Label
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content">
+            <!-- Manual Tab -->
+            <div v-show="activeTab === 'manual'" class="tab-pane">
+              <div class="input-with-button">
+                <input
+                  v-model="recipientInput"
+                  @keydown.enter.prevent="addRecipientsFromInput"
+                  placeholder="628123456789 (pisahkan dengan koma untuk banyak nomor)"
+                  class="form-input"
+                />
+                <button type="button" class="btn-primary" @click="addRecipientsFromInput">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+              </div>
+            </div>
+
+            <!-- Contacts Tab -->
+            <div v-show="activeTab === 'contacts'" class="tab-pane">
+              <div class="input-with-button">
+                <select v-model="selectedContactId" class="form-select">
+                  <option value="" disabled>Pilih kontak...</option>
+                  <option v-for="c in filteredContacts" :key="c.id" :value="c.phone">
+                    {{ contactDisplay(c) }}
+                  </option>
+                </select>
+                <button type="button" class="btn-primary" @click="addSelectedContact" :disabled="!selectedContactId">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+                <button type="button" class="btn-secondary" @click="loadContacts" :disabled="loadingContacts">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingContacts }">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Groups Tab -->
+            <div v-show="activeTab === 'groups'" class="tab-pane">
+              <div class="input-with-button">
+                <select v-model="selectedGroupId" class="form-select">
+                  <option value="" disabled>Pilih grup...</option>
+                  <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
+                </select>
+                <button type="button" class="btn-primary" @click="addSelectedGroup" :disabled="!selectedGroupId">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+                <button type="button" class="btn-secondary" @click="loadGroups" :disabled="loadingGroups">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Labels Tab -->
+            <div v-show="activeTab === 'labels'" class="tab-pane">
+              <div class="input-with-button">
+                <select v-model="selectedLabelValue" class="form-select">
+                  <option value="" disabled>Pilih label...</option>
+                  <option v-for="l in filteredLabels" :key="l.value" :value="l.value">{{ l.label }}</option>
+                </select>
+                <button type="button" class="btn-primary" @click="addSelectedLabel" :disabled="!selectedLabelValue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+                <button type="button" class="btn-secondary" @click="loadLabels" :disabled="loadingLabels">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingLabels }">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="field span-2">
-          <label>Tambah Kontak (opsional)</label>
-          <div class="recipients">
-            <div class="add">
-              <select v-model="selectedContactId">
-                <option value="" disabled>Pilih kontak</option>
-                <option v-for="c in filteredContacts" :key="c.id" :value="c.phone">
-                  {{ contactDisplay(c) }}
-                </option>
-              </select>
-              <button type="button" class="btn" @click="addSelectedContact" :disabled="!selectedContactId">Tambah Kontak</button>
-              <button type="button" class="btn outline" @click="loadContacts" :disabled="loadingContacts">{{ loadingContacts ? 'Memuat...' : 'Muat Kontak' }}</button>
-            </div>
-          </div>
+      <!-- Alerts -->
+      <div v-if="validationError || msg || err" class="alert-section">
+        <div v-if="validationError" class="alert alert-error">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ validationError }}
         </div>
-
-        <div class="field span-2">
-          <label>Tambah Grup (opsional)</label>
-          <div class="recipients">
-            <div class="add">
-              <select v-model="selectedGroupId">
-                <option value="" disabled>Pilih group</option>
-                <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
-              </select>
-              <button type="button" class="btn" @click="addSelectedGroup" :disabled="!selectedGroupId">Tambah Grup</button>
-              <button type="button" class="btn outline" @click="loadGroups" :disabled="loadingGroups">{{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}</button>
-            </div>
-          </div>
+        <div v-if="msg" class="alert alert-success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {{ msg }}
         </div>
-
-        <div class="field span-2">
-          <label>Tambah Kelas (Label) (opsional)</label>
-          <div class="recipients">
-            <div class="add">
-              <select v-model="selectedLabelValue">
-                <option value="" disabled>Pilih label</option>
-                <option v-for="l in filteredLabels" :key="l.value" :value="l.value">{{ l.label }}</option>
-              </select>
-              <button type="button" class="btn" @click="addSelectedLabel" :disabled="!selectedLabelValue">Tambah Label</button>
-              <button type="button" class="btn outline" @click="loadLabels" :disabled="loadingLabels">{{ loadingLabels ? 'Memuat...' : 'Muat Label' }}</button>
-            </div>
-          </div>
+        <div v-if="err" class="alert alert-error">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          {{ err }}
         </div>
+      </div>
 
-        <div class="actions span-2">
-          <button class="btn primary" :disabled="loading || !!validationError">{{ loading ? 'Memproses...' : 'Kirim Broadcast' }}</button>
-        </div>
-      </form>
-
-      <p v-if="validationError" class="error">{{ validationError }}</p>
-      <p v-if="msg" class="success">{{ msg }}</p>
-      <p v-if="err" class="error">{{ err }}</p>
-    </section>
+      <!-- Submit Button -->
+      <div class="form-actions">
+        <button 
+          type="submit"
+          class="btn-submit" 
+          :disabled="loading || !!validationError"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          <span v-if="loading">Memproses...</span>
+          <span v-else>{{ form.schedule ? 'Jadwalkan Broadcast' : 'Kirim Sekarang' }}</span>
+        </button>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -156,14 +459,53 @@ const loading = ref(false);
 const msg = ref('');
 const err = ref('');
 
+const isDragOver = ref(false);
+const fileInput = ref(null);
+const activeTab = ref('manual');
+
+function triggerFileInput() {
+  if (mediaFile.value) return; // Don't trigger if file already exists
+  fileInput.value?.click();
+}
+
+function onDrop(e) {
+  isDragOver.value = false;
+  const file = e.dataTransfer?.files?.[0];
+  if (file) {
+    handleFile(file);
+  }
+}
+
 function onFile(e) {
   const file = e.target.files?.[0];
-  mediaFile.value = file || null;
-  if (file && file.type?.startsWith('image')) {
+  if (file) {
+    handleFile(file);
+  }
+}
+
+function handleFile(file) {
+  mediaFile.value = file;
+  if (file.type?.startsWith('image')) {
     mediaPreview.value = URL.createObjectURL(file);
   } else {
     mediaPreview.value = '';
   }
+}
+
+function removeMedia() {
+  mediaFile.value = null;
+  mediaPreview.value = '';
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+}
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
 function addRecipientsFromInput() {
@@ -397,7 +739,7 @@ async function submit() {
       await deviceApi.post('/messages/broadcasts', fd);
     }
 
-    toast.success('Broadcast berhasil dikirim/dijadwalkan');
+    toast.success('Broadcast berhasil dijadwalkan');
     form.value.name = '';
     form.value.message = '';
     form.value.delay = 5000;
@@ -414,110 +756,808 @@ async function submit() {
 </script>
 
 <style scoped>
-.wrapper { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-.card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,0.04); padding: 12px; }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.field { display: flex; flex-direction: column; }
-.field input, .field textarea, .field select { padding: 8px 10px; border: 1px solid #d6d6d6; border-radius: 8px; }
-.span-2 { grid-column: span 2; }
-.actions { display: flex; justify-content: flex-end; }
+* {
+  box-sizing: border-box;
+}
 
-.btn { height: 36px; padding: 0 12px; border: 1px solid #d0d5dd; background: #f9fafb; border-radius: 8px; cursor: pointer; font-weight: 500; }
-.btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-.btn.outline { background: #fff; }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
+/* Base Styles - Konsisten dengan menu lain */
+.wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
 
-.dim { color: #666; }
-.error { color: #c00; margin-top: 8px; }
-.success { color: #070; margin-top: 8px; }
-.recipients .chips { margin-bottom: 6px; }
-.chip { display: inline-flex; align-items: center; background: #eef6ff; color: #0a4; border: 1px solid #bfe; padding: 4px 8px; border-radius: 16px; margin: 2px; }
-.chip-x { margin-left: 6px; border: none; background: transparent; color: #555; cursor: pointer; }
-.recipients .add { display: flex; gap: 6px; }
-.preview { margin-top: 8px; }
-.preview img { max-width: 220px; max-height: 140px; border-radius: 6px; border: 1px solid #ddd; }
-.file-chip { display: inline-block; background: #f3f3f3; padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; }
-.recipients .add select { flex: 1; }
-.recipients .add input { flex: 1; }
+/* Page Header - Konsisten dengan Contacts */
+.page-header {
+  margin-bottom: 32px;
+}
 
-@media (max-width: 1024px) {
-  .grid {
-    grid-template-columns: 1fr;
+.header-content {
+  margin-bottom: 24px;
+}
+
+.header-content h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.header-content h2 svg {
+  width: 32px;
+  height: 32px;
+  color: #3b82f6;
+  stroke-width: 2.5;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+/* Form */
+.broadcast-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+/* Card */
+.card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.card-title svg {
+  width: 22px;
+  height: 22px;
+  color: #3b82f6;
+}
+
+.badge-optional {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #a5b4fc;
+}
+
+.badge-count {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #93c5fd;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+/* Form Elements */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #475569;
+  font-size: 13px;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.optional {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: #f8fafc;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+.form-help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Upload Zone */
+.upload-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone.is-empty {
+  padding: 48px 32px;
+  cursor: pointer;
+}
+
+.upload-zone.is-empty:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.upload-zone.is-dragover {
+  border-color: #3b82f6;
+  background: #dbeafe;
+  transform: scale(1.01);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.upload-zone.has-media {
+  padding: 0;
+  border-style: solid;
+  background: white;
+}
+
+/* Upload Empty State */
+.upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.upload-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.upload-icon {
+  width: 32px;
+  height: 32px;
+  color: white;
+}
+
+.upload-text {
+  text-align: center;
+}
+
+.upload-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+.upload-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.btn-upload {
+  padding: 10px 20px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  color: #475569;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-upload:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f8fafc;
+}
+
+.btn-upload svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Media Preview */
+.media-preview-wrapper {
+  position: relative;
+}
+
+.media-preview {
+  position: relative;
+}
+
+/* Image Preview */
+.image-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0f172a;
+  min-height: 300px;
+  padding: 20px;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 500px;
+  border-radius: 8px;
+  display: block;
+}
+
+.preview-overlay {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.btn-change,
+.btn-remove {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-change {
+  background: white;
+  color: #475569;
+}
+
+.btn-change:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-remove {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-remove:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.btn-change svg,
+.btn-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Document Preview */
+.document-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: #f8fafc;
+}
+
+.doc-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doc-icon-wrapper svg {
+  width: 32px;
+  height: 32px;
+  color: #1e40af;
+}
+
+.doc-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-name {
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+
+.doc-size {
+  color: #64748b;
+  font-size: 13px;
+  margin: 0;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid #e2e8f0;
+  background: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #64748b;
+}
+
+.btn-icon:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.btn-icon-danger:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Recipients */
+.selected-recipients {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.recipients-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recipient-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.recipient-chip:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.chip-label {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.chip-close:hover {
+  color: #ef4444;
+}
+
+.chip-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Recipient Tabs */
+.recipient-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.recipient-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  margin-bottom: -10px;
+}
+
+.recipient-tab:hover {
+  color: #3b82f6;
+  background: #f8fafc;
+  border-radius: 10px 10px 0 0;
+}
+
+.recipient-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
+}
+
+.recipient-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Tab Content */
+.tab-content {
+  margin-top: 16px;
+}
+
+.tab-pane {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
   }
-  
-  .span-2 {
-    grid-column: span 1;
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.input-with-button {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.input-with-button .form-input,
+.input-with-button .form-select {
+  flex: 1;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border: 1.5px solid;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border-color: #cbd5e1;
+  padding: 12px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary svg,
+.btn-secondary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Alerts */
+.alert-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.alert svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.alert-error {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+/* Form Actions */
+.form-actions {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-submit svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .wrapper {
+    padding: 0 20px;
   }
 }
 
 @media (max-width: 768px) {
   .wrapper {
-    padding: 0 12px;
+    padding: 0 16px;
   }
-  
-  h2 {
-    font-size: 20px;
+
+  .header-content h2 {
+    font-size: 24px;
   }
-  
-  .card {
-    padding: 10px;
+
+  .header-content h2 svg {
+    width: 28px;
+    height: 28px;
   }
-  
-  .grid {
-    gap: 10px;
+
+  .form-row {
+    grid-template-columns: 1fr;
   }
-  
-  .field input,
-  .field textarea,
-  .field select {
-    font-size: 14px;
+
+  .card-header {
+    padding: 16px 20px;
   }
-  
-  .recipients .add {
-    flex-direction: column;
-    align-items: stretch;
+
+  .card-body {
+    padding: 20px;
   }
-  
-  .recipients .add button {
-    width: 100%;
+
+  .upload-zone.is-empty {
+    padding: 32px 20px;
   }
-  
-  .btn {
-    height: 34px;
-    font-size: 13px;
+
+  .recipient-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  
-  .preview img {
-    max-width: 180px;
-    max-height: 120px;
+
+  .input-with-button {
+    flex-wrap: wrap;
+  }
+
+  .input-with-button .form-input,
+  .input-with-button .form-select {
+    flex: 1 1 100%;
+  }
+
+  .btn-primary {
+    flex: 1;
+  }
+
+  .form-actions {
+    padding: 20px;
   }
 }
 
 @media (max-width: 480px) {
-  h2 {
-    font-size: 18px;
+  .wrapper {
+    padding: 0 12px;
   }
-  
-  .card {
-    padding: 8px;
+
+  .header-content h2 {
+    font-size: 20px;
   }
-  
-  .field input,
-  .field textarea,
-  .field select {
-    padding: 6px 8px;
-    font-size: 13px;
+
+  .card-header {
+    padding: 14px 16px;
   }
-  
-  .btn {
-    height: 32px;
-    padding: 0 10px;
-    font-size: 12px;
-  }
-  
-  .chip {
-    font-size: 11px;
-    padding: 3px 6px;
+
+  .card-body {
+    padding: 16px;
   }
 }
 </style>

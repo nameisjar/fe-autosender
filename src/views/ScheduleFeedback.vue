@@ -1,134 +1,356 @@
 <template>
   <div class="wrapper">
-    <h2>Feedback (Algo)</h2>
-    <small class="hint">Pengiriman akan berulang tiap minggu untuk setiap lesson. Waktu akan dikirim sesuai persis dengan input Anda.</small>
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <circle cx="9" cy="10" r="1"/>
+            <circle cx="12" cy="10" r="1"/>
+            <circle cx="15" cy="10" r="1"/>
+          </svg>
+          Feedback Berulang (Algo)
+        </h2>
+        <p class="subtitle">Pengiriman akan berulang tiap minggu untuk setiap lesson. Waktu akan dikirim sesuai persis dengan input Anda.</p>
+      </div>
+    </div>
 
-
-    <section class="schedule card">
-      <!-- <h3>Buat Jadwal Feedback</h3> -->
-      <form @submit.prevent="submit" class="form-grid">
-        <!-- Tambah kembali Nama -->
-        <div class="field">
-          <label>Nama</label>
-          <input v-model.trim="form.name" placeholder="Contoh: IND-PS-358-SAT-16.00 {PREM} (H-3)" required />
+    <!-- Main Form -->
+    <form @submit.prevent="submit" class="feedback-form">
+      <!-- Card 1: Basic Info -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Informasi Dasar
+          </h3>
         </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">
+                Nama Feedback <span class="required">*</span>
+              </label>
+              <input 
+                v-model.trim="form.name" 
+                placeholder="Contoh: IND-PS-358-SAT-16.00 {PREM} (H-3)" 
+                required 
+                class="form-input"
+              />
+            </div>
 
-        <div class="field">
-          <label>Course</label>
-          <select v-model="form.courseName" required>
-            <option value="" disabled>Pilih course</option>
-            <option v-for="c in courseOptions" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </div>
+            <div class="form-group">
+              <label class="form-label">
+                Course <span class="required">*</span>
+              </label>
+              <select v-model="form.courseName" required class="form-select">
+                <option value="" disabled>Pilih course...</option>
+                <option v-for="c in courseOptions" :key="c" :value="c">{{ c }}</option>
+              </select>
+            </div>
 
-        <div class="field">
-          <label>Mulai dari Lesson ke-</label>
-          <select v-model.number="form.startLesson" required :disabled="!form.courseName">
-            <option value="" disabled>{{ form.courseName ? 'Pilih lesson' : 'Pilih course terlebih dahulu' }}</option>
-            <option v-for="lessonNum in availableLessons" :key="lessonNum" :value="lessonNum">
-              Lesson {{ lessonNum }}
-            </option>
-          </select>
-        </div>
+            <div class="form-group">
+              <label class="form-label">
+                Mulai dari Lesson <span class="required">*</span>
+              </label>
+              <select 
+                v-model.number="form.startLesson" 
+                required 
+                :disabled="!form.courseName"
+                class="form-select"
+              >
+                <option value="" disabled>{{ form.courseName ? 'Pilih lesson...' : 'Pilih course terlebih dahulu' }}</option>
+                <option v-for="lessonNum in availableLessons" :key="lessonNum" :value="lessonNum">
+                  Lesson {{ lessonNum }}
+                </option>
+              </select>
+            </div>
 
-        <div class="field">
-          <label>Tanggal mulai</label>
-          <input v-model="form.schedule" type="datetime-local" required />
-        </div>
-        <!-- Tambah Preview Pesan -->
-        <div v-if="previewMessage" class="field span-2 preview-section">
-          <label>Preview Pesan Lesson {{ form.startLesson }}</label>
-          <div class="preview-box">
-            <pre>{{ previewMessage }}</pre>
+            <div class="form-group">
+              <label class="form-label">
+                Tanggal Mulai <span class="required">*</span>
+              </label>
+              <input 
+                v-model="form.schedule" 
+                type="datetime-local" 
+                required 
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <!-- Message Preview -->
+          <div v-if="previewMessage" class="form-group preview-section">
+            <label class="form-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              Preview Pesan - Lesson {{ form.startLesson }}
+            </label>
+            <div class="message-preview">
+              <pre>{{ previewMessage }}</pre>
+            </div>
+          </div>
+          
+          <div v-else-if="form.courseName && form.startLesson" class="form-group preview-section">
+            <label class="form-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              Preview Pesan
+            </label>
+            <div class="message-preview no-preview">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p>Tidak ada template untuk Lesson {{ form.startLesson }} di course "{{ form.courseName }}"</p>
+            </div>
           </div>
         </div>
-        
-        <div v-else-if="form.courseName && form.startLesson" class="field span-2 preview-section">
-          <div class="preview-box no-preview">
-            <p>Tidak ada template untuk Lesson {{ form.startLesson }} di course "{{ form.courseName }}"</p>
-          </div>
+      </div>
+
+      <!-- Card 2: Recipients -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Penerima
+          </h3>
+          <span class="badge-count" v-if="recipients.length > 0">{{ recipients.length }} dipilih</span>
         </div>
-        
-        <div class="field span-2">
-          <label>Penerima</label>
-          <div class="recipients">
-            <div class="chips">
-              <span v-for="(r, i) in recipients" :key="r + i" class="chip">
-                {{ chipLabel(r) }}
-                <button type="button" class="chip-x" @click="removeRecipient(i)">×</button>
+        <div class="card-body">
+          <!-- Selected Recipients -->
+          <div v-if="recipients.length > 0" class="selected-recipients">
+            <div class="recipients-chips">
+              <span v-for="(r, i) in recipients" :key="r + i" class="recipient-chip">
+                <span class="chip-label">{{ chipLabel(r) }}</span>
+                <button type="button" class="chip-close" @click="removeRecipient(i)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
               </span>
             </div>
-            <div class="add">
-              <input
-                v-model="recipientInput"
-                @keydown.enter.prevent="addRecipientsFromInput"
-                placeholder="cth: 62812... jika banyak: 62812...,62813...,62814..."
-              />
-              <button type="button" class="btn" @click="addRecipientsFromInput">Tambah</button>
+          </div>
+
+          <!-- Add Recipients Tabs -->
+          <div class="recipient-tabs">
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'manual' }"
+              @click="activeTab = 'manual'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Manual
+            </button>
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'contacts' }"
+              @click="activeTab = 'contacts'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Kontak
+            </button>
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'groups' }"
+              @click="activeTab = 'groups'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Grup
+            </button>
+            <button 
+              type="button"
+              class="recipient-tab"
+              :class="{ active: activeTab === 'labels' }"
+              @click="activeTab = 'labels'"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+              Label
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content">
+            <!-- Manual Tab -->
+            <div v-show="activeTab === 'manual'" class="tab-pane">
+              <div class="input-with-button">
+                <input
+                  v-model="recipientInput"
+                  @keydown.enter.prevent="addRecipientsFromInput"
+                  placeholder="628123456789 (pisahkan dengan koma untuk banyak nomor)"
+                  class="form-input"
+                />
+                <button type="button" class="btn-primary" @click="addRecipientsFromInput">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+              </div>
+            </div>
+
+            <!-- Contacts Tab -->
+            <div v-show="activeTab === 'contacts'" class="tab-pane">
+              <div class="input-with-button">
+                <select v-model="selectedContactId" class="form-select">
+                  <option value="" disabled>Pilih kontak...</option>
+                  <option v-for="c in filteredContacts" :key="c.id" :value="c.phone">
+                    {{ contactDisplay(c) }}
+                  </option>
+                </select>
+                <button type="button" class="btn-primary" @click="addSelectedContact" :disabled="!selectedContactId">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+                <button type="button" class="btn-secondary" @click="loadContacts" :disabled="loadingContacts">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingContacts }">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Groups Tab -->
+            <div v-show="activeTab === 'groups'" class="tab-pane">
+              <div class="input-with-button">
+                <select v-model="selectedGroupId" class="form-select">
+                  <option value="" disabled>Pilih grup...</option>
+                  <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
+                </select>
+                <button type="button" class="btn-primary" @click="addSelectedGroup" :disabled="!selectedGroupId">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+                <button type="button" class="btn-secondary" @click="loadGroups" :disabled="loadingGroups">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Labels Tab -->
+            <div v-show="activeTab === 'labels'" class="tab-pane">
+              <div class="input-with-button">
+                <select v-model="selectedLabelValue" class="form-select">
+                  <option value="" disabled>Pilih label...</option>
+                  <option v-for="l in filteredLabels" :key="l.value" :value="l.value">{{ l.label }}</option>
+                </select>
+                <button type="button" class="btn-primary" @click="addSelectedLabel" :disabled="!selectedLabelValue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah
+                </button>
+                <button type="button" class="btn-secondary" @click="loadLabels" :disabled="loadingLabels">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingLabels }">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info & Alerts -->
+      <div class="info-section">
+        <div class="info-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <div class="info-content">
+            <div class="info-text">
+              Estimasi kirim: <strong>{{ estimatedCount }}</strong> kali
+              <span v-if="lastDate"> — Perkiraan selesai: <strong>{{ lastDate }}</strong></span>
             </div>
           </div>
         </div>
 
-        <div class="field span-2">
-          <label>Tambah Kontak (opsional)</label>
-          <div class="recipients">
-            <div class="add">
-              <select v-model="selectedContactId">
-                <option value="" disabled>Pilih kontak</option>
-                <option v-for="c in filteredContacts" :key="c.id" :value="c.phone">{{ contactDisplay(c) }}</option>
-              </select>
-              <button type="button" class="btn" @click="addSelectedContact" :disabled="!selectedContactId">Tambah Kontak</button>
-              <button type="button" class="btn outline" @click="loadContacts" :disabled="loadingContacts">{{ loadingContacts ? 'Memuat...' : 'Muat Kontak' }}</button>
-            </div>
-          </div>
+        <div v-if="validationError" class="alert alert-error">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ validationError }}
         </div>
 
-        <div class="field span-2">
-          <label>Tambah Grup (opsional)</label>
-          <div class="recipients">
-            <div class="add">
-              <select v-model="selectedGroupId">
-                <option value="" disabled>Pilih group</option>
-                <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
-              </select>
-              <button type="button" class="btn" @click="addSelectedGroup" :disabled="!selectedGroupId">Tambah Grup</button>
-              <button type="button" class="btn outline" @click="loadGroups" :disabled="loadingGroups">{{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}</button>
-            </div>
-          </div>
+        <div v-if="msg" class="alert alert-success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {{ msg }}
         </div>
 
-        <div class="field span-2">
-          <label>Tambah Kelas (Label) (opsional)</label>
-          <div class="recipients">
-            <div class="add">
-              <select v-model="selectedLabelValue">
-                <option value="" disabled>Pilih label</option>
-                <option v-for="l in filteredLabels" :key="l.value" :value="l.value">{{ l.label }}</option>
-              </select>
-              <button type="button" class="btn" @click="addSelectedLabel" :disabled="!selectedLabelValue">Tambah Label</button>
-              <button type="button" class="btn outline" @click="loadLabels" :disabled="loadingLabels">{{ loadingLabels ? 'Memuat...' : 'Muat Label' }}</button>
-            </div>
-          </div>
+        <div v-if="err" class="alert alert-error">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          {{ err }}
         </div>
+      </div>
 
-        <div class="field span-2 info">
-          <div>
-            Estimasi kirim: <strong>{{ estimatedCount }}</strong> kali
-            <span v-if="lastDate"> — Perkiraan selesai: <strong>{{ lastDate }}</strong></span>
-          </div>
-          <div v-if="validationError" class="error">{{ validationError }}</div>
-        </div>
-
-        <div class="actions span-2">
-          <button class="btn primary" :disabled="loading || !!validationError">{{ loading ? 'Memproses...' : 'Jadwalkan' }}</button>
-        </div>
-      </form>
-
-      <p v-if="msg" class="success">{{ msg }}</p>
-      <p v-if="err" class="error">{{ err }}</p>
-    </section>
-
-   
+      <!-- Submit Button -->
+      <div class="form-actions">
+        <button 
+          type="submit"
+          class="btn-submit" 
+          :disabled="loading || !!validationError"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span v-if="loading">Memproses...</span>
+          <span v-else>Jadwalkan Feedback</span>
+        </button>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -532,164 +754,612 @@ const previewMessage = computed(() => {
   
   return template?.message || '';
 });
+
+const activeTab = ref('manual');
 </script>
 
 <style scoped>
-.wrapper { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-section { margin-top: 16px; }
-.card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,0.04); padding: 12px; }
-.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.field { display: flex; flex-direction: column; }
-.field input, .field textarea, .field select { padding: 8px 10px; border: 1px solid #d6d6d6; border-radius: 8px; }
-.span-2 { grid-column: span 2; }
-.actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+* {
+  box-sizing: border-box;
+}
 
-.btn { height: 36px; padding: 0 12px; border: 1px solid #d0d5dd; background: #f9fafb; border-radius: 8px; cursor: pointer; font-weight: 500; }
-.btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-.btn.outline { background: #fff; }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Base Styles - Konsisten dengan menu Broadcast */
+.wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
 
-.error { color: #c00; }
-.success { color: #070; }
+/* Page Header - Konsisten dengan Broadcast */
+.page-header {
+  margin-bottom: 32px;
+}
 
-.recipients .chips { margin-bottom: 6px; }
-.chip { display: inline-flex; align-items: center; background: #eef6ff; color: #0a4; border: 1px solid #bfe; padding: 4px 8px; border-radius: 16px; margin: 2px; }
-.chip-x { margin-left: 6px; border: none; background: transparent; color: #555; cursor: pointer; }
-.recipients .add { display: flex; gap: 6px; }
-.recipients .add input { flex: 1; }
-.recipients .add select { flex: 1; }
-.hint { color: #666; }
-.info { color: #333; display: flex; justify-content: space-between; align-items: center; }
+.header-content {
+  margin-bottom: 24px;
+}
 
-.templates { margin-top: 24px; }
-.filter { margin: 8px 0; display: flex; gap: 8px; align-items: center; }
-ul { padding-left: 16px; }
+.header-content h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+}
 
+.header-content h2 svg {
+  width: 32px;
+  height: 32px;
+  color: #3b82f6;
+  stroke-width: 2.5;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Form */
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+/* Card */
+.card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.card-title svg {
+  width: 22px;
+  height: 22px;
+  color: #3b82f6;
+}
+
+.badge-count {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #93c5fd;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+/* Form Elements */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #475569;
+  font-size: 13px;
+}
+
+.form-label svg {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: #f8fafc;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Message Preview */
 .preview-section {
   margin-top: 8px;
 }
 
-.preview-box {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 12px;
+.message-preview {
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   max-height: 300px;
   overflow-y: auto;
 }
 
-.preview-box pre {
+.message-preview pre {
   white-space: pre-wrap;
   word-wrap: break-word;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
-  line-height: 1.5;
-  color: #333;
+  line-height: 1.6;
+  color: #334155;
 }
 
-.preview-box.no-preview {
-  background: #fff8e1;
-  border-color: #ffd54f;
+.message-preview.no-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fcd34d;
 }
 
-.preview-box.no-preview p {
+.message-preview.no-preview svg {
+  width: 24px;
+  height: 24px;
+  color: #92400e;
+  flex-shrink: 0;
+}
+
+.message-preview.no-preview p {
   margin: 0;
-  color: #f57c00;
+  color: #92400e;
   font-size: 14px;
+  font-weight: 500;
 }
 
-@media (max-width: 1024px) {
-  .form-grid {
-    grid-template-columns: 1fr;
+/* Recipients */
+.selected-recipients {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.recipients-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recipient-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.recipient-chip:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.chip-label {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.chip-close:hover {
+  color: #ef4444;
+}
+
+.chip-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Recipient Tabs */
+.recipient-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.recipient-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  margin-bottom: -10px;
+}
+
+.recipient-tab:hover {
+  color: #3b82f6;
+  background: #f8fafc;
+  border-radius: 10px 10px 0 0;
+}
+
+.recipient-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
+}
+
+.recipient-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Tab Content */
+.tab-content {
+  margin-top: 16px;
+}
+
+.tab-pane {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
   }
-  
-  .span-2 {
-    grid-column: span 1;
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.input-with-button {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.input-with-button .form-input,
+.input-with-button .form-select {
+  flex: 1;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border: 1.5px solid;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border-color: #cbd5e1;
+  padding: 12px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary svg,
+.btn-secondary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Info Section */
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+}
+
+.info-card svg {
+  width: 24px;
+  height: 24px;
+  color: #1e40af;
+  flex-shrink: 0;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-text {
+  color: #1e40af;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.info-text strong {
+  font-weight: 700;
+}
+
+/* Alerts */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.alert svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.alert-error {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+/* Form Actions */
+.form-actions {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-submit svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .wrapper {
+    padding: 0 20px;
   }
 }
 
 @media (max-width: 768px) {
   .wrapper {
-    padding: 0 12px;
+    padding: 0 16px;
   }
-  
-  h2 {
-    font-size: 20px;
+
+  .header-content h2 {
+    font-size: 24px;
   }
-  
-  .card {
-    padding: 10px;
+
+  .header-content h2 svg {
+    width: 28px;
+    height: 28px;
   }
-  
-  .form-grid {
-    gap: 10px;
+
+  .form-row {
+    grid-template-columns: 1fr;
   }
-  
-  .field input,
-  .field textarea,
-  .field select {
-    font-size: 14px;
+
+  .card-header {
+    padding: 16px 20px;
   }
-  
-  .recipients .add {
-    flex-direction: column;
+
+  .card-body {
+    padding: 20px;
   }
-  
-  .recipients .add button {
-    width: 100%;
+
+  .recipient-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  
-  .actions {
-    flex-direction: column;
+
+  .input-with-button {
+    flex-wrap: wrap;
   }
-  
-  .actions button {
-    width: 100%;
+
+  .input-with-button .form-input,
+  .input-with-button .form-select {
+    flex: 1 1 100%;
   }
-  
-  .preview-box {
+
+  .btn-primary {
+    flex: 1;
+  }
+
+  .form-actions {
+    padding: 20px;
+  }
+
+  .message-preview {
     max-height: 200px;
-  }
-  
-  .info {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 
 @media (max-width: 480px) {
-  h2 {
-    font-size: 18px;
+  .wrapper {
+    padding: 0 12px;
   }
-  
-  .card {
-    padding: 8px;
+
+  .header-content h2 {
+    font-size: 20px;
   }
-  
-  .field input,
-  .field textarea,
-  .field select {
-    padding: 6px 8px;
-    font-size: 13px;
+
+  .card-header {
+    padding: 14px 16px;
   }
-  
-  .btn {
-    height: 34px;
-    font-size: 13px;
-  }
-  
-  .chip {
-    font-size: 11px;
-    padding: 3px 6px;
-  }
-  
-  .hint {
-    font-size: 12px;
-  }
-  
-  .preview-box pre {
-    font-size: 13px;
+
+  .card-body {
+    padding: 16px;
   }
 }
 </style>
