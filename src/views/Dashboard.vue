@@ -116,7 +116,10 @@
 
       <div class="sidebar-footer">
         <div class="user-info" v-if="me">
-          <div class="avatar">{{ getInitials(me.firstName) }}</div>
+          <div class="avatar">
+            <img v-if="profilePictureUrl" :src="profilePictureUrl" alt="Profile" class="avatar-img" />
+            <span v-else>{{ getInitials(me.firstName) }}</span>
+          </div>
           <div class="user-details">
             <div class="user-name">{{ me.firstName }}</div>
             <div class="user-role">
@@ -147,16 +150,37 @@ import { onMounted, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
 import { useGroups } from '../composables/useGroups.js';
+import { deviceApi } from '../api/http.js';
 
 const router = useRouter();
 const auth = useAuthStore();
 const { clearGroups } = useGroups();
 
 const sidebarOpen = ref(false);
+const profilePictureUrl = ref(null);
 
-onMounted(() => auth.fetchMe());
+onMounted(async () => {
+  await auth.fetchMe();
+  await fetchProfilePicture();
+});
+
 const me = computed(() => auth.me);
 const isAdmin = computed(() => auth.isAdmin);
+
+// Fungsi untuk mengambil foto profil WhatsApp
+const fetchProfilePicture = async () => {
+  try {
+    const { data } = await deviceApi.get('/messages/get-profile', {
+      params: { recipient: 'me', resolution: 'high' }
+    });
+    if (data && data.profilePictureUrl) {
+      profilePictureUrl.value = data.profilePictureUrl;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch profile picture:', error);
+    // Tetap gunakan inisial jika gagal
+  }
+};
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value;
@@ -431,6 +455,17 @@ nav a.router-link-active .nav-icon {
   font-size: 16px;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .user-details {
