@@ -346,4 +346,85 @@ onMounted(async () => {
 .session-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px; border: 1px solid #eee; border-radius: 8px; margin: 8px 0; }
 .session-id { color: #888; font-size: 12px; }
 .sessions ul { list-style: none; padding: 0; }
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+  }
+  
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .field select {
+    min-width: 100%;
+  }
+  
+  .row-btns {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .row-btns button {
+    width: 100%;
+  }
+  
+  .qr img {
+    width: 260px;
+    height: 260px;
+  }
+  
+  .session-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .session-item button {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  .field select {
+    height: 34px;
+    font-size: 14px;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .qr img {
+    width: 220px;
+    height: 220px;
+    padding: 12px;
+  }
+  
+  .qr-instructions {
+    font-size: 13px;
+  }
+  
+  .hint {
+    font-size: 13px;
+  }
+}
 </style>

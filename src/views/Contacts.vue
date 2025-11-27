@@ -143,6 +143,9 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { userApi } from '../api/http.js';
+import { useToast } from '../composables/useToast.js';
+
+const toast = useToast();
 
 const contacts = ref([]);
 const devices = ref([]);
@@ -318,13 +321,13 @@ const formatPhoneNumber = (phone) => {
 
 const saveContact = async () => {
   if (!selectedDeviceId.value) {
-    err.value = 'Pilih perangkat terlebih dahulu';
+    toast.error('Pilih perangkat terlebih dahulu');
     return;
   }
 
   // Validate phone number format
   if (!validatePhoneNumber(form.value.phone)) {
-    err.value = 'Format nomor tidak valid. Gunakan format WhatsApp Indonesia yang dimulai dengan 628 (contoh: 628123456789)';
+    toast.error('Format nomor tidak valid. Gunakan format WhatsApp Indonesia yang dimulai dengan 628 (contoh: 628123456789)');
     return;
   }
   
@@ -351,11 +354,11 @@ const saveContact = async () => {
     let response;
     if (editingContact.value) {
       response = await userApi.put(`/contacts/${editingContact.value.id}`, payload);
-      msg.value = 'Kontak berhasil diperbarui';
+      toast.success('Kontak berhasil diperbarui');
       console.log('✅ Contact updated:', response.data);
     } else {
       response = await userApi.post('/contacts/create', payload);
-      msg.value = 'Kontak berhasil ditambahkan';
+      toast.success('Kontak berhasil ditambahkan');
       console.log('✅ Contact created:', response.data);
     }
     
@@ -392,15 +395,15 @@ const saveContact = async () => {
     const errorMsg = e?.response?.data?.message || e?.message || 'Gagal menyimpan kontak';
     
     if (e?.response?.status === 401) {
-      err.value = 'Session expired. Silakan login ulang.';
+      toast.error('Session expired. Silakan login ulang.');
     } else if (e?.response?.status === 403) {
-      err.value = 'Tidak memiliki izin untuk mengelola kontak. Hubungi admin.';
+      toast.error('Tidak memiliki izin untuk mengelola kontak. Hubungi admin.');
     } else if (e?.response?.status === 404 && errorMsg.includes('Device')) {
-      err.value = 'Perangkat tidak ditemukan. Pilih perangkat yang valid.';
+      toast.error('Perangkat tidak ditemukan. Pilih perangkat yang valid.');
     } else if (errorMsg.includes('already exists')) {
-      err.value = 'Nomor HP sudah terdaftar di perangkat ini.';
+      toast.error('Nomor HP sudah terdaftar di perangkat ini.');
     } else {
-      err.value = `Error: ${errorMsg}`;
+      toast.error(`Error: ${errorMsg}`);
     }
   } finally {
     saving.value = false;
@@ -412,17 +415,17 @@ const deleteContact = async (contactId) => {
   
   try {
     await userApi.delete('/contacts', { data: { contactIds: [contactId] } });
-    msg.value = 'Kontak berhasil dihapus';
+    toast.success('Kontak berhasil dihapus');
     await loadContacts();
   } catch (e) {
-    err.value = e?.response?.data?.message || 'Gagal menghapus kontak';
+    toast.error(e?.response?.data?.message || 'Gagal menghapus kontak');
   }
 };
 
 // New: Import handlers
 const triggerImport = () => {
   if (!selectedDeviceId.value) {
-    err.value = 'Pilih perangkat terlebih dahulu';
+    toast.error('Pilih perangkat terlebih dahulu');
     return;
   }
   err.value = '';
@@ -435,7 +438,7 @@ const onImportFileChange = async (e) => {
   if (!file) return;
   const MAX_SIZE_MB = 5; // simple guard
   if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-    err.value = `Ukuran file melebihi ${MAX_SIZE_MB}MB`;
+    toast.error(`Ukuran file melebihi ${MAX_SIZE_MB}MB`);
     e.target.value = '';
     return;
   }
@@ -459,13 +462,13 @@ const onImportFileChange = async (e) => {
 
     const createdCount = Array.isArray(data?.results) ? data.results.length : 0;
     const errorCount = Array.isArray(data?.errors) ? data.errors.length : 0;
-    msg.value = `Import selesai. Berhasil: ${createdCount}${errorCount ? `, Gagal: ${errorCount}` : ''}`;
+    toast.success(`Import selesai. Berhasil: ${createdCount}${errorCount ? `, Gagal: ${errorCount}` : ''}`);
 
     // reload contacts after import
     await loadContacts();
   } catch (e) {
     console.error('❌ Import error:', e);
-    err.value = e?.response?.data?.message || 'Gagal mengimpor kontak';
+    toast.error(e?.response?.data?.message || 'Gagal mengimpor kontak');
   } finally {
     importBusy.value = false;
     if (e?.target) e.target.value = '';
@@ -475,7 +478,7 @@ const onImportFileChange = async (e) => {
 // New: Export handler
 const exportContactsFile = async () => {
   if (!selectedDeviceId.value) {
-    err.value = 'Pilih perangkat terlebih dahulu';
+    toast.error('Pilih perangkat terlebih dahulu');
     return;
   }
   exportBusy.value = true;
@@ -515,10 +518,10 @@ const exportContactsFile = async () => {
     a.remove();
     window.URL.revokeObjectURL(urlObj);
 
-    msg.value = 'Export dimulai. File sedang diunduh.';
+    toast.success('Export berhasil. File sedang diunduh.');
   } catch (e) {
     console.error('❌ Export error:', e);
-    err.value = e?.message || e?.response?.data?.message || 'Gagal mengekspor kontak';
+    toast.error(e?.message || e?.response?.data?.message || 'Gagal mengekspor kontak');
   } finally {
     exportBusy.value = false;
   }

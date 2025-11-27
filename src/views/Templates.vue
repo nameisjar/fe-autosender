@@ -114,6 +114,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { userApi } from '../api/http.js';
 import { useAuthStore } from '../stores/auth.js';
+import { useToast } from '../composables/useToast.js';
+
+const toast = useToast();
 
 const auth = useAuthStore();
 onMounted(() => auth.fetchMe());
@@ -165,7 +168,7 @@ const loadFeedbacks = async () => {
     }
     collapsed.value = {};
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal memuat template';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal memuat template');
   } finally {
     loading.value = false;
   }
@@ -178,10 +181,10 @@ const createFeedback = async () => {
   try {
     await userApi.post('/algorithmics/feedback', fb.value);
     fb.value = { courseName: '', lesson: 1, message: '' };
-    msg.value = 'Template ditambahkan';
+    toast.success('Template berhasil ditambahkan');
     await loadFeedbacks();
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal menambah template';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal menambah template');
   } finally {
     submitting.value = false;
   }
@@ -201,11 +204,11 @@ const saveEdit = async () => {
   err.value = '';
   try {
     await userApi.put(`/algorithmics/feedback/${encodeURIComponent(editId.value)}`, { courseName: ed.value.courseName, lesson: ed.value.lesson, message: ed.value.message });
-    msg.value = 'Template diperbarui';
+    toast.success('Template berhasil diperbarui');
     editId.value = '';
     await loadFeedbacks();
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal memperbarui template';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal memperbarui template');
   } finally {
     submitting.value = false;
   }
@@ -218,10 +221,10 @@ const deleteFeedback = async (t) => {
   err.value = '';
   try {
     await userApi.delete(`/algorithmics/feedback/${encodeURIComponent(t.id)}`);
-    msg.value = 'Template dihapus';
+    toast.success('Template berhasil dihapus');
     await loadFeedbacks();
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal menghapus template';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal menghapus template');
   } finally {
     submitting.value = false;
   }
@@ -229,23 +232,28 @@ const deleteFeedback = async (t) => {
 
 // XLSX export for visible data
 const exportXLSX = () => {
-  const rows = [];
-  rows.push(['Course Name', 'Lesson', 'Message']);
-  for (const c of courses.value) {
-    for (const t of grouped.value[c]) {
-      rows.push([t.courseName, String(t.lesson ?? ''), t.message ?? '']);
+  try {
+    const rows = [];
+    rows.push(['Course Name', 'Lesson', 'Message']);
+    for (const c of courses.value) {
+      for (const t of grouped.value[c]) {
+        rows.push([t.courseName, String(t.lesson ?? ''), t.message ?? '']);
+      }
     }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Feedback Templates');
+    XLSX.writeFile(wb, 'feedback-templates.xlsx');
+    toast.success('File XLSX berhasil diekspor');
+  } catch (e) {
+    toast.error('Gagal mengekspor file XLSX');
   }
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Feedback Templates');
-  XLSX.writeFile(wb, 'feedback-templates.xlsx');
 };
 
 // CSV/XLSX import for Templates (admin)
 const triggerTplImport = () => {
   if (!isAdmin.value) {
-    err.value = 'Hanya admin yang dapat mengimpor template';
+    toast.error('Hanya admin yang dapat mengimpor template');
     return;
   }
   err.value = '';
@@ -257,7 +265,7 @@ const onTplImportFileChange = async (e) => {
   const file = e?.target?.files?.[0];
   if (!file) return;
   if (!/\.csv$|\.xlsx$/i.test(file.name)) {
-    err.value = 'Pilih file CSV atau XLSX';
+    toast.error('Pilih file CSV atau XLSX');
     e.target.value = '';
     return;
   }
@@ -273,10 +281,10 @@ const onTplImportFileChange = async (e) => {
       headers: { 'Content-Type': 'multipart/form-data' },
       params: { replace },
     });
-    msg.value = `Import template selesai${replace ? ' (replace)' : ' (append)'}`;
+    toast.success(`Import template berhasil${replace ? ' (replace)' : ' (append)'}`);
     await loadFeedbacks();
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal mengimpor template';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal mengimpor template');
   } finally {
     importBusy.value = false;
     if (e?.target) e.target.value = '';
@@ -369,7 +377,7 @@ loadFeedbacks();
 }
 
 .form-row {
-  display: flex;
+  display: flex; 
   gap: 16px;
   margin-bottom: 16px;
 }
@@ -407,6 +415,131 @@ loadFeedbacks();
 }
 
 /* Responsive design for smaller screens */
+@media (max-width: 1024px) {
+  .toolbar .filters {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .toolbar .actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .toolbar .filters {
+    grid-template-columns: 1fr;
+  }
+  
+  .toolbar .actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .toolbar .actions button {
+    flex: 1;
+  }
+  
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .field-course,
+  .field-lesson {
+    max-width: 100%;
+  }
+  
+  .table-wrap {
+    border-radius: 8px;
+  }
+  
+  .tbl {
+    font-size: 13px;
+    min-width: 600px;
+  }
+  
+  .tbl th,
+  .tbl td {
+    padding: 6px 8px;
+  }
+  
+  .message-preview {
+    max-width: 300px;
+  }
+  
+  .message-content {
+    max-height: 100px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  .field input,
+  .field textarea,
+  .field select {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .btn.small {
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .toolbar .actions {
+    flex-direction: column;
+  }
+  
+  .toolbar .actions button {
+    width: 100%;
+  }
+  
+  .tbl {
+    font-size: 12px;
+  }
+  
+  .message-preview {
+    max-width: 200px;
+  }
+  
+  .message-content {
+    font-size: 12px;
+  }
+  
+  .group-header {
+    padding: 8px 10px;
+  }
+}
+
 @media (max-width: 768px) {
   .form-row {
     flex-direction: column;
@@ -424,4 +557,3 @@ loadFeedbacks();
   .message-preview { max-width: 250px; }
 }
 </style>
-``` 

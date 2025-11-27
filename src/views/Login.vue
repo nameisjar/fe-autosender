@@ -55,4 +55,46 @@ const login = async () => {
 .btn { height: 40px; padding: 0 12px; border: 1px solid #2563eb; background: #2563eb; color: #fff; border-radius: 8px; cursor: pointer; font-weight: 500; }
 .btn:disabled { opacity: .7; cursor: default; }
 .error { color: #c00; }
+
+@media (max-width: 768px) {
+  .wrapper {
+    max-width: 100%;
+    margin: 32px 16px;
+    padding: 0 12px;
+  }
+  
+  .card {
+    padding: 14px;
+  }
+  
+  h2 {
+    font-size: 20px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    margin: 20px 12px;
+    padding: 0 8px;
+  }
+  
+  .card {
+    padding: 12px;
+  }
+  
+  h2 {
+    font-size: 18px;
+  }
+  
+  .field input {
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .btn {
+    height: 38px;
+    font-size: 14px;
+  }
+}
 </style>

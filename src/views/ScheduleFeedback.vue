@@ -136,12 +136,15 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { useToast } from '../composables/useToast.js';
 import { 
   convertToServerTime, 
   formatLocalTime, 
   isValidDateTime,
   addInterval 
 } from '../utils/datetime.js';
+
+const toast = useToast();
 
 // Pastikan deviceId tersedia/tersimpan sebelum memuat label/kontak
 const ensureDeviceId = async () => {
@@ -468,7 +471,7 @@ const submit = async () => {
   msg.value = '';
   err.value = '';
   if (validationError.value) {
-    err.value = validationError.value;
+    toast.error(validationError.value);
     return;
   }
   loading.value = true;
@@ -478,7 +481,7 @@ const submit = async () => {
     
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
-      err.value = 'Device tidak ditemukan atau belum login';
+      toast.error('Device tidak ditemukan atau belum login');
       loading.value = false;
       return;
     }
@@ -492,7 +495,7 @@ const submit = async () => {
       deviceId, // pass deviceId required by backend
     };
     await deviceApi.post('/messages/broadcasts/feedback', payload);
-    msg.value = 'Jadwal feedback berhasil dibuat.';
+    toast.success('Jadwal feedback berhasil dibuat');
     form.value.name = '';
     form.value.courseName = '';
     form.value.startLesson = 1;
@@ -501,8 +504,8 @@ const submit = async () => {
     recipients.value = [];
     recipientLabels.value = {};
   } catch (e) {
-    const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal feedback';
-    err.value = errorMsg;
+    const errorMsg = 'Gagal membuat jadwal feedback. Pastikan WhatsApp sudah terhubung' || e?.response?.data?.message || e?.response?.data?.error || e?.message;
+    toast.error(errorMsg);
   } finally {
     loading.value = false;
   }
@@ -512,9 +515,9 @@ const handleSyncGroups = async () => {
   try {
     err.value = '';
     await syncGroups();
-    msg.value = 'Grup berhasil disinkronkan dari WhatsApp';
+    toast.success('Grup berhasil disinkronkan dari WhatsApp');
   } catch (e) {
-    err.value = e?.message || 'Gagal sinkronisasi grup';
+    toast.error(e?.message || 'Gagal sinkronisasi grup');
   }
 };
 
@@ -594,5 +597,99 @@ ul { padding-left: 16px; }
   margin: 0;
   color: #f57c00;
   font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .span-2 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+  }
+  
+  .form-grid {
+    gap: 10px;
+  }
+  
+  .field input,
+  .field textarea,
+  .field select {
+    font-size: 14px;
+  }
+  
+  .recipients .add {
+    flex-direction: column;
+  }
+  
+  .recipients .add button {
+    width: 100%;
+  }
+  
+  .actions {
+    flex-direction: column;
+  }
+  
+  .actions button {
+    width: 100%;
+  }
+  
+  .preview-box {
+    max-height: 200px;
+  }
+  
+  .info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  .field input,
+  .field textarea,
+  .field select {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .chip {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+  
+  .hint {
+    font-size: 12px;
+  }
+  
+  .preview-box pre {
+    font-size: 13px;
+  }
 }
 </style>

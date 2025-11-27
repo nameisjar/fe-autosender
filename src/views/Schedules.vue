@@ -141,6 +141,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
+import { useToast } from '../composables/useToast.js';
+
+const toast = useToast();
 
 const items = ref([]);
 const loading = ref(false);
@@ -413,10 +416,10 @@ const confirmDelete = async (name) => {
   err.value = '';
   try {
     await deviceApi.delete('/messages/broadcast-name', { data: { name } });
-    msg.value = `Jadwal dengan nama "${name}" berhasil dihapus.`;
+    toast.success(`Jadwal dengan nama "${name}" berhasil dihapus`);
     await load();
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal menghapus jadwal';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal menghapus jadwal');
   }
 };
 
@@ -428,8 +431,7 @@ const load = async () => {
     items.value = Array.isArray(data) ? data : [];
     await loadGroupNames(); // Reload group names when loading broadcasts
   } catch (e) {
-    // err.value = '';
-    err.value = 'Gagal memuat jadwal (silahkan login WhatsApp)' || e?.response?.data?.message || e?.message;
+    toast.error('Gagal memuat jadwal. Pastikan WhatsApp sudah terhubung');
   } finally {
     loading.value = false;
   }
@@ -769,5 +771,90 @@ onMounted(async () => {
   border-color: #ffcccc; 
   color: #cc0000; 
   font-weight: 500;
+}
+
+@media (max-width: 1024px) {
+  .toolbar {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .toolbar input,
+  .toolbar select,
+  .toolbar button {
+    width: 100%;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  table {
+    font-size: 13px;
+    min-width: 800px;
+  }
+  
+  th, td {
+    padding: 8px;
+  }
+  
+  .msg-cell {
+    max-width: 200px;
+  }
+  
+  .failed-cell {
+    max-width: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+  
+  .card {
+    padding: 6px;
+  }
+  
+  table {
+    font-size: 12px;
+  }
+  
+  th, td {
+    padding: 6px;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .chip {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  
+  .badge {
+    font-size: 11px;
+  }
 }
 </style>

@@ -109,11 +109,14 @@
 import { ref, computed } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { useToast } from '../composables/useToast.js';
 import { 
   convertToServerTime, 
   formatLocalTime, 
   isValidDateTime 
 } from '../utils/datetime.js';
+
+const toast = useToast();
 
 const ensureDeviceId = async () => {
   let deviceId = localStorage.getItem('device_selected_id');
@@ -200,9 +203,9 @@ const handleSyncGroups = async () => {
   try {
     err.value = '';
     await syncGroups();
-    msg.value = 'Grup berhasil disinkronkan dari WhatsApp';
+    toast.success('Grup berhasil disinkronkan dari WhatsApp');
   } catch (e) {
-    err.value = e?.message || 'Gagal sinkronisasi grup';
+    toast.error(e?.message || 'Gagal sinkronisasi grup');
   }
 };
 
@@ -242,7 +245,7 @@ const loadContacts = async () => {
     const res = await userApi.get('/contacts', { params: deviceId ? { deviceId } : {} });
     contacts.value = Array.isArray(res?.data) ? res.data : [];
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal memuat kontak';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal memuat kontak');
   } finally {
     loadingContacts.value = false;
   }
@@ -357,11 +360,20 @@ async function submit() {
   msg.value = '';
   err.value = '';
   if (validationError.value) {
-    err.value = validationError.value;
+    toast.error(validationError.value);
     return;
   }
+  
   loading.value = true;
   try {
+    // Validasi device sebelum mengirim
+    const deviceId = await ensureDeviceId();
+    if (!deviceId) {
+      toast.error('Device tidak ditemukan atau belum login WhatsApp');
+      loading.value = false;
+      return;
+    }
+    
     const payloadDelay = form.value.delay ?? 5000;
     
     const scheduleISO = form.value.schedule ? convertToServerTime(form.value.schedule) : undefined;
@@ -385,7 +397,7 @@ async function submit() {
       await deviceApi.post('/messages/broadcasts', fd);
     }
 
-    msg.value = 'Broadcast berhasil dikirim/dijadwalkan.';
+    toast.success('Broadcast berhasil dikirim/dijadwalkan');
     form.value.name = '';
     form.value.message = '';
     form.value.delay = 5000;
@@ -394,7 +406,7 @@ async function submit() {
     mediaFile.value = null;
     mediaPreview.value = '';
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal mengirim broadcast (silahkan login WhatsApp)';
+    toast.error('Gagal mengirim broadcast. Pastikan WhatsApp sudah terhubung' || e?.response?.data?.message || e?.message);
   } finally {
     loading.value = false;
   }
@@ -427,4 +439,85 @@ async function submit() {
 .file-chip { display: inline-block; background: #f3f3f3; padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; }
 .recipients .add select { flex: 1; }
 .recipients .add input { flex: 1; }
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .span-2 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+  }
+  
+  .grid {
+    gap: 10px;
+  }
+  
+  .field input,
+  .field textarea,
+  .field select {
+    font-size: 14px;
+  }
+  
+  .recipients .add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .recipients .add button {
+    width: 100%;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .preview img {
+    max-width: 180px;
+    max-height: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  .field input,
+  .field textarea,
+  .field select {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  
+  .btn {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  
+  .chip {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+}
 </style>

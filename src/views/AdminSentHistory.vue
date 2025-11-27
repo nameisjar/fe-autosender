@@ -114,6 +114,9 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { userApi, deviceApi } from '../api/http.js';
+import { useToast } from '../composables/useToast.js';
+
+const toast = useToast();
 
 const rows = ref([]);
 const meta = ref({ totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: false });
@@ -359,8 +362,9 @@ const exportCsv = async () => {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    toast.success('Export CSV berhasil. File sedang diunduh.');
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal mengekspor CSV';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal mengekspor CSV');
   } finally {
     exporting.value = false;
   }
@@ -379,9 +383,10 @@ const deleteAllSent = async () => {
     // 2) Sinkron: hapus broadcast yang sudah terkirim (cascade akan bersih-kan BC_*)
     await userApi.delete('/broadcasts/bulk', { params: { isSent: true } });
 
+    toast.success('Semua pesan terkirim berhasil dihapus');
     await load(1);
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal menghapus pesan';
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal menghapus pesan');
   } finally {
     deleting.value = false;
   }

@@ -1,13 +1,17 @@
 <template>
   <router-view />
+  <ToastContainer ref="toastContainer" />
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useGroups } from './composables/useGroups.js';
 import { userApi } from './api/http.js';
+import ToastContainer from './components/ToastContainer.vue';
+import { setToastInstance } from './composables/useToast.js';
 
 const { loadGroups } = useGroups();
+const toastContainer = ref(null);
 
 async function ensureDefaultDeviceSelected() {
   const current = localStorage.getItem('device_selected_id');
@@ -25,6 +29,11 @@ async function ensureDefaultDeviceSelected() {
 }
 
 onMounted(async () => {
+  // Setup toast instance
+  if (toastContainer.value) {
+    setToastInstance(toastContainer.value);
+  }
+
   const token = localStorage.getItem('token');
   if (!token) return; // skip auto-calls on login page
   await ensureDefaultDeviceSelected();

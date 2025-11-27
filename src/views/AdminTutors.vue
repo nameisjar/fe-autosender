@@ -114,6 +114,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { userApi } from '../api/http.js';
+import { useToast } from '../composables/useToast.js';
+
+const toast = useToast();
 
 const rows = ref([]);
 const firstName = ref('');
@@ -207,7 +210,7 @@ const createTutor = async () => {
   err.value = '';
   const body = { firstName: (firstName.value || '').trim(), email: (email.value || '').trim().toLowerCase() };
   if (!canSubmit.value) {
-    err.value = 'Nama dan email harus diisi dengan benar';
+    toast.error('Nama dan email harus diisi dengan benar');
     return;
   }
   if (password.value) body.password = password.value;
@@ -215,7 +218,7 @@ const createTutor = async () => {
   loading.value = true;
   try {
     await userApi.post('/tutors', body);
-    msg.value = 'Tutor dibuat';
+    toast.success('Tutor berhasil dibuat');
     firstName.value = '';
     email.value = '';
     password.value = '';
@@ -223,8 +226,8 @@ const createTutor = async () => {
     await loadTutors();
   } catch (e) {
     const status = e?.response?.status;
-    if (status === 409) err.value = 'Email sudah terdaftar';
-    else err.value = (e && e.response && e.response.data && e.response.data.message) || 'Gagal menambah tutor';
+    if (status === 409) toast.error('Email sudah terdaftar');
+    else toast.error((e && e.response && e.response.data && e.response.data.message) || 'Gagal menambah tutor');
   } finally {
     loading.value = false;
   }
@@ -238,11 +241,11 @@ const deleteTutor = async (u) => {
   deletingId.value = u.id;
   try {
     await userApi.delete(`/users/${encodeURIComponent(u.id)}/delete`);
-    msg.value = 'Akun tutor berhasil dihapus';
+    toast.success('Akun tutor berhasil dihapus');
     page.value = 1;
     await loadTutors();
   } catch (e) {
-    err.value = (e && e.response && e.response.data && e.response.data.message) || 'Gagal menghapus akun tutor';
+    toast.error((e && e.response && e.response.data && e.response.data.message) || 'Gagal menghapus akun tutor');
   } finally {
     deletingId.value = '';
   }
@@ -279,13 +282,13 @@ const saveEdit = async (u) => {
       if (newPwd.length < 6) throw new Error('Password minimal 6 karakter');
       await userApi.patch(`/users/change-password/${encodeURIComponent(u.id)}`, { password: newPwd });
     }
-    msg.value = 'Akun tutor diperbarui';
+    toast.success('Akun tutor berhasil diperbarui');
     editingId.value = '';
     ed.value = { firstName: '', lastName: '', email: '', password: '' };
     await loadTutors();
   } catch (e) {
     const m = e?.response?.data?.message || e?.message || 'Gagal menyimpan perubahan';
-    err.value = m;
+    toast.error(m);
   } finally {
     savingEdit.value = false;
   }
@@ -333,4 +336,82 @@ const SortIcon = {
 .pagination { display:flex; align-items:center; justify-content: space-between; margin-top: 10px; }
 .pager { display:flex; align-items:center; gap: 8px; }
 .empty { text-align: center; color: #777; padding: 18px; }
+
+@media (max-width: 1000px) { .toolbar .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .toolbar .filters { grid-template-columns: 1fr; } }
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  .form-inline {
+    flex-direction: column;
+  }
+  
+  .form-inline .field {
+    width: 100%;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .toolbar input,
+  .toolbar select {
+    width: 100%;
+  }
+  
+  .table-wrap {
+    border-radius: 8px;
+  }
+  
+  table {
+    font-size: 13px;
+    min-width: 600px;
+  }
+  
+  th, td {
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  .field input,
+  .field select {
+    font-size: 14px;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .btn.small {
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  table {
+    font-size: 12px;
+  }
+}
 </style>

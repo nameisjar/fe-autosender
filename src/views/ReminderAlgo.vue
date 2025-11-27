@@ -119,15 +119,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { useToast } from '../composables/useToast.js';
 import { 
   convertToServerTime, 
   formatLocalTime, 
   isValidDateTime,
   addInterval 
 } from '../utils/datetime.js';
+
+const toast = useToast();
 
 // Pastikan deviceId tersedia/tersimpan sebelum memuat label/kontak
 const ensureDeviceId = async () => {
@@ -304,9 +307,9 @@ const handleSyncGroups = async () => {
   try {
     err.value = '';
     await syncGroups();
-    msg.value = 'Grup berhasil disinkronkan dari WhatsApp';
+    toast.success('Grup berhasil disinkronkan dari WhatsApp');
   } catch (e) {
-    err.value = e?.message || 'Gagal sinkronisasi grup';
+    toast.error(e?.message || 'Gagal sinkronisasi grup');
   }
 };
 
@@ -409,7 +412,7 @@ const submit = async () => {
   msg.value = '';
   err.value = '';
   if (validationError.value) {
-    err.value = validationError.value;
+    toast.error(validationError.value);
     return;
   }
   loading.value = true;
@@ -419,7 +422,7 @@ const submit = async () => {
     
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
-      err.value = 'Device tidak ditemukan atau belum login';
+      toast.error('Device tidak ditemukan atau belum login');
       loading.value = false;
       return;
     }
@@ -450,7 +453,7 @@ const submit = async () => {
       await deviceApi.post('/messages/broadcasts/reminder-algo', fd);
     }
     
-    msg.value = 'Jadwal reminder berhasil dibuat.';
+    toast.success('Jadwal reminder berhasil dibuat');
     form.value.name = '';
     form.value.message = '';
     form.value.lessons = 1;
@@ -461,8 +464,8 @@ const submit = async () => {
     mediaFile.value = null;
     mediaPreview.value = '';
   } catch (e) {
-    const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal reminder';
-    err.value = errorMsg;
+    const errorMsg = 'Gagal mengirim reminder berkala. Pastikan WhatsApp sudah terhubung' || e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Gagal membuat jadwal reminder';
+    toast.error(errorMsg);
   } finally {
     loading.value = false;
   }
@@ -504,4 +507,99 @@ section { margin-top: 16px; }
 .file-chip { display: inline-block; background: #f3f3f3; padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; }
 .btn-remove { padding: 4px 8px; background: #fee; border: 1px solid #fcc; color: #c00; border-radius: 6px; cursor: pointer; font-size: 12px; }
 .btn-remove:hover { background: #fdd; }
+
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .span-2 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+  }
+  
+  .form-grid {
+    gap: 10px;
+  }
+  
+  .field input,
+  .field textarea,
+  .field select {
+    font-size: 14px;
+  }
+  
+  .recipients .add {
+    flex-direction: column;
+  }
+  
+  .recipients .add button {
+    width: 100%;
+  }
+  
+  .actions {
+    flex-direction: column;
+  }
+  
+  .actions button {
+    width: 100%;
+  }
+  
+  .preview {
+    flex-direction: column;
+  }
+  
+  .preview img {
+    max-width: 180px;
+    max-height: 120px;
+  }
+  
+  .info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  .field input,
+  .field textarea,
+  .field select {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .chip {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+  
+  .hint {
+    font-size: 12px;
+  }
+}
 </style>

@@ -371,4 +371,78 @@ onMounted(() => {
 
 .error { color: #b00020; }
 .ok { color: #2e7d32; }
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+  }
+  
+  .form {
+    gap: 10px;
+  }
+  
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .field {
+    width: 100%;
+  }
+  
+  .field.grow {
+    min-width: 100%;
+  }
+  
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 14px;
+  }
+  
+  .btn {
+    height: 34px;
+    font-size: 13px;
+  }
+  
+  .radios .choices {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 8px;
+  }
+  
+  .field input,
+  .field select,
+  .field textarea {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  
+  .btn {
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  .radios .choices label {
+    font-size: 13px;
+  }
+}
 </style>

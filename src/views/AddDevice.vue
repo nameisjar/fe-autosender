@@ -168,10 +168,12 @@ import { userApi } from '../api/http.js';
 import { useAuthStore } from '../stores/auth.js';
 import QRCode from 'qrcode';
 import { useGroups } from '../composables/useGroups.js';
+import { useToast } from '../composables/useToast.js';
 import { listenToDeviceStatus } from '../api/socket.js';
 import { cache } from '../utils/cache.js';
 import { debounce } from '../utils/debounce.js';
 
+const toast = useToast();
 const auth = useAuthStore();
 const devices = ref([]);
 const name = ref('');
@@ -294,26 +296,26 @@ const createDevice = async () => {
   success.value = '';
   
   if (!name.value.trim()) {
-    error.value = 'Nama device tidak boleh kosong';
+    toast.error('Nama device tidak boleh kosong');
     return;
   }
   
   if (tutorReachedLimit.value) {
-    error.value = 'Tutor hanya dapat memiliki 1 device';
+    toast.error('Tutor hanya dapat memiliki 1 device');
     return;
   }
   
   loading.value = true;
   try {
     await userApi.post('/tutors/devices', { name: name.value });
-    success.value = 'Device berhasil dibuat';
+    toast.success('Device berhasil dibuat');
     name.value = '';
     
     // Invalidate cache dan fetch ulang
     cache.invalidate(CACHE_KEY);
     await fetchDevices(true);
   } catch (e) {
-    error.value = (e && e.response && e.response.data && e.response.data.message) || 'Gagal membuat device';
+    toast.error((e && e.response && e.response.data && e.response.data.message) || 'Gagal membuat device');
   } finally {
     loading.value = false;
   }
@@ -328,13 +330,13 @@ const doDelete = async (ids) => {
   deleting.value = true;
   try {
     await userApi.delete('/devices', { data: { deviceIds: ids } });
-    success.value = 'Device berhasil dihapus';
+    toast.success('Device berhasil dihapus');
     
     // Invalidate cache dan fetch ulang
     cache.invalidate(CACHE_KEY);
     await fetchDevices(true);
   } catch (e) {
-    error.value = (e && e.response && e.response.data && e.response.data.message) || 'Gagal menghapus device';
+    toast.error((e && e.response && e.response.data && e.response.data.message) || 'Gagal menghapus device');
   } finally {
     deleting.value = false;
   }
@@ -490,6 +492,7 @@ const startPairing = async () => {
       const opened = await openSSEOnce();
       if (opened) {
         statusText.value = 'Berhasil terhubung!';
+        toast.success('WhatsApp berhasil terhubung!');
         break;
       }
       if (!pairingLoading.value) break; // stopped manually
@@ -501,6 +504,7 @@ const startPairing = async () => {
     console.error('Pairing error:', e);
     statusText.value = e?.message || 'Koneksi terputus';
     apiError.value = e?.message || 'Terjadi kesalahan saat melakukan pairing';
+    toast.error(e?.message || 'Gagal melakukan pairing WhatsApp');
   } finally {
     pairingLoading.value = false;
     controller = null;
@@ -572,9 +576,8 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
         controller = null;
       }
       
-      // Show success message
-      success.value = 'Device berhasil terhubung dengan WhatsApp!';
-      setTimeout(() => { success.value = ''; }, 5000);
+      // Show success toast
+      toast.success('Device berhasil terhubung dengan WhatsApp!');
     }
     
     // Jika berubah menjadi closed/disconnected (terputus)
@@ -596,9 +599,8 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
       // Clear success message jika masih ada
       success.value = '';
       
-      // Show error message
-      error.value = 'Device terputus dari WhatsApp. Silakan lakukan pairing ulang.';
-      setTimeout(() => { error.value = ''; }, 5000);
+      // Show warning toast
+      toast.warning('Device terputus dari WhatsApp. Silakan lakukan pairing ulang.');
       
       console.log('⚠️ Device terputus, UI telah direset ke state awal');
     }
@@ -852,12 +854,56 @@ onUnmounted(() => {
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 720px) {
-  .toolbar .filters { grid-template-columns: 1fr; }
+@media (max-width: 1024px) {
+  .toolbar .filters { 
+    grid-template-columns: repeat(2, 1fr); 
+  }
+  
+  .success-features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 12px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: 10px;
+    margin-top: 12px;
+  }
+  
+  .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .field {
+    width: 100%;
+  }
+  
+  .toolbar .filters { 
+    grid-template-columns: 1fr;
+  }
+  
+  .row-btns {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .row-btns button {
+    width: 100%;
+  }
   
   .connection-success {
     flex-direction: column;
     text-align: center;
+    padding: 16px;
   }
   
   .success-features {
@@ -868,6 +914,105 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+  
+  .qr img {
+    width: 280px;
+    height: 280px;
+  }
+  
+  table {
+    font-size: 13px;
+  }
+  
+  th, td {
+    padding: 8px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    padding: 0 8px;
+  }
+  
+  h2 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .card {
+    padding: 8px;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  
+  .field input,
+  .field select {
+    height: 34px;
+    padding: 5px 8px;
+    font-size: 14px;
+  }
+  
+  .btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  
+  .btn-sm {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  
+  .qr img {
+    width: 240px;
+    height: 240px;
+    padding: 12px;
+  }
+  
+  .qr-instructions {
+    font-size: 13px;
+  }
+  
+  .connection-success {
+    padding: 12px;
+  }
+  
+  .success-content h4 {
+    font-size: 16px;
+  }
+  
+  .success-features {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  
+  .feature-item {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  
+  .success-note {
+    font-size: 12px;
+  }
+  
+  .table-wrap {
+    border-radius: 8px;
+  }
+  
+  table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+  
+  th, td {
+    padding: 6px 8px;
+  }
+  
+  .status-badge {
+    font-size: 11px;
+    padding: 3px 6px;
   }
 }
 </style>
