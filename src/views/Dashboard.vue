@@ -33,10 +33,10 @@
           <span class="nav-label">MENU UTAMA</span>
           <router-link to="/add-device" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M12 6V18M6 12H18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+              <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 18H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <span>Tambah Device</span>
+            <span>Device</span>
           </router-link>
           <router-link to="/contacts" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
@@ -48,9 +48,9 @@
             <span>Kontak</span>
           </router-link>
           <router-link to="/broadcasts" @click="closeSidebar">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/>
+              <path d="m21.854 2.147-10.94 10.939"/>
             </svg>
             <span>Broadcast</span>
           </router-link>

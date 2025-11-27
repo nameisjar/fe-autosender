@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <h2>Tambah Device</h2>
+    <h2>Kelola Device</h2>
 
     <section class="create card">
       <h3>Buat Device Baru</h3>
