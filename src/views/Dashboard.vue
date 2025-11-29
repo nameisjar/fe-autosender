@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
 import { useGroups } from '../composables/useGroups.js';
@@ -161,6 +161,9 @@ const { clearGroups } = useGroups();
 
 const sidebarOpen = ref(false);
 const profilePictureUrl = ref(null);
+
+// 🆕 Watch untuk device_selected_id dari localStorage
+const selectedDeviceId = ref(localStorage.getItem('device_selected_id'));
 
 onMounted(async () => {
   await auth.fetchMe();
@@ -178,12 +181,46 @@ const fetchProfilePicture = async () => {
     });
     if (data && data.profilePictureUrl) {
       profilePictureUrl.value = data.profilePictureUrl;
+    } else {
+      // Reset ke null jika tidak ada foto profil
+      profilePictureUrl.value = null;
     }
   } catch (error) {
     console.warn('Failed to fetch profile picture:', error);
-    // Tetap gunakan inisial jika gagal
+    // Reset ke null jika gagal
+    profilePictureUrl.value = null;
   }
 };
+
+// 🆕 Watch perubahan device dari localStorage
+// Menggunakan setInterval untuk polling localStorage changes
+let storageWatcher = null;
+onMounted(() => {
+  storageWatcher = setInterval(() => {
+    const currentDeviceId = localStorage.getItem('device_selected_id');
+    if (currentDeviceId !== selectedDeviceId.value) {
+      console.log('[Dashboard] Device berubah dari', selectedDeviceId.value, 'ke', currentDeviceId);
+      selectedDeviceId.value = currentDeviceId;
+      
+      // Auto-refresh foto profil
+      if (currentDeviceId) {
+        console.log('[Dashboard] Auto-refresh foto profil untuk device:', currentDeviceId);
+        fetchProfilePicture();
+      } else {
+        // Jika tidak ada device, reset foto profil
+        profilePictureUrl.value = null;
+      }
+    }
+  }, 500); // Check every 500ms
+});
+
+// Cleanup saat component unmount
+onUnmounted(() => {
+  if (storageWatcher) {
+    clearInterval(storageWatcher);
+    storageWatcher = null;
+  }
+});
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value;

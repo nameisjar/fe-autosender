@@ -70,3 +70,60 @@ export function listenToDeviceStatus(deviceId, callback) {
     socket.off(eventName, callback);
   };
 }
+
+// 🆕 Listen to group updates for a device
+export function listenToGroupUpdates(deviceId, callback) {
+  const socket = connectSocket();
+  const eventName = `device:${deviceId}:groups-updated`;
+  
+  console.log(`[Socket.IO] Listening to event: ${eventName}`);
+  
+  socket.on(eventName, (data) => {
+    console.log(`[Socket.IO] Received event ${eventName}:`, data);
+    callback(data);
+  });
+  
+  // Return cleanup function
+  return () => {
+    console.log(`[Socket.IO] Removing listener for: ${eventName}`);
+    socket.off(eventName, callback);
+  };
+}
+
+// 🆕 Listen to new group joined
+export function listenToNewGroup(deviceId, callback) {
+  const socket = connectSocket();
+  const eventName = `device:${deviceId}:group-joined`;
+  
+  console.log(`[Socket.IO] Listening to event: ${eventName}`);
+  
+  socket.on(eventName, (groupData) => {
+    console.log(`[Socket.IO] New group joined for device ${deviceId}:`, groupData);
+    callback(groupData);
+  });
+  
+  // Return cleanup function
+  return () => {
+    console.log(`[Socket.IO] Removing listener for: ${eventName}`);
+    socket.off(eventName, callback);
+  };
+}
+
+// 🆕 Listen to group left/removed event
+export function listenToGroupLeft(deviceId, callback) {
+  const socket = connectSocket();
+  const eventName = `device:${deviceId}:group-left`;
+  
+  console.log(`[Socket.IO] Listening to event: ${eventName}`);
+  
+  socket.on(eventName, (data) => {
+    console.log(`[Socket.IO] Device left group ${data.groupId}:`, data);
+    callback(data);
+  });
+  
+  // Return cleanup function
+  return () => {
+    console.log(`[Socket.IO] Removing listener for: ${eventName}`);
+    socket.off(eventName, callback);
+  };
+}

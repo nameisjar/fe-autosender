@@ -99,50 +99,94 @@ userApi.interceptors.response.use(
 
 export const deviceApi = axios.create({ baseURL: API_BASE + '/api' });
 
-// Helper to fetch device detail (multiple possible endpoints)
-async function fetchDeviceDetail(id) {
-    if (!id) return null;
+// 🆕 Cache untuk API key per session (dalam memory, tidak di localStorage)
+const deviceApiKeyCache = new Map();
+
+// Helper to fetch device detail and get API key securely
+async function fetchDeviceApiKey(deviceId) {
+    if (!deviceId) {
+        console.error('[fetchDeviceApiKey] No deviceId provided');
+        return null;
+    }
+    
+    // Check memory cache first
+    if (deviceApiKeyCache.has(deviceId)) {
+        console.log('[fetchDeviceApiKey] Using cached API key for device:', deviceId);
+        return deviceApiKeyCache.get(deviceId);
+    }
+    
+    console.log('[fetchDeviceApiKey] Fetching API key for device:', deviceId);
+    
+    // Fetch from backend
     const paths = [
-        `/devices/${encodeURIComponent(id)}`,
-        `/tutors/devices/${encodeURIComponent(id)}`,
+        `/devices/${encodeURIComponent(deviceId)}`,
+        `/tutors/devices/${encodeURIComponent(deviceId)}`,
     ];
+    
     for (const p of paths) {
         try {
+            console.log('[fetchDeviceApiKey] Trying path:', p);
             const { data } = await userApi.get(p);
-            if (data && typeof data === 'object') return data;
-        } catch (_) { /* try next */ }
+            
+            if (data && data.apiKey) {
+                console.log('[fetchDeviceApiKey] ✅ API key found for device:', deviceId);
+                // ✅ Cache in memory only (not localStorage)
+                deviceApiKeyCache.set(deviceId, data.apiKey);
+                return data.apiKey;
+            } else {
+                console.warn('[fetchDeviceApiKey] ⚠️ Response has no apiKey:', data);
+            }
+        } catch (error) {
+            console.warn('[fetchDeviceApiKey] Failed to fetch from path:', p, error?.response?.status || error?.message);
+        }
     }
+    
+    console.error('[fetchDeviceApiKey] ❌ Could not retrieve API key for device:', deviceId);
     return null;
 }
 
-// Enhance deviceApi interceptor to robustly obtain apiKey for admin accounts
+// 🆕 Clear API key cache (called on logout or device change)
+export function clearDeviceApiKeyCache() {
+    deviceApiKeyCache.clear();
+}
+
+// Enhanced deviceApi interceptor - Session-based approach
 deviceApi.interceptors.request.use(async (config) => {
     await scheduler.schedule();
-    let key = localStorage.getItem('device_api_key');
-    if (!key) {
+    
+    // 🆕 Get deviceId from localStorage (only ID, not API key)
+    const deviceId = localStorage.getItem('device_selected_id');
+    
+    if (deviceId) {
+        // 🔐 Fetch API key securely from backend (cached in memory)
+        const apiKey = await fetchDeviceApiKey(deviceId);
+        if (apiKey) {
+            config.headers['X-Forwardin-Key-Device'] = apiKey;
+        } else {
+            console.warn('Could not retrieve API key for device:', deviceId);
+        }
+    } else {
+        // Fallback: auto-select first available device
         try {
             const { data: devices } = await userApi.get('/devices');
             const list = Array.isArray(devices) ? devices : [];
-            if (list.length) {
+            if (list.length > 0) {
                 const current = list.find((d) => d.status === 'open') || list[0];
-                if (current) {
-                    let apiKey = current.apiKey;
-                    // If apiKey missing attempt detail endpoints (admin often lacks apiKey in list response)
-                    if (!apiKey) {
-                        const detail = await fetchDeviceDetail(current.id);
-                        apiKey = detail?.apiKey || apiKey;
-                    }
+                if (current && current.id) {
+                    localStorage.setItem('device_selected_id', current.id);
+                    localStorage.setItem('device_selected_name', current.name || '');
+                    
+                    const apiKey = await fetchDeviceApiKey(current.id);
                     if (apiKey) {
-                        key = apiKey;
-                        localStorage.setItem('device_api_key', key);
-                        localStorage.setItem('device_selected_id', current.id);
-                        localStorage.setItem('device_selected_name', current.name || detail?.name || '');
+                        config.headers['X-Forwardin-Key-Device'] = apiKey;
                     }
                 }
             }
-        } catch (_) {}
+        } catch (err) {
+            console.error('Error auto-selecting device:', err);
+        }
     }
-    if (key) config.headers['X-Forwardin-Key-Device'] = key;
+    
     return config;
 });
 
@@ -150,15 +194,24 @@ deviceApi.interceptors.response.use(
     (r) => r,
     async (err) => {
         if (err && err.response && err.response.status === 401) {
-            console.warn('Device API unauthorized. Periksa API Key device dan sesi.');
-            const hadKey = localStorage.getItem('device_api_key');
-            localStorage.removeItem('device_api_key');
+            console.warn('Device API unauthorized. Device session may be closed.');
+            
+            // 🔐 Clear memory cache (not localStorage)
+            const deviceId = localStorage.getItem('device_selected_id');
+            if (deviceId) {
+                deviceApiKeyCache.delete(deviceId);
+            }
+            
+            // 🔔 Notify app that device session is closed
             try {
-                // notify current tab listeners to invalidate caches immediately
-                window.dispatchEvent(new CustomEvent('wa:device-session-closed'));
+                window.dispatchEvent(new CustomEvent('wa:device-session-closed', {
+                    detail: { deviceId }
+                }));
             } catch (_) {}
+            
             return Promise.reject(err);
         }
+        
         // Retry/backoff for 429/503
         try {
             return await maybeRetry(err, deviceApi);
@@ -168,4 +221,4 @@ deviceApi.interceptors.response.use(
     },
 );
 
-export default { userApi, deviceApi };
+export default { userApi, deviceApi, clearDeviceApiKeyCache };

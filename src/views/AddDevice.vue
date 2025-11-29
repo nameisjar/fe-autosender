@@ -110,23 +110,34 @@
               </svg>
               Pilih Device
             </label>
-            <select v-model="deviceId" :disabled="pairingLoading || selectedStatus === 'open'">
+            <select v-model="deviceId" :disabled="pairingLoading">
               <option value="" disabled>Pilih device</option>
-              <option v-for="d in devices" :key="d.id" :value="String(d.id)">{{ d.name }}</option>
+              <option v-for="d in devices" :key="d.id" :value="String(d.id)">
+                {{ d.name }} {{ d.status === 'open' ? '✓ Terhubung' : '' }}
+              </option>
             </select>
           </div>
           <div class="field">
             <label>&nbsp;</label>
             <div class="row-btns">
               <button 
-                v-if="devices.length > 1 || selectedStatus !== 'open'"
+                v-if="selectedStatus !== 'open'"
                 class="btn primary" 
                 @click="startPairing" 
-                :disabled="!deviceId || pairingLoading || selectedStatus === 'open'">
+                :disabled="!deviceId || pairingLoading || (isTutor && tutorHasConnectedDevice)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
                 {{ pairingLoading ? 'Menunggu QR...' : 'Mulai Pairing' }}
+              </button>
+              <button 
+                v-else-if="!isTutor"
+                class="btn outline" 
+                @click="selectNextDisconnectedDevice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+                Pairing Device Lain
               </button>
               <button 
                 v-if="controller && selectedStatus !== 'open'" 
@@ -351,7 +362,7 @@ import { useAuthStore } from '../stores/auth.js';
 import QRCode from 'qrcode';
 import { useGroups } from '../composables/useGroups.js';
 import { useToast } from '../composables/useToast.js';
-import { listenToDeviceStatus } from '../api/socket.js';
+import { listenToDeviceStatus, listenToGroupUpdates, listenToNewGroup } from '../api/socket.js';
 import { cache } from '../utils/cache.js';
 import { debounce } from '../utils/debounce.js';
 
@@ -374,11 +385,15 @@ const apiError = ref('');
 let controller = null;
 let socketCleanupFunctions = [];
 
+// 🆕 Flag untuk mendeteksi apakah user manual memilih device
+let isManualSelection = false;
+
 const CACHE_KEY = 'devices_list';
 const CACHE_TTL = 30; // 30 seconds
 
 const isTutor = computed(() => auth.roleName === 'cs');
 const tutorReachedLimit = computed(() => isTutor.value && devices.value.length >= 1);
+const tutorHasConnectedDevice = computed(() => isTutor.value && devices.value.some(d => d.status === 'open'));
 
 // Simplified group handling - groups are automatically synced when device connects
 const { clearGroups } = useGroups();
@@ -439,6 +454,13 @@ const fetchDevices = async (forceRefresh = false) => {
 const autoSelectDevice = () => {
   if (!devices.value.length) return;
   
+  // ✅ SKIP auto-select jika user baru saja manual memilih device
+  if (isManualSelection) {
+    console.log('[Auto-Select] Skipped - User manual selection');
+    isManualSelection = false; // Reset flag
+    return;
+  }
+  
   // Jika hanya ada 1 device, langsung pilih
   if (devices.value.length === 1) {
     deviceId.value = String(devices.value[0].id);
@@ -446,7 +468,28 @@ const autoSelectDevice = () => {
     return;
   }
   
-  // Jika ada device yang sudah open, pilih yang itu
+  // ✅ PRIORITAS #1: Jika ada device tersimpan di localStorage, gunakan itu
+  const savedDeviceId = localStorage.getItem('device_selected_id');
+  if (savedDeviceId) {
+    const savedDevice = devices.value.find(d => String(d.id) === savedDeviceId);
+    if (savedDevice) {
+      deviceId.value = savedDeviceId;
+      console.log('[Auto-Select] Menggunakan device tersimpan dari localStorage:', savedDevice.name);
+      return;
+    }
+  }
+  
+  // ✅ PRIORITAS #2: UNTUK ADMIN: Prioritas pilih device yang belum terhubung agar bisa langsung pairing
+  if (!isTutor.value) {
+    const disconnectedDevice = devices.value.find(d => d.status !== 'open');
+    if (disconnectedDevice) {
+      deviceId.value = String(disconnectedDevice.id);
+      console.log('[Auto-Select] Admin - memilih device yang belum terhubung:', disconnectedDevice.name);
+      return;
+    }
+  }
+  
+  // ✅ PRIORITAS #3: Untuk Tutor: Jika ada device yang sudah open, pilih yang itu
   const openDevice = devices.value.find(d => d.status === 'open');
   if (openDevice) {
     deviceId.value = String(openDevice.id);
@@ -454,18 +497,7 @@ const autoSelectDevice = () => {
     return;
   }
   
-  // Jika ada device tersimpan di localStorage, gunakan itu
-  const savedDeviceId = localStorage.getItem('device_selected_id');
-  if (savedDeviceId) {
-    const savedDevice = devices.value.find(d => String(d.id) === savedDeviceId);
-    if (savedDevice) {
-      deviceId.value = savedDeviceId;
-      console.log('[Auto-Select] Menggunakan device tersimpan:', savedDevice.name);
-      return;
-    }
-  }
-  
-  // Default: pilih device pertama
+  // ✅ PRIORITAS #4: Default: pilih device pertama
   deviceId.value = String(devices.value[0].id);
   console.log('[Auto-Select] Memilih device pertama:', devices.value[0].name);
 };
@@ -707,6 +739,24 @@ const stopPairing = () => {
   statusText.value = 'Dihentikan';
 };
 
+// 🆕 Function untuk memilih device berikutnya yang belum terhubung
+const selectNextDisconnectedDevice = () => {
+  // Cari device yang belum terhubung (status !== 'open')
+  const disconnectedDevices = devices.value.filter(d => d.status !== 'open');
+  
+  if (disconnectedDevices.length === 0) {
+    toast.info('Semua device sudah terhubung');
+    return;
+  }
+  
+  // Pilih device pertama yang belum terhubung
+  const nextDevice = disconnectedDevices[0];
+  deviceId.value = String(nextDevice.id);
+  
+  console.log('[Select Next] Memilih device yang belum terhubung:', nextDevice.name);
+  toast.success(`Device "${nextDevice.name}" dipilih. Klik "Mulai Pairing" untuk menghubungkan.`);
+};
+
 // Pretty status mapping for table badges
 const humanStatus = (s) => {
   const key = String(s || '').toLowerCase();
@@ -790,12 +840,19 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
 });
 
 // Watch deviceId untuk save ke localStorage
-watch(deviceId, (newDeviceId) => {
+watch(deviceId, (newDeviceId, oldDeviceId) => {
   if (newDeviceId) {
     localStorage.setItem('device_selected_id', newDeviceId);
     const device = devices.value.find(d => String(d.id) === newDeviceId);
     if (device) {
       localStorage.setItem('device_selected_name', device.name);
+    }
+    
+    // ✅ Set flag bahwa ini adalah manual selection dari user
+    // HANYA jika ada oldDeviceId (artinya user ganti device, bukan initial load)
+    if (oldDeviceId && oldDeviceId !== newDeviceId) {
+      isManualSelection = true;
+      console.log('[Manual Selection] User memilih device:', device?.name);
     }
   }
 });

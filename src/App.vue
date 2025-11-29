@@ -4,14 +4,37 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useGroups } from './composables/useGroups.js';
-import { userApi } from './api/http.js';
+import { useDevices } from './composables/useDevices.js';
+import { clearDeviceApiKeyCache, userApi } from './api/http.js';
 import ToastContainer from './components/ToastContainer.vue';
 import { setToastInstance } from './composables/useToast.js';
 
 const { loadGroups } = useGroups();
+const { loadDevices } = useDevices();
 const toastContainer = ref(null);
+
+// 🔔 Handle device session closed event
+function handleDeviceSessionClosed(event) {
+  const { deviceId } = event.detail || {};
+  console.warn('Device session closed:', deviceId);
+  
+  // Clear cache untuk device yang disconnect
+  clearDeviceApiKeyCache();
+  
+  // Reload devices untuk update status
+  loadDevices().catch(() => {});
+}
+
+// 🔔 Handle device changed event
+function handleDeviceChanged(event) {
+  const { deviceId, deviceName } = event.detail || {};
+  console.log('Device changed:', deviceId, deviceName);
+  
+  // Clear old cache, akan di-fetch ulang saat request berikutnya
+  clearDeviceApiKeyCache();
+}
 
 async function ensureDefaultDeviceSelected() {
   const current = localStorage.getItem('device_selected_id');
@@ -36,8 +59,22 @@ onMounted(async () => {
 
   const token = localStorage.getItem('token');
   if (!token) return; // skip auto-calls on login page
-  await ensureDefaultDeviceSelected();
+  
+  // 🆕 Load devices untuk auto-select
+  await loadDevices().catch(() => {});
+  
+  // Load groups
   loadGroups().catch(() => {});
+  
+  // 🔔 Setup event listeners
+  window.addEventListener('wa:device-session-closed', handleDeviceSessionClosed);
+  window.addEventListener('device:changed', handleDeviceChanged);
+});
+
+onUnmounted(() => {
+  // 🧹 Cleanup event listeners
+  window.removeEventListener('wa:device-session-closed', handleDeviceSessionClosed);
+  window.removeEventListener('device:changed', handleDeviceChanged);
 });
 </script>
 

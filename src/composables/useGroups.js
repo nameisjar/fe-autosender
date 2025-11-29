@@ -1,13 +1,15 @@
 // Reusable groups loader from database (no cache, always fresh from DB)
 // Uses database-stored WhatsApp groups instead of cache
-import { ref } from 'vue';
+import { ref, onUnmounted } from 'vue';
 import { userApi } from '../api/http.js';
+import { listenToGroupUpdates, listenToNewGroup, listenToGroupLeft } from '../api/socket.js';
 
 // Singleton state (module-scoped)
 const groupsState = ref([]); // { value, label, meta }
 const loadingState = ref(false);
 const errorState = ref('');
 let inFlight = null;
+let socketCleanups = [];
 
 const getDeviceId = () => {
   try { return localStorage.getItem('device_selected_id') || ''; } catch { return ''; }
@@ -84,6 +86,94 @@ const clearGroups = () => {
   groupsState.value = [];
   errorState.value = '';
   inFlight = null;
+  cleanupSocketListeners();
+};
+
+// 🆕 Cleanup socket listeners
+const cleanupSocketListeners = () => {
+  socketCleanups.forEach(cleanup => cleanup());
+  socketCleanups = [];
+};
+
+// 🆕 Setup socket listeners untuk auto-refresh grup
+const setupGroupSocketListeners = (deviceId) => {
+  // Clean up existing listeners
+  cleanupSocketListeners();
+  
+  if (!deviceId) return;
+  
+  console.log(`[Groups Socket] Setting up listeners for device ${deviceId}`);
+  
+  // Listen untuk group updates (bulk update)
+  const cleanup1 = listenToGroupUpdates(deviceId, async (data) => {
+    console.log('[Groups Socket] Groups updated, refreshing...', data);
+    
+    // Jika action adalah group-left, hapus grup dari list secara langsung
+    if (data.action === 'group-left' && data.groupId) {
+      const groupIdNormalized = normalizeGroupValue({ groupId: data.groupId });
+      groupsState.value = groupsState.value.filter(g => g.value !== groupIdNormalized);
+      console.log('[Groups Socket] ✅ Group removed from list:', data.groupId);
+    } else {
+      // Untuk update lainnya, lakukan full refresh
+      await loadGroups({ force: true });
+    }
+  });
+  
+  // Listen untuk new group joined (single group)
+  const cleanup2 = listenToNewGroup(deviceId, async (groupData) => {
+    console.log('[Groups Socket] New group joined:', groupData);
+    
+    // Add new group to existing list tanpa full reload
+    if (groupData && groupData.groupId) {
+      const newGroup = {
+        value: normalizeGroupValue(groupData),
+        label: groupData.groupName || groupData.subject || 'Grup Baru',
+        meta: {
+          id: groupData.id,
+          groupId: groupData.groupId,
+          isActive: groupData.isActive,
+          participants: groupData.participants || 0,
+          sessionId: groupData.sessionId
+        }
+      };
+      
+      // Check jika grup sudah ada (hindari duplikat)
+      const exists = groupsState.value.some(g => g.value === newGroup.value);
+      if (!exists) {
+        groupsState.value = [...groupsState.value, newGroup];
+        console.log('[Groups Socket] ✅ New group added to list:', newGroup.label);
+      }
+    }
+    
+    // Optional: Full refresh untuk memastikan data konsisten
+    setTimeout(() => {
+      loadGroups({ force: true });
+    }, 2000);
+  });
+  
+  // 🆕 Listen untuk device keluar/dikick dari grup
+  const cleanup3 = listenToGroupLeft(deviceId, (data) => {
+    console.log('[Groups Socket] Device left/removed from group:', data);
+    
+    if (data.groupId) {
+      const groupIdNormalized = normalizeGroupValue({ groupId: data.groupId });
+      
+      // Hapus grup dari list
+      const beforeCount = groupsState.value.length;
+      groupsState.value = groupsState.value.filter(g => g.value !== groupIdNormalized);
+      const afterCount = groupsState.value.length;
+      
+      if (beforeCount > afterCount) {
+        console.log('[Groups Socket] ✅ Group removed from dropdown:', data.groupId);
+        console.log(`[Groups Socket] Groups count: ${beforeCount} -> ${afterCount}`);
+      } else {
+        console.warn('[Groups Socket] ⚠️ Group not found in list:', data.groupId);
+      }
+    }
+  });
+  
+  socketCleanups.push(cleanup1, cleanup2, cleanup3);
+  console.log('[Groups Socket] ✅ Listeners active');
 };
 
 // Listen for device changes to clear groups
@@ -128,6 +218,12 @@ export function useGroups() {
         
         if (data.length === 0) {
           console.warn('No groups found. Make sure WhatsApp is connected and groups exist.');
+        }
+        
+        // 🆕 Setup socket listeners setelah load groups
+        const deviceId = getDeviceId();
+        if (deviceId) {
+          setupGroupSocketListeners(deviceId);
         }
         
         return groups.value;

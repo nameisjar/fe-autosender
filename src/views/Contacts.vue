@@ -133,6 +133,12 @@
           <input v-model="q" placeholder="Cari nama, nomor, atau label..." />
         </div>
         <div class="filter-group">
+          <select v-model="selectedLabelFilter" class="filter-select label-filter">
+            <option value="">Semua Label</option>
+            <option v-for="label in availableLabels" :key="label" :value="label">
+              {{ label }}
+            </option>
+          </select>
           <select v-model="sortBy" class="filter-select">
             <option value="createdAt">Terbaru</option>
             <option value="firstName">Nama Depan</option>
@@ -152,65 +158,83 @@
         </div>
       </div>
 
-      <div class="contacts-grid" v-if="visibleContacts.length">
-        <div v-for="contact in visibleContacts" :key="contact.id" class="contact-card">
-          <div class="contact-header">
-            <div class="contact-avatar">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <div class="contact-info">
-              <h4>{{ contact.firstName }} {{ contact.lastName || '' }}</h4>
-              <div class="contact-phone">
+      <!-- Table View -->
+      <div class="table-container" v-if="visibleContacts.length">
+        <table class="contacts-table">
+          <thead>
+            <tr>
+              <th class="col-name">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Nama
+              </th>
+              <th class="col-phone">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
-                {{ contact.phone }}
-              </div>
-            </div>
-          </div>
-
-          <div class="contact-body">
-            <div class="info-section">
-              <div class="info-label">
+                Nomor WhatsApp
+              </th>
+              <th class="col-labels">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
                   <line x1="7" y1="7" x2="7.01" y2="7"/>
                 </svg>
                 Label Kelas
-              </div>
-              <div class="labels-list" v-if="contact.ContactLabel && filteredContactLabels(contact).length">
-                <div v-for="label in filteredContactLabels(contact)" :key="label" class="label-chip">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                    <line x1="7" y1="7" x2="7.01" y2="7"/>
-                  </svg>
-                  {{ label }}
+              </th>
+              <th class="col-actions">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="contact in visibleContacts" :key="contact.id" class="contact-row">
+              <td class="col-name">
+                <div class="contact-name-cell">
+                  <div class="contact-avatar-small">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div class="contact-name-text">
+                    <span class="name-full">{{ contact.firstName }} {{ contact.lastName || '' }}</span>
+                  </div>
                 </div>
-              </div>
-              <div v-else class="no-labels">Belum ada label</div>
-            </div>
-          </div>
-
-          <div class="contact-footer">
-            <button class="btn-edit" @click="editContact(contact)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Edit
-            </button>
-            <button class="btn-delete" @click="deleteContact(contact.id)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-              Hapus
-            </button>
-          </div>
-        </div>
+              </td>
+              <td class="col-phone">
+                <div class="phone-text">{{ contact.phone }}</div>
+              </td>
+              <td class="col-labels">
+                <div class="labels-list-table" v-if="contact.ContactLabel && filteredContactLabels(contact).length">
+                  <div v-for="label in filteredContactLabels(contact)" :key="label" class="label-chip-table">
+                    <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                      <line x1="7" y1="7" x2="7.01" y2="7"/>
+                    </svg> -->
+                    {{ label }}
+                  </div>
+                </div>
+                <span v-else class="no-labels-table">—</span>
+              </td>
+              <td class="col-actions">
+                <div class="action-buttons">
+                  <button class="btn-edit-table" @click="editContact(contact)" title="Edit kontak">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button class="btn-delete-table" @click="deleteContact(contact.id)" title="Hapus kontak">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div v-else-if="!loading" class="empty-state">
@@ -410,6 +434,19 @@ const sortBy = ref('createdAt');
 const sortDir = ref('desc');
 const meta = ref({ totalContacts: 0, currentPage: 1, totalPages: 1, hasMore: false });
 
+// New: Label filter state
+const selectedLabelFilter = ref('');
+
+// New: Get all available labels from contacts
+const availableLabels = computed(() => {
+  const labelsSet = new Set();
+  contacts.value.forEach((contact) => {
+    const labels = filteredContactLabels(contact);
+    labels.forEach((label) => labelsSet.add(label));
+  });
+  return Array.from(labelsSet).sort();
+});
+
 const fetchDevices = async () => {
   try {
     const { data } = await userApi.get('/devices');
@@ -478,16 +515,30 @@ const filteredContactLabels = (contact) => {
   return names.filter((n) => !String(n).startsWith('device_'));
 };
 
-// New: computed visibleContacts filtered by query (name/phone/label)
+// Updated: visibleContacts filtered by query AND label
 const visibleContacts = computed(() => {
+  let filtered = contacts.value;
+  
+  // Filter by selected label first
+  if (selectedLabelFilter.value) {
+    filtered = filtered.filter((c) => {
+      const labels = filteredContactLabels(c);
+      return labels.includes(selectedLabelFilter.value);
+    });
+  }
+  
+  // Then filter by search term
   const term = String(q.value || '').trim().toLowerCase();
-  if (!term) return contacts.value;
-  return contacts.value.filter((c) => {
-    const name = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
-    const phone = String(c.phone || '').toLowerCase();
-    const labels = filteredContactLabels(c).join(' ').toLowerCase();
-    return name.includes(term) || phone.includes(term) || labels.includes(term);
-  });
+  if (term) {
+    filtered = filtered.filter((c) => {
+      const name = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+      const phone = String(c.phone || '').toLowerCase();
+      const labels = filteredContactLabels(c).join(' ').toLowerCase();
+      return name.includes(term) || phone.includes(term) || labels.includes(term);
+    });
+  }
+  
+  return filtered;
 });
 
 // Debounced server-side reload on search/sort/pageSize change
@@ -1117,41 +1168,95 @@ onMounted(async () => {
   min-width: 160px;
 }
 
-/* Contacts Grid */
-.contacts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
+/* Table View */
+.table-container {
+  overflow-x: auto;
   margin-bottom: 24px;
 }
 
-.contact-card {
+.contacts-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.contact-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
+.contacts-table thead {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
-.contact-header {
-  padding: 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+.contacts-table th {
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.contacts-table th svg {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.contacts-table tbody tr {
+  transition: all 0.2s ease;
   border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  gap: 16px;
-  align-items: center;
 }
 
-.contact-avatar {
-  width: 56px;
-  height: 56px;
+.contacts-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.contacts-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.contacts-table td {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+/* Table Columns */
+.contacts-table .col-name {
+  min-width: 220px;
+}
+
+.contacts-table .col-phone {
+  min-width: 160px;
+}
+
+.contacts-table .col-labels {
+  min-width: 200px;
+}
+
+.contacts-table .col-actions {
+  width: 100px;
+  text-align: center;
+}
+
+/* Contact Name Cell */
+.contact-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.contact-avatar-small {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
   display: flex;
@@ -1160,157 +1265,136 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.contact-avatar svg {
-  width: 32px;
-  height: 32px;
+.contact-avatar-small svg {
+  width: 20px;
+  height: 20px;
   color: #1e40af;
 }
 
-.contact-info {
-  flex: 1;
+.contact-name-text {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
-.contact-info h4 {
-  margin: 0 0 6px 0;
-  font-size: 17px;
-  font-weight: 700;
+.name-full {
+  font-weight: 600;
   color: #1e293b;
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.contact-phone {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #64748b;
+/* Phone Text */
+.phone-text {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.contact-phone svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.contact-body {
-  padding: 20px;
-}
-
-.info-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.info-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
   color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.info-label svg {
-  width: 14px;
-  height: 14px;
-  color: #3b82f6;
-}
-
-.labels-list {
+/* Labels in Table */
+.labels-list-table {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-.label-chip {
+.label-chip-table {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 500;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
   background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
   color: #4338ca;
   border: 1px solid #a5b4fc;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
-.label-chip svg {
-  width: 12px;
-  height: 12px;
+.label-chip-table:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(67, 56, 202, 0.2);
+}
+
+.label-chip-table svg {
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
 }
 
-.no-labels {
-  padding: 12px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  color: #64748b;
-  font-size: 13px;
-  text-align: center;
+.no-labels-table {
+  color: #cbd5e1;
+  font-size: 14px;
+  font-style: italic;
 }
 
-.contact-footer {
-  padding: 16px 20px;
-  border-top: 1px solid #f1f5f9;
-  background: #f8fafc;
+/* Action Buttons in Table */
+.action-buttons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  justify-content: center;
 }
 
-.btn-edit,
-.btn-delete {
-  flex: 1;
+.btn-edit-table,
+.btn-delete-table {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 16px;
-  border: 1.5px solid;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 13px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn-edit {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  color: #0369a1;
-  border-color: #7dd3fc;
+.btn-edit-table {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
 }
 
-.btn-edit:hover {
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(3, 105, 161, 0.2);
+.btn-edit-table:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
-.btn-delete {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  color: #dc2626;
-  border-color: #fca5a5;
-}
-
-.btn-delete:hover {
+.btn-delete-table {
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }
 
-.btn-edit svg,
-.btn-delete svg {
-  width: 16px;
-  height: 16px;
+.btn-delete-table:hover {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.btn-edit-table svg {
+  width: 18px;
+  height: 18px;
+  color: #1e40af;
+}
+
+.btn-delete-table svg {
+  width: 18px;
+  height: 18px;
+  color: #dc2626;
+}
+
+/* Label Filter Dropdown */
+.label-filter {
+  min-width: 180px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border: 1.5px solid #cbd5e1;
+  font-weight: 600;
+}
+
+.label-filter:hover {
+  border-color: #3b82f6;
 }
 
 /* Empty States */
@@ -1357,7 +1441,7 @@ onMounted(async () => {
   justify-content: space-between;
   padding: 20px;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #e2e8f0;
   border-radius: 12px;
   gap: 16px;
 }
@@ -1594,7 +1678,6 @@ onMounted(async () => {
 .btn-cancel svg,
 .btn-submit svg {
   width: 18px;
-  height: 18px;
 }
 
 /* Messages */

@@ -16,6 +16,112 @@
 
     <!-- Main Form -->
     <form @submit.prevent="submit" class="reminder-form">
+      <!-- Card 0: Device Selection -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            </svg>
+            Pilih Device WhatsApp
+          </h3>
+          <button 
+            type="button" 
+            class="btn-refresh-header" 
+            @click="loadDevices" 
+            :disabled="loadingDevices"
+            title="Refresh device list"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingDevices }">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            {{ loadingDevices ? 'Loading...' : 'Refresh' }}
+          </button>
+        </div>
+        <div class="card-body">
+          <!-- Device Info Card (when device is selected) -->
+          <div v-if="selectedDevice" class="device-info-card" :class="{ 'connected': selectedDevice.isConnected, 'disconnected': !selectedDevice.isConnected }">
+            <div class="device-avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <path d="M12 8v4"/>
+                <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+              </svg>
+              <div class="status-indicator" :class="{ 'online': selectedDevice.isConnected }"></div>
+            </div>
+            <div class="device-details">
+              <div class="device-name">{{ selectedDevice.name || 'Unknown Device' }}</div>
+              <div class="device-meta">
+                <span class="device-status" :class="{ 'online': selectedDevice.isConnected }">
+                  <svg viewBox="0 0 8 8" fill="currentColor">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  {{ selectedDevice.isConnected ? 'Online' : 'Offline' }}
+                </span>
+                <span class="device-divider">•</span>
+                <span class="device-id">{{ selectedDevice.status || 'Unknown' }}</span>
+              </div>
+            </div>
+            <button type="button" class="btn-change-device" @click="handleChangeDevice">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+              </svg>
+              Ganti Device
+            </button>
+          </div>
+
+          <!-- Device Selector (when no device selected) -->
+          <div v-else class="device-selector-empty">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              </svg>
+            </div>
+            <div class="empty-text">
+              <h4>Pilih Device WhatsApp</h4>
+              <p>Pilih device yang akan digunakan untuk mengirim reminder</p>
+            </div>
+          </div>
+
+          <!-- Device List -->
+          <div v-if="otherDevices.length > 0" class="device-list">
+            <label class="form-label">
+              {{ selectedDevice ? 'Atau pilih device lain:' : 'Pilih dari daftar device:' }}
+            </label>
+            <div class="device-grid">
+              <button
+                v-for="device in otherDevices"
+                :key="device.id"
+                type="button"
+                class="device-item"
+                :class="{ 
+                  'active': device.id === selectedDeviceId,
+                  'connected': device.isConnected,
+                  'disconnected': !device.isConnected
+                }"
+                @click="handleSelectDevice(device.id)"
+              >
+                <div class="device-item-avatar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                    <line x1="12" y1="18" x2="12.01" y2="18"/>
+                  </svg>
+                  <div class="device-item-status" :class="{ 'online': device.isConnected }"></div>
+                </div>
+                <div class="device-item-info">
+                  <div class="device-item-name">{{ device.name }}</div>
+                  <div class="device-item-status-text" :class="{ 'online': device.isConnected }">
+                    {{ device.isConnected ? 'Terhubung' : 'Terputus' }}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Card 1: Basic Info -->
       <div class="card">
         <div class="card-header">
@@ -286,7 +392,7 @@
                   Tambah
                 </button>
                 <button type="button" class="btn-secondary" @click="loadContacts" :disabled="loadingContacts">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingContacts }">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                   </svg>
                 </button>
@@ -308,7 +414,7 @@
                   Tambah
                 </button>
                 <button type="button" class="btn-secondary" @click="loadGroups" :disabled="loadingGroups">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingContacts }">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                   </svg>
                 </button>
@@ -330,7 +436,7 @@
                   Tambah
                 </button>
                 <button type="button" class="btn-secondary" @click="loadLabels" :disabled="loadingLabels">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingLabels }">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingContacts }">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                   </svg>
                 </button>
@@ -402,9 +508,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { deviceApi, userApi } from '../api/http.js';
 import { useGroups } from '../composables/useGroups.js';
+import { useDevices } from '../composables/useDevices.js';
 import { useToast } from '../composables/useToast.js';
 import { 
   convertToServerTime, 
@@ -415,23 +522,25 @@ import {
 
 const toast = useToast();
 
-// Pastikan deviceId tersedia/tersimpan sebelum memuat label/kontak
-const ensureDeviceId = async () => {
-  let deviceId = localStorage.getItem('device_selected_id');
-  if (deviceId) return deviceId;
-  try {
-    const { data } = await userApi.get('/devices');
-    const devices = Array.isArray(data) ? data : [];
-    const current = devices.find((d) => d.status === 'open') || devices[0];
-    if (current) {
-      if (current.id) localStorage.setItem('device_selected_id', current.id);
-      if (current.name) localStorage.setItem('device_selected_name', current.name);
-      if (current.apiKey) localStorage.setItem('device_api_key', current.apiKey);
-      return current.id || '';
-    }
-  } catch (_) {}
-  return '';
-};
+// Device management
+const { 
+  selectedDeviceId, 
+  selectedDevice, 
+  availableDevices, 
+  loading: loadingDevices, 
+  loadDevices, 
+  selectDevice 
+} = useDevices();
+
+const otherDevices = computed(() => availableDevices.value.filter(device => device.id !== selectedDeviceId.value));
+
+function handleChangeDevice() {
+  selectedDeviceId.value = '';
+}
+
+function handleSelectDevice(deviceId) {
+  selectDevice(deviceId);
+}
 
 const form = ref({
   name: '',
@@ -703,7 +812,8 @@ const submit = async () => {
     // Convert schedule menggunakan utility function
     const scheduleISO = convertToServerTime(form.value.schedule);
     
-    const deviceId = await ensureDeviceId();
+    // Gunakan deviceId dari device selector
+    const deviceId = selectedDeviceId.value || (await ensureDeviceId());
     if (!deviceId) {
       toast.error('Device tidak ditemukan atau belum login');
       loading.value = false;
@@ -719,7 +829,7 @@ const submit = async () => {
         delay: form.value.delay ?? 5000,
         schedule: scheduleISO,
         recipients: recipients.value,
-        deviceId,
+        deviceId, // Kirim deviceId
       };
       await deviceApi.post('/messages/broadcasts/reminder-algo', payload);
     } else {
@@ -730,7 +840,7 @@ const submit = async () => {
       fd.append('lessons', String(form.value.lessons));
       fd.append('delay', String(form.value.delay ?? 5000));
       fd.append('schedule', scheduleISO);
-      fd.append('deviceId', deviceId);
+      fd.append('deviceId', deviceId); // Kirim deviceId
       recipients.value.forEach((r) => fd.append('recipients', r));
       fd.append('media', mediaFile.value);
       await deviceApi.post('/messages/broadcasts/reminder-algo', fd);
@@ -756,6 +866,33 @@ const submit = async () => {
 
 // auto-load groups initially (fast cached)
 loadGroups().catch(() => {});
+
+// Load devices on mount
+loadDevices().catch(() => {});
+
+// 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
+watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
+  if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
+    console.log('[ReminderAlgo] Device berubah dari', oldDeviceId, 'ke', newDeviceId);
+    console.log('[ReminderAlgo] Auto-refresh data: Kontak, Grup, dan Label...');
+    
+    // Clear recipients ketika ganti device
+    recipients.value = [];
+    recipientLabels.value = {};
+    selectedContactId.value = '';
+    selectedGroupId.value = '';
+    selectedLabelValue.value = '';
+    
+    // Auto-refresh semua data
+    await Promise.allSettled([
+      loadGroups(),
+      loadContacts(),
+      loadLabels()
+    ]);
+    
+    toast.success('Device berhasil diganti. Data kontak, grup, dan label telah di-refresh.');
+  }
+});
 
 const activeTab = ref('manual');
 </script>
@@ -846,6 +983,375 @@ const activeTab = ref('manual');
   height: 22px;
   color: #3b82f6;
 }
+
+/* 🆕 Device Selector Styles */
+/* Button Refresh Header */
+.btn-refresh-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-refresh-header:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+}
+
+.btn-refresh-header:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-refresh-header svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Device Info Card (Selected Device) */
+.device-info-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 2px solid;
+  transition: all 0.3s;
+}
+
+.device-info-card.connected {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #86efac;
+}
+
+.device-info-card.disconnected {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fca5a5;
+}
+
+.device-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.device-info-card.connected .device-avatar {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.device-info-card.disconnected .device-avatar {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.device-avatar svg {
+  width: 32px;
+  height: 32px;
+  color: white;
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid white;
+  background: #94a3b8;
+  transition: all 0.3s;
+}
+
+.status-indicator.online {
+  background: #22c55e;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+}
+
+.device-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.device-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.device-status.online {
+  color: #15803d;
+}
+
+.device-status svg {
+  width: 8px;
+  height: 8px;
+}
+
+.device-divider {
+  color: #cbd5e1;
+}
+
+.device-id {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.btn-change-device {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-change-device:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.btn-change-device svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Device Selector Empty State */
+.device-selector-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  margin-bottom: 24px;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon svg {
+  width: 32px;
+  height: 32px;
+  color: #1e40af;
+}
+
+.empty-text {
+  text-align: center;
+}
+
+.empty-text h4 {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.empty-text p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* Device List */
+.device-list {
+  margin-top: 24px;
+}
+
+.device-list .form-label {
+  margin-bottom: 12px;
+}
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.device-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+}
+
+.device-item:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.device-item.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.device-item.connected {
+  border-color: #86efac;
+}
+
+.device-item.connected:hover {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.device-item.disconnected {
+  border-color: #fca5a5;
+  opacity: 0.7;
+}
+
+.device-item.disconnected:hover {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.device-item-avatar {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.device-item.active .device-item-avatar {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.device-item.connected .device-item-avatar {
+  background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
+}
+
+.device-item.disconnected .device-item-avatar {
+  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
+}
+
+.device-item-avatar svg {
+  width: 24px;
+  height: 24px;
+  color: #1e40af;
+}
+
+.device-item.active .device-item-avatar svg,
+.device-item.connected .device-item-avatar svg,
+.device-item.disconnected .device-item-avatar svg {
+  color: white;
+}
+
+.device-item-status {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: #94a3b8;
+}
+
+.device-item-status.online {
+  background: #22c55e;
+}
+
+.device-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-item-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-item-status-text {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.device-item-status-text.online {
+  color: #15803d;
+}
+
+/* End Device Selector Styles */
 
 .badge-optional {
   padding: 6px 12px;
