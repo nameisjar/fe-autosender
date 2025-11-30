@@ -44,7 +44,7 @@
           <div v-if="selectedDevice" class="device-info-card" :class="{ 'connected': selectedDevice.isConnected, 'disconnected': !selectedDevice.isConnected }">
             <div class="device-avatar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1-2-2h14a2 2 0 0 1 2 2z"/>
                 <path d="M12 8v4"/>
                 <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
               </svg>
@@ -804,14 +804,62 @@ function removeMedia() {
   if (input) input.value = '';
 }
 
+// ✅ Fungsi validasi nomor telepon
+function isValidPhoneNumber(phone) {
+  // Nomor harus berupa string yang hanya mengandung digit
+  const cleaned = String(phone).replace(/\D/g, '');
+  
+  // Nomor harus dimulai dengan 62 dan minimal 10 digit (62 + 8 digit)
+  // Format yang valid: 628xxx (minimal) hingga 62xxxxxxxxxxxxxx
+  if (!cleaned.startsWith('62')) {
+    return false;
+  }
+  
+  // Panjang minimal 10 digit (62 + 8 digit nomor)
+  // Panjang maksimal 15 digit (standar internasional)
+  if (cleaned.length < 10 || cleaned.length > 15) {
+    return false;
+  }
+  
+  return true;
+}
+
 function addRecipientsFromInput() {
   if (!recipientInput.value) return;
+  
   const items = recipientInput.value
     .split(/[\s,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  const set = new Set([...recipients.value, ...items]);
-  recipients.value = Array.from(set);
+  
+  // ✅ Validasi setiap nomor sebelum ditambahkan
+  const validNumbers = [];
+  const invalidNumbers = [];
+  
+  items.forEach((item) => {
+    if (isValidPhoneNumber(item)) {
+      validNumbers.push(item);
+    } else {
+      invalidNumbers.push(item);
+    }
+  });
+  
+  // Tambahkan nomor valid ke recipients
+  if (validNumbers.length > 0) {
+    const set = new Set([...recipients.value, ...validNumbers]);
+    recipients.value = Array.from(set);
+  }
+  
+  // Tampilkan notifikasi
+  if (validNumbers.length > 0 && invalidNumbers.length > 0) {
+    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
+    toast.error(`${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(', ')}`);
+  } else if (validNumbers.length > 0) {
+    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
+  } else if (invalidNumbers.length > 0) {
+    toast.error(`Nomor tidak valid: ${invalidNumbers.join(', ')}. Format harus: 62xxx (minimal 10 digit)`);
+  }
+  
   recipientInput.value = '';
 }
 

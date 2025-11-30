@@ -608,14 +608,62 @@ function formatFileSize(bytes) {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
+// ✅ Fungsi validasi nomor telepon
+function isValidPhoneNumber(phone) {
+  // Nomor harus berupa string yang hanya mengandung digit
+  const cleaned = String(phone).replace(/\D/g, '');
+  
+  // Nomor harus dimulai dengan 62 dan minimal 10 digit (62 + 8 digit)
+  // Format yang valid: 628xxx (minimal) hingga 62xxxxxxxxxxxxxx
+  if (!cleaned.startsWith('62')) {
+    return false;
+  }
+  
+  // Panjang minimal 10 digit (62 + 8 digit nomor)
+  // Panjang maksimal 15 digit (standar internasional)
+  if (cleaned.length < 10 || cleaned.length > 15) {
+    return false;
+  }
+  
+  return true;
+}
+
 function addRecipientsFromInput() {
   if (!recipientInput.value) return;
+  
   const items = recipientInput.value
     .split(/[\s,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  const set = new Set([...recipients.value, ...items]);
-  recipients.value = Array.from(set);
+  
+  // ✅ Validasi setiap nomor sebelum ditambahkan
+  const validNumbers = [];
+  const invalidNumbers = [];
+  
+  items.forEach((item) => {
+    if (isValidPhoneNumber(item)) {
+      validNumbers.push(item);
+    } else {
+      invalidNumbers.push(item);
+    }
+  });
+  
+  // Tambahkan nomor valid ke recipients
+  if (validNumbers.length > 0) {
+    const set = new Set([...recipients.value, ...validNumbers]);
+    recipients.value = Array.from(set);
+  }
+  
+  // Tampilkan notifikasi
+  if (validNumbers.length > 0 && invalidNumbers.length > 0) {
+    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
+    toast.error(`${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(', ')}`);
+  } else if (validNumbers.length > 0) {
+    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
+  } else if (invalidNumbers.length > 0) {
+    toast.error(`Nomor tidak valid: ${invalidNumbers.join(', ')}. Format harus: 62xxx (minimal 10 digit)`);
+  }
+  
   recipientInput.value = '';
 }
 

@@ -34,7 +34,7 @@
             title="Refresh device list"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingDevices }">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1-18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
             </svg>
             {{ loadingDevices ? 'Loading...' : 'Refresh' }}
           </button>
@@ -393,7 +393,7 @@
                 </button>
                 <button type="button" class="btn-secondary" @click="loadContacts" :disabled="loadingContacts">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1-18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                   </svg>
                 </button>
               </div>
@@ -577,6 +577,26 @@ function removeMedia() {
   mediaPreview.value = '';
 }
 
+// ✅ Fungsi validasi nomor telepon
+function isValidPhoneNumber(phone) {
+  // Nomor harus berupa string yang hanya mengandung digit
+  const cleaned = String(phone).replace(/\D/g, '');
+  
+  // Nomor harus dimulai dengan 62 dan minimal 10 digit (62 + 8 digit)
+  // Format yang valid: 628xxx (minimal) hingga 62xxxxxxxxxxxxxx
+  if (!cleaned.startsWith('62')) {
+    return false;
+  }
+  
+  // Panjang minimal 10 digit (62 + 8 digit nomor)
+  // Panjang maksimal 15 digit (standar internasional)
+  if (cleaned.length < 10 || cleaned.length > 15) {
+    return false;
+  }
+  
+  return true;
+}
+
 // Recipients (same behaviour as ScheduleReminder)
 const recipients = ref([]);
 const recipientInput = ref('');
@@ -746,12 +766,40 @@ const chipLabel = (r) => recipientLabels.value[r] || r;
 // Add/remove recipients manually
 function addRecipientsFromInput() {
   if (!recipientInput.value) return;
+  
   const items = recipientInput.value
     .split(/[\s,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  const set = new Set([...recipients.value, ...items]);
-  recipients.value = Array.from(set);
+  
+  // ✅ Validasi setiap nomor sebelum ditambahkan
+  const validNumbers = [];
+  const invalidNumbers = [];
+  
+  items.forEach((item) => {
+    if (isValidPhoneNumber(item)) {
+      validNumbers.push(item);
+    } else {
+      invalidNumbers.push(item);
+    }
+  });
+  
+  // Tambahkan nomor valid ke recipients
+  if (validNumbers.length > 0) {
+    const set = new Set([...recipients.value, ...validNumbers]);
+    recipients.value = Array.from(set);
+  }
+  
+  // Tampilkan notifikasi
+  if (validNumbers.length > 0 && invalidNumbers.length > 0) {
+    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
+    toast.error(`${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(', ')}`);
+  } else if (validNumbers.length > 0) {
+    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
+  } else if (invalidNumbers.length > 0) {
+    toast.error(`Nomor tidak valid: ${invalidNumbers.join(', ')}. Format harus: 62xxx (minimal 10 digit)`);
+  }
+  
   recipientInput.value = '';
 }
 
