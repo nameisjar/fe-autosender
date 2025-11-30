@@ -141,7 +141,7 @@
               </label>
               <input 
                 v-model.trim="form.name" 
-                placeholder="Contoh: Pengumuman Promo Bulan Ini" 
+                placeholder="Contoh: Extra Class (Fulan)" 
                 required 
                 class="form-input"
               />
