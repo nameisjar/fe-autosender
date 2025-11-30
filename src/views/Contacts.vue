@@ -239,7 +239,7 @@
 
       <div v-else-if="!loading" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <path d="M17 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -435,6 +435,82 @@
       </div>
     </div>
 
+    <!-- Import Modal -->
+    <div v-if="showImportModal" class="modal-overlay import-modal-overlay" @click="cancelImport">
+      <div class="import-modal" @click.stop>
+        <div class="import-modal-icon">
+          <div class="icon-circle-import">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="import-modal-content">
+          <h3>Import Kontak dari XLSX</h3>
+          <p class="import-description">Impor data kontak dari file Excel ke perangkat yang dipilih</p>
+          
+          <div class="file-preview" v-if="selectedFile">
+            <div class="preview-icon-file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">{{ selectedFile.name }}</div>
+              <div class="file-size">{{ (selectedFile.size / 1024).toFixed(2) }} KB</div>
+            </div>
+          </div>
+
+          <div class="form-group-import">
+            <label>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Nama Grup (Opsional)
+            </label>
+            <input 
+              v-model="importGroupName" 
+              type="text"
+              placeholder="Contoh: IMPORT_2025-11-30"
+              class="input-group-name"
+            />
+            <small class="help-text-import">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              Nama grup akan digunakan untuk mengelompokkan kontak yang diimpor
+            </small>
+          </div>
+        </div>
+
+        <div class="import-modal-actions">
+          <button type="button" class="btn-cancel-import" @click="cancelImport" :disabled="importBusy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+            Batal
+          </button>
+          <button type="button" class="btn-import-confirm" @click="confirmImport" :disabled="importBusy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            {{ importBusy ? 'Mengimpor...' : 'Mulai Import' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <p v-if="msg" class="success-message">{{ msg }}</p>
     <p v-if="err" class="error-message">{{ err }}</p>
   </div>
@@ -461,6 +537,11 @@ const err = ref('');
 const showDeleteModal = ref(false);
 const contactToDelete = ref(null);
 const deleting = ref(false);
+
+// New: Import modal state
+const showImportModal = ref(false);
+const importGroupName = ref('');
+const selectedFile = ref(null);
 
 // New: Import/Export state
 const fileInput = ref(null);
@@ -514,11 +595,9 @@ const onDeviceChange = () => {
 
 const loadContacts = async () => {
   if (!selectedDeviceId.value) {
-    console.log('❌ No device selected, cannot load contacts');
     return;
   }
   
-  console.log('🔄 Loading contacts for device:', selectedDeviceId.value);
   loading.value = true;
   err.value = '';
   
@@ -534,9 +613,6 @@ const loadContacts = async () => {
       },
     });
     
-    console.log('📋 Raw contacts response:', data);
-    console.log('📊 Number of contacts received:', Array.isArray(data) ? data.length : 'Not an array');
-    
     const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
     contacts.value = list;
     meta.value = Array.isArray(data) ? {
@@ -545,11 +621,6 @@ const loadContacts = async () => {
       totalPages: 1,
       hasMore: false,
     } : (data?.metadata || meta.value);
-    
-    console.log('✅ Contacts loaded successfully:', contacts.value.length, 'items');
-    contacts.value.forEach((contact, index) => {
-      console.log(`   ${index + 1}. ${contact.firstName} ${contact.lastName || ''} - ${contact.phone}`);
-    });
     
   } catch (e) {
     console.error('❌ Error loading contacts:', e);
@@ -680,38 +751,30 @@ const saveContact = async () => {
       deviceId: selectedDeviceId.value,
     };
     
-    console.log('🚀 Sending contact payload:', payload);
-    console.log('📱 Selected device ID:', selectedDeviceId.value);
-    
     let response;
     if (editingContact.value) {
       response = await userApi.put(`/contacts/${editingContact.value.id}`, payload);
       toast.success('Kontak berhasil diperbarui');
-      console.log('✅ Contact updated:', response.data);
     } else {
       response = await userApi.post('/contacts/create', payload);
       toast.success('Kontak berhasil ditambahkan');
-      console.log('✅ Contact created:', response.data);
     }
     
     // Reset form immediately
     resetForm();
     
     // Force reload contacts with better timing and error handling
-    console.log('🔄 Reloading contacts after save...');
     
     // Try immediate reload first
     await loadContacts();
     
     // If no contacts found, try again after a short delay
     if (contacts.value.length === 0) {
-      console.log('⏰ No contacts found, retrying after delay...');
       setTimeout(async () => {
         await loadContacts();
         
         // If still no contacts, try one more time
         if (contacts.value.length === 0) {
-          console.log('⏰ Still no contacts, final retry...');
           setTimeout(async () => {
             await loadContacts();
           }, 1000);
@@ -801,8 +864,13 @@ const onImportFileChange = async (e) => {
     return;
   }
 
-  const defaultGroup = new Date().toISOString().slice(0,10);
-  const groupName = (prompt('Nama grup untuk import (opsional):', `IMPORT_${defaultGroup}`) || '').trim();
+  selectedFile.value = file;
+  showImportModal.value = true;
+};
+
+// New: Confirm import action
+const confirmImport = async () => {
+  if (!selectedFile.value) return;
 
   importBusy.value = true;
   err.value = '';
@@ -810,9 +878,9 @@ const onImportFileChange = async (e) => {
 
   try {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', selectedFile.value);
     formData.append('deviceId', selectedDeviceId.value);
-    if (groupName) formData.append('groupName', groupName);
+    if (importGroupName.value) formData.append('groupName', importGroupName.value);
 
     const { data } = await userApi.post('/contacts/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -825,12 +893,18 @@ const onImportFileChange = async (e) => {
     // reload contacts after import
     await loadContacts();
   } catch (e) {
-    console.error('❌ Import error:', e);
     toast.error(e?.response?.data?.message || 'Gagal mengimpor kontak');
   } finally {
     importBusy.value = false;
-    if (e?.target) e.target.value = '';
+    showImportModal.value = false;
+    selectedFile.value = null;
   }
+};
+
+// New: Cancel import action
+const cancelImport = () => {
+  showImportModal.value = false;
+  selectedFile.value = null;
 };
 
 // New: Export handler
@@ -855,7 +929,6 @@ const exportContactsFile = async () => {
     if (typeof ct === 'string' && ct.includes('text/html')) {
       try {
         const txt = await response.data.text();
-        console.warn('Unexpected HTML in export response:', txt?.slice(0, 200));
       } catch (_) {}
       throw new Error('Server mengembalikan HTML. Cek konfigurasi URL API.');
     }
@@ -878,7 +951,6 @@ const exportContactsFile = async () => {
 
     toast.success('Export berhasil. File sedang diunduh.');
   } catch (e) {
-    console.error('❌ Export error:', e);
     toast.error(e?.message || e?.response?.data?.message || 'Gagal mengekspor kontak');
   } finally {
     exportBusy.value = false;
@@ -1986,6 +2058,244 @@ onMounted(async () => {
   width: 18px;
 }
 
+/* Import Modal */
+.import-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.import-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 32px;
+  text-align: center;
+  animation: slideUp 0.3s ease-out;
+}
+
+.import-modal-icon {
+  margin-bottom: 20px;
+  animation: pulse 0.5s ease-out;
+}
+
+.icon-circle-import {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.icon-circle-import::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  opacity: 0.3;
+  animation: ripple 1.5s infinite;
+}
+
+.icon-circle-import svg {
+  width: 40px;
+  height: 40px;
+  color: #1e40af;
+  position: relative;
+  z-index: 1;
+}
+
+.import-modal-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.import-description {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.file-preview:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.preview-icon-file {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.preview-icon-file svg {
+  width: 24px;
+  height: 24px;
+  color: #1e40af;
+}
+
+.file-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.file-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.form-group-import {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.form-group-import label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.form-group-import label svg {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+}
+
+.input-group-name {
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+}
+
+.input-group-name:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.help-text-import {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+  font-style: normal;
+}
+
+.help-text-import svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.import-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-cancel-import,
+.btn-import-confirm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-import {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+}
+
+.btn-cancel-import:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-import-confirm {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-import-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.btn-import-confirm:disabled,
+.btn-cancel-import:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-cancel-import svg,
+.btn-import-confirm svg {
+  width: 18px;
+}
+
 /* Responsive for Delete Modal */
 @media (max-width: 768px) {
   .delete-modal {
@@ -2014,6 +2324,38 @@ onMounted(async () => {
 
   .btn-keep,
   .btn-delete-confirm {
+    width: 100%;
+  }
+}
+
+/* Responsive for Import Modal */
+@media (max-width: 768px) {
+  .import-modal {
+    padding: 24px;
+    max-width: 90%;
+  }
+
+  .icon-circle-import {
+    width: 72px;
+    height: 72px;
+  }
+
+  .icon-circle-import svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .import-modal-content h3 {
+    font-size: 20px;
+  }
+
+  .import-modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-cancel-import,
+  .btn-import-confirm {
     width: 100%;
   }
 }

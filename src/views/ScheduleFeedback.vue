@@ -936,9 +936,6 @@ const activeTab = ref('manual');
 // 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
-    console.log('[ScheduleFeedback] Device berubah dari', oldDeviceId, 'ke', newDeviceId);
-    console.log('[ScheduleFeedback] Auto-refresh data: Kontak, Grup, dan Label...');
-    
     // Clear recipients ketika ganti device
     recipients.value = [];
     recipientLabels.value = {};

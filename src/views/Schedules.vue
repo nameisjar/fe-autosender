@@ -444,7 +444,6 @@ const loadGroupNames = async () => {
   try {
     const deviceId = localStorage.getItem('device_selected_id') || '';
     if (!deviceId) {
-      console.log('No device selected');
       return;
     }
 
@@ -467,7 +466,6 @@ const loadGroupNames = async () => {
     }
     
     groupsMap.value = map;
-    console.log(`Loaded ${groups.length} groups from database`);
   } catch (error) {
     console.error('Error loading groups from database:', error);
     // Fallback ke method lama jika API database gagal

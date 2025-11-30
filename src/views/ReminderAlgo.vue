@@ -926,8 +926,6 @@ const submit = async () => {
 // 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
-    console.log('[ReminderAlgo] Device berubah dari', oldDeviceId, 'ke', newDeviceId);
-    console.log('[ReminderAlgo] Auto-refresh data: Kontak, Grup, dan Label...');
     
     // Clear recipients ketika ganti device
     recipients.value = [];

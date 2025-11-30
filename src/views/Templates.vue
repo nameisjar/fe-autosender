@@ -134,8 +134,8 @@
           Daftar Template ({{ feedbacks.length }})
         </h3>
         <button class="btn-reload" @click="loadFeedbacks" :disabled="loading">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loading }">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1-18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
           </svg>
           {{ loading ? 'Memuat...' : 'Muat Ulang' }}
         </button>
@@ -350,6 +350,62 @@
         </div>
       </div>
     </div>
+
+    <!-- Import Confirmation Modal -->
+    <div v-if="showImportModal" class="modal-overlay import-modal-overlay" @click="cancelImport">
+      <div class="import-modal" @click.stop>
+        <div class="import-modal-icon">
+          <div class="icon-circle-import">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="import-modal-content">
+          <h3>Ganti Semua Data Template?</h3>
+          <p class="import-description">File yang diimport akan mengganti semua template yang ada. Pilih "Tambah" untuk menambahkan tanpa menghapus data lama, atau "Ganti Semua" untuk replace.</p>
+          
+          <div class="file-preview" v-if="selectedImportFile">
+            <div class="preview-icon-file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">{{ selectedImportFile.name }}</div>
+              <div class="file-size">{{ (selectedImportFile.size / 1024).toFixed(2) }} KB</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="import-modal-actions">
+          <button type="button" class="btn-cancel-import" @click="cancelImport" :disabled="importBusy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+            Batal
+          </button>
+          <button type="button" class="btn-append-import" @click="() => { importReplaceMode = false; confirmImport(); }" :disabled="importBusy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            {{ importBusy && !importReplaceMode ? 'Menambah...' : 'Tambah' }}
+          </button>
+          <button type="button" class="btn-import-confirm" @click="() => { importReplaceMode = true; confirmImport(); }" :disabled="importBusy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            {{ importBusy && importReplaceMode ? 'Mengganti...' : 'Ganti Semua' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -358,6 +414,7 @@ import { ref, computed, onMounted } from 'vue';
 import { userApi } from '../api/http.js';
 import { useAuthStore } from '../stores/auth.js';
 import { useToast } from '../composables/useToast.js';
+import { loadXLSX } from '../utils/xlsx-loader.js';
 
 const toast = useToast();
 
@@ -379,6 +436,11 @@ const err = ref('');
 const showDeleteModal = ref(false);
 const templateToDelete = ref(null);
 const deleting = ref(false);
+
+// Import modal state
+const showImportModal = ref(false);
+const importReplaceMode = ref(false);
+const selectedImportFile = ref(null);
 
 // Import state for Templates
 const tplFileInput = ref(null);
@@ -509,8 +571,12 @@ const cancelDelete = () => {
 };
 
 // XLSX export for visible data
-const exportXLSX = () => {
+const exportXLSX = async () => {
   try {
+    // Load XLSX library dinamis hanya saat diperlukan
+    // toast.info('Memuat library Excel...');
+    const XLSX = await loadXLSX();
+    
     const rows = [];
     rows.push(['Course Name', 'Lesson', 'Message']);
     for (const c of courses.value) {
@@ -524,7 +590,7 @@ const exportXLSX = () => {
     XLSX.writeFile(wb, 'feedback-templates.xlsx');
     toast.success('File XLSX berhasil diekspor');
   } catch (e) {
-    toast.error('Gagal mengekspor file XLSX');
+    toast.error(e?.message || 'Gagal mengekspor file XLSX');
   }
 };
 
@@ -548,25 +614,45 @@ const onTplImportFileChange = async (e) => {
     return;
   }
 
-  const replace = window.confirm('Ganti semua data template dengan file ini? Pilih Cancel untuk menambah (append).');
+  // Show modern import modal instead of browser confirm
+  selectedImportFile.value = file;
+  importReplaceMode.value = false; // Default to append mode
+  showImportModal.value = true;
+};
+
+// Confirm import action
+const confirmImport = async () => {
+  if (!selectedImportFile.value) return;
+
   importBusy.value = true;
   err.value = '';
   msg.value = '';
+
   try {
     const form = new FormData();
-    form.append('file', file);
+    form.append('file', selectedImportFile.value);
     await userApi.post(`/algorithmics/feedback/import`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      params: { replace },
+      params: { replace: importReplaceMode.value },
     });
-    toast.success(`Import template berhasil${replace ? ' (replace)' : ' (append)'}`);
+    toast.success(`Import template berhasil${importReplaceMode.value ? ' (replace)' : ' (append)'}`);
     await loadFeedbacks();
   } catch (e) {
     toast.error(e?.response?.data?.message || e?.message || 'Gagal mengimpor template');
   } finally {
     importBusy.value = false;
-    if (e?.target) e.target.value = '';
+    showImportModal.value = false;
+    selectedImportFile.value = null;
+    if (tplFileInput.value) tplFileInput.value.value = '';
   }
+};
+
+// Cancel import action
+const cancelImport = () => {
+  showImportModal.value = false;
+  selectedImportFile.value = null;
+  importReplaceMode.value = false;
+  if (tplFileInput.value) tplFileInput.value.value = '';
 };
 
 loadFeedbacks();
@@ -1759,6 +1845,239 @@ loadFeedbacks();
 
   .btn-keep,
   .btn-delete-confirm {
+    width: 100%;
+  }
+}
+
+/* Import Modal */
+.import-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.import-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 32px;
+  text-align: center;
+  animation: slideUp 0.3s ease-out;
+}
+
+.import-modal-icon {
+  margin-bottom: 20px;
+  animation: pulse-icon 0.5s ease-out;
+}
+
+.icon-circle-import {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.icon-circle-import::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  opacity: 0.3;
+  animation: ripple 1.5s infinite;
+}
+
+.icon-circle-import svg {
+  width: 40px;
+  height: 40px;
+  color: #1e40af;
+  position: relative;
+  z-index: 1;
+}
+
+.import-modal-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.import-description {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.file-preview:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.preview-icon-file {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.preview-icon-file svg {
+  width: 24px;
+  height: 24px;
+  color: #1e40af;
+}
+
+.file-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.file-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.import-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn-cancel-import,
+.btn-append-import,
+.btn-import-confirm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-import {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+}
+
+.btn-cancel-import:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-append-import {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border: 1.5px solid #86efac;
+  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.2);
+}
+
+.btn-append-import:hover:not(:disabled) {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.3);
+}
+
+.btn-import-confirm {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-import-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.btn-import-confirm:disabled,
+.btn-append-import:disabled,
+.btn-cancel-import:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-cancel-import svg,
+.btn-append-import svg,
+.btn-import-confirm svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive for Import Modal */
+@media (max-width: 768px) {
+  .import-modal {
+    padding: 24px;
+    max-width: 90%;
+  }
+
+  .icon-circle-import {
+    width: 72px;
+    height: 72px;
+  }
+
+  .icon-circle-import svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .import-modal-content h3 {
+    font-size: 20px;
+  }
+
+  .import-modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-cancel-import,
+  .btn-append-import,
+  .btn-import-confirm {
     width: 100%;
   }
 }

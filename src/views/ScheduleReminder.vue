@@ -980,9 +980,6 @@ loadDevices().catch(() => {});
 // 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
-    console.log('[ScheduleReminder] Device berubah dari', oldDeviceId, 'ke', newDeviceId);
-    console.log('[ScheduleReminder] Auto-refresh data: Kontak, Grup, dan Label...');
-    
     // Clear recipients ketika ganti device
     recipients.value = [];
     recipientLabels.value = {};
@@ -2190,3 +2187,4 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   }
 }
 </style>
+`

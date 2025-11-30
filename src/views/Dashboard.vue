@@ -199,12 +199,10 @@ onMounted(() => {
   storageWatcher = setInterval(() => {
     const currentDeviceId = localStorage.getItem('device_selected_id');
     if (currentDeviceId !== selectedDeviceId.value) {
-      console.log('[Dashboard] Device berubah dari', selectedDeviceId.value, 'ke', currentDeviceId);
       selectedDeviceId.value = currentDeviceId;
       
       // Auto-refresh foto profil
       if (currentDeviceId) {
-        console.log('[Dashboard] Auto-refresh foto profil untuk device:', currentDeviceId);
         fetchProfilePicture();
       } else {
         // Jika tidak ada device, reset foto profil
