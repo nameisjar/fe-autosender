@@ -542,6 +542,24 @@ function handleSelectDevice(deviceId) {
   selectDevice(deviceId);
 }
 
+// ✅ Tambahkan fungsi ensureDeviceId
+const ensureDeviceId = async () => {
+  let deviceId = localStorage.getItem('device_selected_id');
+  if (deviceId) return deviceId;
+  try {
+    const { data } = await userApi.get('/devices');
+    const devices = Array.isArray(data) ? data : [];
+    const current = devices.find((d) => d.status === 'open') || devices[0];
+    if (current) {
+      if (current.id) localStorage.setItem('device_selected_id', current.id);
+      if (current.name) localStorage.setItem('device_selected_name', current.name);
+      if (current.apiKey) localStorage.setItem('device_api_key', current.apiKey);
+      return current.id || '';
+    }
+  } catch (_) {}
+  return '';
+};
+
 const form = ref({
   name: '',
   message: '',
@@ -579,21 +597,13 @@ function removeMedia() {
 
 // ✅ Fungsi validasi nomor telepon
 function isValidPhoneNumber(phone) {
-  // Nomor harus berupa string yang hanya mengandung digit
   const cleaned = String(phone).replace(/\D/g, '');
-  
-  // Nomor harus dimulai dengan 62 dan minimal 10 digit (62 + 8 digit)
-  // Format yang valid: 628xxx (minimal) hingga 62xxxxxxxxxxxxxx
   if (!cleaned.startsWith('62')) {
     return false;
   }
-  
-  // Panjang minimal 10 digit (62 + 8 digit nomor)
-  // Panjang maksimal 15 digit (standar internasional)
   if (cleaned.length < 10 || cleaned.length > 15) {
     return false;
   }
-  
   return true;
 }
 
@@ -658,6 +668,7 @@ const deriveLabelsFromContacts = () => {
   return Array.from(names);
 };
 
+// ✅ Perbaiki fungsi loadLabels
 const loadLabels = async () => {
   try {
     loadingLabels.value = true;
@@ -667,7 +678,7 @@ const loadLabels = async () => {
     let list = Array.isArray(data?.labels) ? data.labels : Array.isArray(data) ? data : [];
     if (!Array.isArray(list) || list.length === 0) {
       if (!contacts.value || contacts.value.length === 0) {
-        await loadContacts();
+        await loadContacts().catch(() => {});
       }
       list = deriveLabelsFromContacts();
     }
@@ -683,16 +694,14 @@ const loadLabels = async () => {
   }
 };
 
+// ✅ Perbaiki fungsi loadContacts
 const loadContacts = async () => {
   try {
     loadingContacts.value = true;
     err.value = '';
-    // Gunakan userApi untuk contacts, bukan deviceApi
     const deviceId = (await ensureDeviceId()) || undefined;
-    const res = await userApi.get('/contacts', {
-      params: deviceId ? { deviceId } : {},
-    });
-    contacts.value = res?.data || [];
+    const res = await userApi.get('/contacts', { params: deviceId ? { deviceId } : {} });
+    contacts.value = Array.isArray(res?.data) ? res.data : [];
   } catch (e) {
     console.error('Error loading contacts:', e);
     // Jangan tampilkan error jika hanya gagal load contacts
@@ -807,7 +816,9 @@ function removeRecipient(index) {
   recipients.value.splice(index, 1);
 }
 
+// ✅ Perbaiki onMounted - pastikan load data dengan benar
 onMounted(async () => {
+  await loadDevices().catch(() => {});
   await Promise.allSettled([loadGroups(), loadContacts(), loadLabels()]);
 });
 
@@ -911,12 +922,6 @@ const submit = async () => {
     loading.value = false;
   }
 };
-
-// auto-load groups initially (fast cached)
-loadGroups().catch(() => {});
-
-// Load devices on mount
-loadDevices().catch(() => {});
 
 // 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
