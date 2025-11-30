@@ -150,95 +150,133 @@
         </select>
       </div>
 
-      <div v-if="rows.length" class="table-container">
-        <table class="tutors-table">
-          <thead>
-            <tr>
-              <th class="th-avatar">
+      <div class="tutors-grid" v-if="rows.length">
+        <div v-for="u in rows" :key="u.id" class="tutor-card">
+          <template v-if="editingId === u.id">
+            <div class="edit-mode">
+              <div class="edit-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                <h4>Edit Tutor</h4>
+              </div>
+              <div class="edit-form">
+                <div class="form-group">
+                  <label>Nama Depan</label>
+                  <input v-model.trim="ed.firstName" placeholder="Nama depan" />
+                </div>
+                <div class="form-group">
+                  <label>Nama Belakang</label>
+                  <input v-model.trim="ed.lastName" placeholder="Nama belakang" />
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input v-model.trim="ed.email" type="email" placeholder="Email" />
+                </div>
+                <div class="form-group">
+                  <label>Password Baru (opsional)</label>
+                  <input v-model="ed.password" type="password" placeholder="Kosongkan jika tidak diubah" />
+                </div>
+              </div>
+              <div class="edit-actions">
+                <button class="btn-save" @click="saveEdit(u)" :disabled="savingEdit">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  {{ savingEdit ? 'Menyimpan...' : 'Simpan' }}
+                </button>
+                <button class="btn-cancel" @click="cancelEdit" :disabled="savingEdit">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  Batal
+                </button>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <div class="tutor-header">
+              <div class="tutor-avatar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>
                 </svg>
-              </th>
-              <th class="sortable" @click="setSort('firstName')">
-                Nama
-                <span v-if="sortBy === 'firstName'" class="sort-icon">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
-              </th>
-              <th class="sortable" @click="setSort('email')">
-                Email
-                <span v-if="sortBy === 'email'" class="sort-icon">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
-              </th>
-              <th>Perangkat</th>
-              <th class="sortable" @click="setSort('createdAt')">
-                Terdaftar
-                <span v-if="sortBy === 'createdAt'" class="sort-icon">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
-              </th>
-              <th class="th-actions">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="u in rows" :key="u.id">
-              <td class="td-avatar">
-                <div class="avatar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </div>
-              </td>
-              <td class="td-name">
-                <div class="name-cell">
-                  <span class="name-primary">{{ u.firstName }} {{ u.lastName || '' }}</span>
-                </div>
-              </td>
-              <td class="td-email">
-                <div class="email-cell">
+              </div>
+              <div class="tutor-info">
+                <h4>{{ u.firstName }} {{ u.lastName || '' }}</h4>
+                <div class="tutor-email">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="2" y="4" width="20" height="16" rx="2"/>
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                   </svg>
                   {{ u.email }}
                 </div>
-              </td>
-              <td class="td-devices">
-                <div class="devices-cell">
-                  <div v-if="u.devices && u.devices.length" class="devices-list">
-                    <span v-for="d in u.devices" :key="d.id" class="device-badge" :class="d.status">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-                        <line x1="12" y1="18" x2="12.01" y2="18"/>
-                      </svg>
-                      {{ d.name || 'Device' }}
-                    </span>
+              </div>
+            </div>
+
+            <div class="tutor-body">
+              <div class="info-section">
+                <div class="info-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                    <line x1="6" y1="6" x2="6.01" y2="6"/>
+                    <line x1="6" y1="18" x2="6.01" y2="18"/>
+                  </svg>
+                  Perangkat
+                </div>
+                <div class="devices-list" v-if="u.devices && u.devices.length">
+                  <div v-for="d in u.devices" :key="d.id" class="device-chip" :class="d.status">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                      <line x1="12" y1="18" x2="12.01" y2="18"/>
+                    </svg>
+                    <span>{{ d.name || 'Device' }}</span>
+                    <span class="device-status">{{ d.status }}</span>
                   </div>
-                  <span v-else class="no-device">Belum ada perangkat</span>
                 </div>
-              </td>
-              <td class="td-date">
-                <span class="date-text">{{ new Date(u.createdAt).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) }}</span>
-              </td>
-              <td class="td-actions">
-                <div class="action-buttons">
-                  <button class="btn-edit-table" @click="startEdit(u)" title="Edit">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2 2 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                  <button class="btn-delete-table" @click="confirmDelete(u)" :disabled="deletingId === u.id" title="Hapus">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      <line x1="10" y1="11" x2="10" y2="17"/>
-                      <line x1="14" y1="11" x2="14" y2="17"/>
-                    </svg>
-                  </button>
+                <div v-else class="no-devices">Belum ada perangkat</div>
+              </div>
+
+              <div class="info-section">
+                <div class="info-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  Dibuat
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                <div class="created-date">{{ new Date(u.createdAt).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) }}</div>
+              </div>
+            </div>
+
+            <div class="tutor-footer">
+              <button class="btn-edit" @click="startEdit(u)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit
+              </button>
+              <button class="btn-delete" @click="deleteTutor(u)" :disabled="deletingId === u.id">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+                {{ deletingId === u.id ? 'Menghapus...' : 'Hapus Akun' }}
+              </button>
+            </div>
+          </template>
+        </div>
       </div>
+
       <div v-else class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -275,105 +313,6 @@
         </div>
       </div>
     </section>
-
-    <!-- Edit Mode Modal (outside of list-card) -->
-    <div v-if="editingId" class="modal-overlay" @click="cancelEdit">
-      <div class="edit-modal" @click.stop>
-        <div class="edit-modal-header">
-          <h3>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            Edit Tutor
-          </h3>
-        </div>
-        <div class="edit-modal-body">
-          <div class="form-group">
-            <label>Nama Depan</label>
-            <input v-model.trim="ed.firstName" placeholder="Nama depan" />
-          </div>
-          <div class="form-group">
-            <label>Nama Belakang</label>
-            <input v-model.trim="ed.lastName" placeholder="Nama belakang" />
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input v-model.trim="ed.email" type="email" placeholder="Email" />
-          </div>
-          <div class="form-group">
-            <label>Password Baru (opsional)</label>
-            <input v-model="ed.password" type="password" placeholder="Kosongkan jika tidak diubah" />
-          </div>
-        </div>
-        <div class="edit-modal-actions">
-          <button class="btn-cancel" @click="cancelEdit" :disabled="savingEdit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
-            </svg>
-            Batal
-          </button>
-          <button class="btn-save" @click="saveEdit" :disabled="savingEdit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            {{ savingEdit ? 'Menyimpan...' : 'Simpan Perubahan' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="deletingUser" class="modal-overlay delete-modal-overlay" @click="cancelDelete">
-      <div class="delete-modal" @click.stop>
-        <div class="delete-modal-icon">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-        </div>
-        
-        <div class="delete-modal-content">
-          <h3>Hapus Tutor Ini?</h3>
-          <p class="delete-warning">Tindakan ini tidak dapat dibatalkan. Kontak akan dihapus secara permanen.</p>
-          
-          <div class="tutor-preview">
-            <div class="preview-avatar">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <div class="preview-info">
-              <div class="preview-name">{{ deletingUser.firstName }} {{ deletingUser.lastName || '' }}</div>
-              <div class="preview-email">{{ deletingUser.email }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="delete-modal-actions">
-          <button type="button" class="btn-keep" @click="cancelDelete" :disabled="isDeleting">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-            Batal
-          </button>
-          <button type="button" class="btn-delete-confirm" @click="deleteTutor" :disabled="isDeleting">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-            {{ isDeleting ? 'Menghapus...' : 'Ya, Hapus' }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -499,13 +438,27 @@ const createTutor = async () => {
   }
 };
 
+const deleteTutor = async (u) => {
+  if (!u?.id) return;
+  if (!window.confirm(`Hapus akun tutor ${u.firstName}? Tindakan ini tidak dapat dibatalkan.`)) return;
+  msg.value = '';
+  err.value = '';
+  deletingId.value = u.id;
+  try {
+    await userApi.delete(`/users/${encodeURIComponent(u.id)}/delete`);
+    toast.success('Akun tutor berhasil dihapus');
+    page.value = 1;
+    await loadTutors();
+  } catch (e) {
+    toast.error((e && e.response && e.response.data && e.response.data.message) || 'Gagal menghapus akun tutor');
+  } finally {
+    deletingId.value = '';
+  }
+};
+
 const editingId = ref('');
 const savingEdit = ref(false);
 const ed = ref({ firstName: '', lastName: '', email: '', password: '' });
-
-// Delete confirmation modal
-const deletingUser = ref(null);
-const isDeleting = ref(false);
 
 const startEdit = (u) => {
   editingId.value = u.id;
@@ -515,24 +468,24 @@ const startEdit = (u) => {
 };
 const cancelEdit = () => { editingId.value = ''; ed.value = { firstName: '', lastName: '', email: '', password: '' }; };
 
-const saveEdit = async () => {
-  if (!editingId.value) return;
+const saveEdit = async (u) => {
+  if (!u?.id) return;
   savingEdit.value = true;
   msg.value = '';
   err.value = '';
   try {
     // 1) Update name
-    await userApi.patch(`/users/${encodeURIComponent(editingId.value)}`, { firstName: ed.value.firstName, lastName: ed.value.lastName });
+    await userApi.patch(`/users/${encodeURIComponent(u.id)}`, { firstName: ed.value.firstName, lastName: ed.value.lastName });
     // 2) Update email if changed
     const newEmail = (ed.value.email || '').trim().toLowerCase();
-    if (newEmail && newEmail !== (rows.value.find(u => u.id === editingId.value)?.email || '').toLowerCase()) {
-      await userApi.patch(`/users/change-email/${encodeURIComponent(editingId.value)}`, { email: newEmail });
+    if (newEmail && newEmail !== (u.email || '').toLowerCase()) {
+      await userApi.patch(`/users/change-email/${encodeURIComponent(u.id)}`, { email: newEmail });
     }
     // 3) Update password if provided
     const newPwd = ed.value.password || '';
     if (newPwd) {
       if (newPwd.length < 6) throw new Error('Password minimal 6 karakter');
-      await userApi.patch(`/users/change-password/${encodeURIComponent(editingId.value)}`, { password: newPwd });
+      await userApi.patch(`/users/change-password/${encodeURIComponent(u.id)}`, { password: newPwd });
     }
     toast.success('Akun tutor berhasil diperbarui');
     editingId.value = '';
@@ -543,35 +496,6 @@ const saveEdit = async () => {
     toast.error(m);
   } finally {
     savingEdit.value = false;
-  }
-};
-
-const confirmDelete = (u) => {
-  if (!u?.id) return;
-  deletingUser.value = u;
-  msg.value = '';
-  err.value = '';
-};
-
-const cancelDelete = () => {
-  deletingUser.value = null;
-};
-
-const deleteTutor = async () => {
-  if (!deletingUser.value?.id) return;
-  const userId = deletingUser.value.id;
-  
-  isDeleting.value = true;
-  try {
-    await userApi.delete(`/users/${encodeURIComponent(userId)}/delete`);
-    toast.success('Akun tutor berhasil dihapus');
-    deletingUser.value = null;
-    page.value = 1;
-    await loadTutors();
-  } catch (e) {
-    toast.error((e && e.response && e.response.data && e.response.data.message) || 'Gagal menghapus akun tutor');
-  } finally {
-    isDeleting.value = false;
   }
 };
 
@@ -924,195 +848,332 @@ const SortIcon = {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Table */
-.table-container {
-  overflow-x: auto;
+/* Tutors Grid */
+.tutors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
-.tutors-table {
-  width: 100%;
-  border-collapse: collapse;
+.tutor-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
   overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.tutors-table th,
-.tutors-table td {
-  padding: 12px 16px;
-  text-align: left;
-  font-size: 14px;
-  color: #475569;
+.tutor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
 }
 
-.tutors-table th {
-  background: #f8fafc;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.tutors-table td {
+.tutor-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
   border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
-.tutors-table th.sortable {
-  cursor: pointer;
-}
-
-.tutors-table th.sortable:hover {
-  color: #3b82f6;
-}
-
-.sort-icon {
-  margin-left: 6px;
-  font-size: 12px;
-  color: #3b82f6;
-}
-
-.th-avatar {
-  width: 50px;
-}
-
-.td-avatar .avatar {
-  width: 40px;
-  height: 40px;
+.tutor-avatar {
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.td-avatar .avatar svg {
-  width: 24px;
-  height: 24px;
+.tutor-avatar svg {
+  width: 32px;
+  height: 32px;
   color: #1e40af;
 }
 
-.td-name .name-primary {
-  font-weight: 600;
-  color: #1e293b;
+.tutor-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.td-email .email-cell {
+.tutor-info h4 {
+  margin: 0 0 6px 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tutor-email {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 13px;
+  color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.td-email .email-cell svg {
-  width: 16px;
-  height: 16px;
-  color: #64748b;
+.tutor-email svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
-.td-devices .devices-cell {
+.tutor-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-label svg {
+  width: 14px;
+  height: 14px;
+  color: #3b82f6;
+}
+
+.devices-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.device-badge {
+.device-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
   border: 1px solid;
+  transition: all 0.2s ease;
 }
 
-.device-badge svg {
+.device-chip svg {
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
 }
 
-.device-badge.open {
+.device-chip.open {
   background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
   color: #15803d;
   border-color: #86efac;
 }
 
-.device-badge.close,
-.device-badge.closed {
+.device-chip.close,
+.device-chip.closed {
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
   color: #991b1b;
   border-color: #fca5a5;
 }
 
-.device-badge.connecting {
+.device-chip.connecting {
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   color: #92400e;
   border-color: #fcd34d;
 }
 
-.no-device {
+.device-status {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.no-devices {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   color: #64748b;
   font-size: 13px;
+  text-align: center;
 }
 
-.td-date .date-text {
-  font-size: 13px;
+.created-date {
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   color: #475569;
+  font-size: 13px;
 }
 
-.td-actions .action-buttons {
+.tutor-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  gap: 10px;
 }
 
-.btn-edit-table,
-.btn-delete-table {
+.btn-edit,
+.btn-delete {
+  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1.5px solid;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn-edit-table {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+.btn-edit {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  color: #0369a1;
+  border-color: #7dd3fc;
 }
 
-.btn-edit-table:hover {
-  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+.btn-edit:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(3, 105, 161, 0.2);
 }
 
-.btn-delete-table {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-}
-
-.btn-delete-table:hover {
-  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
-}
-
-.btn-edit-table svg {
-  width: 18px;
-  height: 18px;
-  color: #1e40af;
-}
-
-.btn-delete-table svg {
-  width: 18px;
-  height: 18px;
+.btn-delete {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   color: #dc2626;
+  border-color: #fca5a5;
 }
 
-.btn-delete-table:disabled {
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+}
+
+.btn-edit svg,
+.btn-delete svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Edit Mode */
+.edit-mode {
+  padding: 20px;
+}
+
+.edit-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.edit-header svg {
+  width: 20px;
+  height: 20px;
+  color: #3b82f6;
+}
+
+.edit-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-save,
+.btn-cancel {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1.5px solid;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.2);
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+}
+
+.btn-save svg,
+.btn-cancel svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-save:disabled,
+.btn-cancel:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -1237,6 +1298,10 @@ const SortIcon = {
 
 /* Responsive */
 @media (max-width: 1200px) {
+  .tutors-grid {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+
   .form-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1272,6 +1337,10 @@ const SortIcon = {
     grid-column: span 1;
   }
 
+  .tutors-grid {
+    grid-template-columns: 1fr;
+  }
+
   .toolbar-section {
     flex-direction: column;
   }
@@ -1303,10 +1372,6 @@ const SortIcon = {
   .pagination-controls {
     justify-content: space-between;
   }
-
-  .table-container {
-    overflow-x: auto;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1326,415 +1391,31 @@ const SortIcon = {
   .stat-value {
     font-size: 24px;
   }
-}
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.edit-modal {
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.edit-modal-header {
-  padding: 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-}
-
-.edit-modal-header h3 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.edit-modal-header h3 svg {
-  width: 24px;
-  height: 24px;
-  color: #3b82f6;
-}
-
-.edit-modal-body {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.edit-modal-actions {
-  padding: 20px 24px;
-  border-top: 1px solid #e2e8f0;
-  display: flex;
-  gap: 12px;
-  background: #f8fafc;
-}
-
-.btn-save,
-.btn-cancel {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border: 1.5px solid;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-save {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  border-color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.btn-save:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-save:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-cancel {
-  background: #ffffff;
-  color: #475569;
-  border-color: #cbd5e1;
-}
-
-.btn-cancel:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  transform: translateY(-1px);
-}
-
-.btn-cancel:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-save svg,
-.btn-cancel svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Delete Modal */
-.delete-modal-overlay {
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.delete-modal {
-  background: white;
-  border-radius: 20px;
-  max-width: 480px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  padding: 32px;
-  text-align: center;
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.delete-modal-icon {
-  margin-bottom: 20px;
-  animation: pulse 0.5s ease-out;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.icon-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  position: relative;
-}
-
-.icon-circle::before {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  opacity: 0.3;
-  animation: ripple 1.5s infinite;
-}
-
-@keyframes ripple {
-  0% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-
-.icon-circle svg {
-  width: 40px;
-  height: 40px;
-  color: #dc2626;
-  position: relative;
-  z-index: 1;
-}
-
-.delete-modal-content {
-  padding: 0;
-  text-align: center;
-}
-
-.delete-modal-content h3 {
-  margin: 0 0 12px 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.delete-warning {
-  margin: 0 0 24px 0;
-  color: #64748b;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.tutor-preview {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  text-align: left;
-  transition: all 0.2s ease;
-}
-
-.tutor-preview:hover {
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
-}
-
-.preview-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.preview-avatar svg {
-  width: 24px;
-  height: 24px;
-  color: #1e40af;
-}
-
-.preview-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.preview-name {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 15px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.preview-email {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.delete-modal-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-  padding: 0;
-  background: transparent;
-  border: none;
-}
-
-.btn-keep,
-.btn-delete-confirm {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 24px;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-keep {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #475569;
-  border: 1.5px solid #cbd5e1;
-}
-
-.btn-keep:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-delete-confirm {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
-
-.btn-delete-confirm:hover:not(:disabled) {
-  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
-}
-
-.btn-delete-confirm:disabled,
-.btn-keep:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-keep svg,
-.btn-delete-confirm svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Responsive for Delete Modal */
-@media (max-width: 768px) {
-  .delete-modal {
-    padding: 24px;
-    max-width: 90%;
+  .tutor-card {
+    border-radius: 12px;
   }
 
-  .icon-circle {
-    width: 72px;
-    height: 72px;
+  .tutor-header {
+    padding: 16px;
   }
 
-  .icon-circle svg {
-    width: 36px;
-    height: 36px;
+  .tutor-avatar {
+    width: 48px;
+    height: 48px;
   }
 
-  .delete-modal-content h3 {
-    font-size: 20px;
+  .tutor-avatar svg {
+    width: 28px;
+    height: 28px;
   }
 
-  .delete-modal-actions {
-    flex-direction: column;
-    gap: 10px;
+  .tutor-info h4 {
+    font-size: 15px;
   }
 
-  .btn-keep,
-  .btn-delete-confirm {
-    width: 100%;
+  .tutor-body {
+    padding: 16px;
   }
 }
 </style>

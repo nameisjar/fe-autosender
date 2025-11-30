@@ -183,59 +183,52 @@
     </div>
 
     <div class="messages-container">
-      <div v-if="displayedRows.length" class="messages-grid">
-        <div v-for="r in displayedRows" :key="r.id" class="message-card">
-          <div class="message-header">
-            <div class="header-left">
-              <div class="contact-info">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <div>
+      <!-- Table View -->
+      <div class="table-container">
+        <table class="messages-table" v-if="!loading && displayedRows.length > 0">
+          <thead>
+            <tr>
+              <th class="col-expand"></th>
+              <th class="col-contact">Kontak</th>
+              <th class="col-message">Pesan</th>
+              <th class="col-status">Status</th>
+              <th class="col-time">Waktu</th>
+              <th class="col-source">Sumber</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in displayedRows" :key="r.id" class="message-row">
+              <td class="col-expand">
+                <button 
+                  class="btn-expand" 
+                  @click="openDetailModal(r)"
+                  title="Lihat detail"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                </button>
+              </td>
+              <td class="col-contact">
+                <div class="contact-cell">
                   <div class="contact-name">{{ r.contact ? (r.contact.firstName + ' ' + (r.contact.lastName||'')) : 'Tidak Ada Nama' }}</div>
                   <div class="phone-number">{{ normalizeNumber(r.to) }}</div>
                 </div>
-              </div>
-            </div>
-            <div class="header-right">
-              <span class="status-badge" :class="badgeClass(r.status)">
-                {{ statusLabel(r.status) }}
-              </span>
-            </div>
-          </div>
-
-          <div class="message-body">
-            <div class="message-content">
-              <div class="message-label">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-                Pesan
-              </div>
-              <div class="message-text">{{ r.message }}</div>
-            </div>
-
-            <div class="message-meta">
-              <div class="meta-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span>{{ fmt(r.createdAt) }}</span>
-              </div>
-
-              <div class="meta-item" v-if="tutorName(r) !== '-'">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <span>{{ tutorName(r) }}</span>
-              </div>
-
-              <div class="meta-item" v-if="sourceSimple(r)">
+              </td>
+              <td class="col-message">
+                <div class="message-preview-cell">{{ truncateMessage(r.message, 50) }}</div>
+              </td>
+              <td class="col-status">
+                <span class="status-badge" :class="badgeClass(r.status)">
+                  {{ statusLabel(r.status) }}
+                </span>
+              </td>
+              <td class="col-time">
+                <div class="time-cell">{{ fmt(r.createdAt) }}</div>
+              </td>
+              <td class="col-source">
                 <span v-if="sourceSimple(r) === 'reminder'" class="source-chip reminder">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="10"/>
@@ -256,53 +249,27 @@
                   </svg>
                   Recurrence
                 </span>
-                <span v-else class="source-chip broadcast">
+                <span v-else-if="sourceSimple(r)" class="source-chip broadcast">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="2"/>
                     <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
                   </svg>
                   Broadcast
                 </span>
-              </div>
-            </div>
+                <span v-else class="no-source">-</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-            <div class="media-section" v-if="r.mediaPath">
-              <div class="message-label">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                  <path d="m21 15-5-5L5 21"/>
-                </svg>
-                Media
-              </div>
-              <div class="media-content">
-                <a :href="mediaUrl(r.mediaPath)" target="_blank" rel="noopener" class="media-link">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                    <polyline points="15 3 21 3 21 9"/>
-                    <line x1="10" y1="14" x2="21" y2="3"/>
-                  </svg>
-                  Lihat Media
-                </a>
-                <img
-                  v-if="isImagePath(r.mediaPath)"
-                  :src="mediaUrl(r.mediaPath)"
-                  alt="media"
-                  class="media-thumb"
-                />
-              </div>
-            </div>
-          </div>
+        <div v-else-if="!loading && displayedRows.length === 0" class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M8 10h.01M12 10h.01M16 10h.01"/>
+          </svg>
+          <h3>Tidak Ada Pesan</h3>
+          <p>Belum ada pesan terkirim yang ditemukan</p>
         </div>
-      </div>
-
-      <div v-else class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          <path d="M8 10h.01M12 10h.01M16 10h.01"/>
-        </svg>
-        <h3>Tidak Ada Pesan</h3>
-        <p>Belum ada pesan terkirim yang ditemukan</p>
       </div>
     </div>
 
@@ -327,6 +294,238 @@
     </div>
 
     <p v-if="err" class="error">{{ err }}</p>
+
+    <!-- Detail Modal Popup -->
+    <div v-if="showDetailModal" class="modal-overlay detail-modal-overlay" @click="closeDetailModal">
+      <div class="detail-modal" @click.stop>
+        <div class="detail-modal-header">
+          <div class="detail-modal-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <div>
+              <h3>Detail Pesan Terkirim</h3>
+              <p class="detail-subtitle">Informasi lengkap pesan broadcast</p>
+            </div>
+          </div>
+          <button class="btn-close-modal" @click="closeDetailModal" title="Tutup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="detail-modal-body" v-if="selectedMessage">
+          <!-- Contact Info -->
+          <div class="detail-section">
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Informasi Kontak
+            </label>
+            <div class="info-grid">
+              <div class="info-item">
+                <label class="info-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  Nama
+                </label>
+                <div class="info-value">{{ selectedMessage.contact ? (selectedMessage.contact.firstName + ' ' + (selectedMessage.contact.lastName||'')) : 'Tidak Ada Nama' }}</div>
+              </div>
+
+              <div class="info-item">
+                <label class="info-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  Nomor Telepon
+                </label>
+                <div class="info-value phone-value">{{ normalizeNumber(selectedMessage.to) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Message Content -->
+          <div class="detail-section">
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              Pesan
+            </label>
+            <div class="message-preview-full">{{ selectedMessage.message }}</div>
+          </div>
+
+          <!-- Status & Time Info -->
+          <div class="detail-section">
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Informasi Status
+            </label>
+            <div class="info-grid">
+              <div class="info-item">
+                <label class="info-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                  Status
+                </label>
+                <span class="status-badge" :class="badgeClass(selectedMessage.status)">
+                  {{ statusLabel(selectedMessage.status) }}
+                </span>
+              </div>
+
+              <div class="info-item">
+                <label class="info-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  Waktu Terkirim
+                </label>
+                <div class="info-value">{{ fmt(selectedMessage.createdAt) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tutor Info (if exists) -->
+          <div class="detail-section" v-if="tutorName(selectedMessage) !== '-'">
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Tutor
+            </label>
+            <div class="info-value">{{ tutorName(selectedMessage) }}</div>
+          </div>
+
+          <!-- Source Info -->
+          <div class="detail-section" v-if="sourceSimple(selectedMessage)">
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="2"/>
+                <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
+              </svg>
+              Sumber Pesan
+            </label>
+            <div class="source-detail">
+              <span v-if="sourceSimple(selectedMessage) === 'reminder'" class="source-chip reminder large">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Reminder
+              </span>
+              <span v-else-if="sourceSimple(selectedMessage) === 'feedback'" class="source-chip feedback large">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+                Feedback
+              </span>
+              <span v-else-if="sourceSimple(selectedMessage) === 'recurrence'" class="source-chip recurrence large">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                Recurrence
+              </span>
+              <span v-else class="source-chip broadcast large">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="2"/>
+                  <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
+                </svg>
+                Broadcast
+              </span>
+            </div>
+          </div>
+
+          <!-- Media (if exists) -->
+          <div class="detail-section" v-if="selectedMessage.mediaPath">
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="m21 15-5-5L5 21"/>
+              </svg>
+              Media
+            </label>
+            <div class="media-content">
+              <a :href="mediaUrl(selectedMessage.mediaPath)" target="_blank" rel="noopener" class="media-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Lihat Media
+              </a>
+              <img
+                v-if="isImagePath(selectedMessage.mediaPath)"
+                :src="mediaUrl(selectedMessage.mediaPath)"
+                alt="media"
+                class="media-thumb"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-modal-footer">
+          <button class="btn-close-footer" @click="closeDetailModal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div v-if="showConfirm" class="modal-overlay delete-modal-overlay" @click.self="cancelConfirm">
+      <div class="delete-modal" @click.stop>
+        <div class="delete-modal-icon">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="delete-modal-content">
+          <h3>Hapus Semua Pesan?</h3>
+          <p class="delete-warning">Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+
+        <div class="delete-modal-actions">
+          <button type="button" class="btn-keep" @click="cancelConfirm" :disabled="deleting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            Batal
+          </button>
+          <button type="button" class="btn-delete-confirm" @click="executeConfirm" :disabled="deleting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            {{ deleting ? 'Menghapus...' : 'Ya, Hapus Semua' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -352,7 +551,25 @@ const err = ref('');
 const exporting = ref(false);
 const deleting = ref(false);
 
+// Confirmation dialog state
+const showConfirm = ref(false);
+const confirmTitle = ref('');
+const confirmMessage = ref('');
+const confirmAction = ref(() => {});
+
+const cancelConfirm = () => {
+  showConfirm.value = false;
+  confirmAction.value = () => {};
+};
+
+const executeConfirm = async () => {
+  if (confirmAction.value) {
+    await confirmAction.value();
+  }
+};
+
 const isBroadcast = (r) => String(r?.id || '').startsWith('BC_');
+
 const displayedRows = computed(() => {
   const list = rows.value || [];
   if (!tutorQuery.value) return list;
@@ -576,7 +793,7 @@ const exportCsv = async () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'sent-messages.csv');
+    setAttribute('download', 'sent-messages.csv');
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -590,25 +807,30 @@ const exportCsv = async () => {
 };
 
 const deleteAllSent = async () => {
-  try {
-    if (!window.confirm('Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini permanen.')) return;
-    deleting.value = true;
+  confirmTitle.value = 'localhost:5173 says';
+  confirmMessage.value = 'Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini permanen.';
+  confirmAction.value = async () => {
+    showConfirm.value = false;
+    try {
+      deleting.value = true;
 
-    // 1) Hapus semua status di outgoingMessage
-    const msgParams = { status: 'all' };
-    if (phoneNumber.value) msgParams.phoneNumber = phoneNumber.value;
-    await userApi.delete('/tutors/messages/all', { params: msgParams });
+      // 1) Hapus semua status di outgoingMessage
+      const msgParams = { status: 'all' };
+      if (phoneNumber.value) msgParams.phoneNumber = phoneNumber.value;
+      await userApi.delete('/tutors/messages/all', { params: msgParams });
 
-    // 2) Sinkron: hapus broadcast yang sudah terkirim (cascade akan bersih-kan BC_*)
-    await userApi.delete('/broadcasts/bulk', { params: { isSent: true } });
+      // 2) Sinkron: hapus broadcast yang sudah terkirim (cascade akan bersih-kan BC_*)
+      await userApi.delete('/broadcasts/bulk', { params: { isSent: true } });
 
-    toast.success('Semua pesan terkirim berhasil dihapus');
-    await load(1);
-  } catch (e) {
-    toast.error(e?.response?.data?.message || e?.message || 'Gagal menghapus pesan');
-  } finally {
-    deleting.value = false;
-  }
+      toast.success('Semua pesan terkirim berhasil dihapus');
+      await load(1);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || 'Gagal menghapus pesan');
+    } finally {
+      deleting.value = false;
+    }
+  };
+  showConfirm.value = true;
 };
 
 const mediaUrl = (p) => {
@@ -634,6 +856,24 @@ watch([sortBy, sortDir, pageSize], () => {
 onMounted(async () => {
   await Promise.allSettled([loadTutorDeviceMap(), loadSessionTutorMap(), loadBroadcasts(), loadFbNameMap(), load(1)]);
 });
+
+const showDetailModal = ref(false);
+const selectedMessage = ref(null);
+
+const openDetailModal = (message) => {
+  selectedMessage.value = message;
+  showDetailModal.value = true;
+};
+
+const closeDetailModal = () => {
+  showDetailModal.value = false;
+  selectedMessage.value = null;
+};
+
+const truncateMessage = (message, length) => {
+  if (message.length <= length) return message;
+  return message.substring(0, length) + '...';
+};
 </script>
 
 <style scoped>
@@ -909,58 +1149,93 @@ onMounted(async () => {
   margin-bottom: 32px;
 }
 
-.messages-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-  gap: 20px;
+.table-container {
+  overflow-x: auto;
 }
 
-.message-card {
+.messages-table {
+  width: 100%;
+  border-collapse: collapse;
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
   border-radius: 16px;
-  overflow: hidden;
-  transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.message-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
-}
-
-.message-header {
-  padding: 20px;
+.messages-table th,
+.messages-table td {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 14px;
+  color: #475569;
   border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
 }
 
-.header-left {
-  flex: 1;
+.messages-table th {
+  background: #f8fafc;
+  font-weight: 600;
 }
 
-.contact-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.messages-table td {
+  background: #ffffff;
 }
 
-.contact-info svg {
+.messages-table .col-expand {
   width: 40px;
-  height: 40px;
-  color: #3b82f6;
-  flex-shrink: 0;
+}
+
+.messages-table .col-contact {
+  width: 200px;
+}
+
+.messages-table .col-message {
+  width: 300px;
+}
+
+.messages-table .col-status {
+  width: 120px;
+}
+
+.messages-table .col-time {
+  width: 160px;
+}
+
+.messages-table .col-source {
+  width: 160px;
+}
+
+.btn-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-expand:hover {
+  background: #e2e8f0;
+}
+
+.btn-expand svg {
+  width: 16px;
+  height: 16px;
+  color: #475569;
+}
+
+.contact-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .contact-name {
-  font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: #1e293b;
-  margin-bottom: 2px;
 }
 
 .phone-number {
@@ -969,192 +1244,19 @@ onMounted(async () => {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.header-right {
-  margin-left: 16px;
-}
-
-.status-badge {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
+.message-preview-cell {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.status-badge.ok {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #15803d;
-  border: 1px solid #86efac;
-}
-
-.status-badge.info {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e40af;
-  border: 1px solid #93c5fd;
-}
-
-.status-badge.warn {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #fca5a5;
-}
-
-.message-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.message-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.message-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.message-label svg {
-  width: 14px;
-  height: 14px;
-  color: #3b82f6;
-}
-
-.message-text {
-  padding: 12px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #334155;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-.message-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.meta-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #f1f5f9;
-  border-radius: 8px;
-  font-size: 12px;
-  color: #475569;
-}
-
-.meta-item svg {
-  width: 14px;
-  height: 14px;
-  color: #64748b;
-  flex-shrink: 0;
-}
-
-.source-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid;
-}
-
-.source-chip svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.source-chip.reminder {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border-color: #fcd34d;
-}
-
-.source-chip.feedback {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #15803d;
-  border-color: #86efac;
-}
-
-.source-chip.recurrence {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e40af;
-  border-color: #93c5fd;
-}
-
-.source-chip.broadcast {
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  color: #4338ca;
-  border-color: #a5b4fc;
-}
-
-.media-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.media-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.media-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #475569;
-  text-decoration: none;
-  border-radius: 10px;
+.time-cell {
   font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  align-self: flex-start;
-  border: 1px solid #cbd5e1;
+  color: #64748b;
 }
 
-.media-link:hover {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.media-link svg {
-  width: 16px;
-  height: 16px;
-}
-
-.media-thumb {
-  max-width: 100%;
-  max-height: 200px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  object-fit: cover;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.no-source {
+  color: #94a3b8;
 }
 
 /* Empty State */
@@ -1272,6 +1374,309 @@ onMounted(async () => {
   border: 1px solid #fca5a5;
 }
 
+/* Modal Overlay & Content */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 440px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-content h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.modal-content p {
+  margin: 0 0 24px 0;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-modal {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.btn-modal.cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+}
+
+.btn-modal.cancel:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.btn-modal.confirm {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-modal.confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Delete Modal */
+.delete-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+  z-index: 10002;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.delete-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 32px;
+  text-align: center;
+  animation: slideUp 0.3s ease-out;
+  position: relative;
+  z-index: 10003;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.delete-modal-icon {
+  margin-bottom: 20px;
+  animation: pulse 0.5s ease-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.icon-circle::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  opacity: 0.3;
+  animation: ripple 1.5s infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.icon-circle svg {
+  width: 40px;
+  height: 40px;
+  color: #dc2626;
+  position: relative;
+  z-index: 1;
+}
+
+.delete-modal-content {
+  padding: 0;
+  text-align: center;
+}
+
+.delete-modal-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.delete-warning {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.btn-keep,
+.btn-delete-confirm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-keep {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+}
+
+.btn-keep:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-delete-confirm {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-delete-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.btn-delete-confirm:disabled,
+.btn-keep:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-keep svg,
+.btn-delete-confirm svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Responsive for Delete Modal */
+@media (max-width: 768px) {
+  .delete-modal {
+    padding: 24px;
+    max-width: 90%;
+  }
+
+  .icon-circle {
+    width: 72px;
+    height: 72px;
+  }
+
+  .icon-circle svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .delete-modal-content h3 {
+    font-size: 20px;
+  }
+
+  .delete-modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-keep,
+  .btn-delete-confirm {
+    width: 100%;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .messages-grid {
@@ -1379,5 +1784,353 @@ onMounted(async () => {
   .contact-name {
     font-size: 14px;
   }
+}
+
+/* Detail Modal */
+.detail-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.detail-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10001;
+}
+
+.detail-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.detail-modal-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.detail-modal-title svg {
+  width: 28px;
+  height: 28px;
+  color: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.detail-modal-title h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.detail-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.btn-close-modal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.btn-close-modal:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  transform: rotate(90deg);
+}
+
+.btn-close-modal svg {
+  width: 18px;
+  height: 18px;
+  color: #dc2626;
+}
+
+.detail-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #ffffff;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.detail-label svg {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-label svg {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.phone-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.message-preview-full {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #334155;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.source-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.btn-close-footer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-close-footer:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-close-footer svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.status-badge.ok {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.status-badge.info {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.status-badge.warn {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+/* Source Chips */
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.source-chip svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.source-chip.reminder {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.source-chip.feedback {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.source-chip.recurrence {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+  border-color: #a5b4fc;
+}
+
+.source-chip.broadcast {
+  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+  color: #c2410c;
+  border-color: #fb923c;
+}
+
+.source-chip.large {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.source-chip.large svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Media Content */
+.media-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.media-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  text-decoration: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+  border: 1.5px solid #cbd5e1;
+}
+
+.media-link:hover {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.media-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.media-thumb {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
 }
 </style>

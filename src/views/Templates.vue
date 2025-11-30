@@ -28,7 +28,7 @@
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/>
           </svg>
           <div>
             <div class="stat-value">{{ courses.length }}</div>
@@ -64,7 +64,7 @@
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/>
             </svg>
             Nama Course
           </label>
@@ -135,7 +135,7 @@
         </h3>
         <button class="btn-reload" @click="loadFeedbacks" :disabled="loading">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loading }">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1-18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
           </svg>
           {{ loading ? 'Memuat...' : 'Muat Ulang' }}
         </button>
@@ -198,7 +198,7 @@
               <div class="course-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/>
                 </svg>
               </div>
               <h4>{{ c }}</h4>
@@ -303,6 +303,53 @@
         <p>Mulai dengan menambahkan template feedback baru</p>
       </div>
     </section>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay delete-modal-overlay" @click="cancelDelete">
+      <div class="delete-modal" @click.stop>
+        <div class="delete-modal-icon">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="delete-modal-content">
+          <h3>Hapus Template Ini?</h3>
+          <p class="delete-warning">Tindakan ini tidak dapat dibatalkan. Template feedback akan dihapus secara permanen.</p>
+          
+          <div class="template-preview" v-if="templateToDelete">
+            <div class="preview-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <div class="preview-info">
+              <div class="preview-name">{{ templateToDelete.courseName }} - Lesson {{ templateToDelete.lesson }}</div>
+              <div class="preview-detail">{{ templateToDelete.message.substring(0, 50) }}{{ templateToDelete.message.length > 50 ? '...' : '' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="delete-modal-actions">
+          <button type="button" class="btn-keep" @click="cancelDelete" :disabled="deleting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+            Batal
+          </button>
+          <button type="button" class="btn-delete-confirm" @click="handleConfirmDelete" :disabled="deleting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="M10 11v6M14 11v6"/>
+            </svg>
+            {{ deleting ? 'Menghapus...' : 'Ya, Hapus Template' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -327,6 +374,11 @@ const loading = ref(false);
 const submitting = ref(false);
 const msg = ref('');
 const err = ref('');
+
+// Delete confirmation modal state
+const showDeleteModal = ref(false);
+const templateToDelete = ref(null);
+const deleting = ref(false);
 
 // Import state for Templates
 const tplFileInput = ref(null);
@@ -419,20 +471,41 @@ const saveEdit = async () => {
   }
 };
 
-const deleteFeedback = async (t) => {
-  if (!window.confirm('Hapus template ini?')) return;
-  submitting.value = true;
+const deleteFeedback = (t) => {
+  // Show custom delete modal instead of browser confirm
+  templateToDelete.value = t;
+  showDeleteModal.value = true;
+};
+
+// Confirm delete action
+const handleConfirmDelete = async () => {
+  if (!templateToDelete.value) return;
+  
+  deleting.value = true;
   msg.value = '';
   err.value = '';
+  
   try {
-    await userApi.delete(`/algorithmics/feedback/${encodeURIComponent(t.id)}`);
+    await userApi.delete(`/algorithmics/feedback/${encodeURIComponent(templateToDelete.value.id)}`);
     toast.success('Template berhasil dihapus');
+    
+    // Close modal
+    showDeleteModal.value = false;
+    templateToDelete.value = null;
+    
+    // Reload templates
     await loadFeedbacks();
   } catch (e) {
     toast.error(e?.response?.data?.message || e?.message || 'Gagal menghapus template');
   } finally {
-    submitting.value = false;
+    deleting.value = false;
   }
+};
+
+// Cancel delete action
+const cancelDelete = () => {
+  showDeleteModal.value = false;
+  templateToDelete.value = null;
 };
 
 // XLSX export for visible data
@@ -585,8 +658,9 @@ loadFeedbacks();
   margin-top: 4px;
 }
 
-/* Create Card */
-.create-card {
+/* Create Card & List Card */
+.create-card,
+.list-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -826,16 +900,6 @@ loadFeedbacks();
   color: #92400e;
   font-weight: 600;
   font-size: 15px;
-}
-
-/* List Card */
-.list-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 32px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 /* Toolbar Section */
@@ -1420,6 +1484,281 @@ loadFeedbacks();
   }
 
   .btn-action {
+    width: 100%;
+  }
+}
+
+/* Delete Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.delete-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.delete-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 32px;
+  text-align: center;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.delete-modal-icon {
+  margin-bottom: 20px;
+  animation: pulse-icon 0.5s ease-out;
+}
+
+@keyframes pulse-icon {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.icon-circle::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  opacity: 0.3;
+  animation: ripple 1.5s infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.icon-circle svg {
+  width: 40px;
+  height: 40px;
+  color: #dc2626;
+  position: relative;
+  z-index: 1;
+}
+
+.delete-modal-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.delete-warning {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.template-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.template-preview:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.preview-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.preview-icon svg {
+  width: 24px;
+  height: 24px;
+  color: #1e40af;
+}
+
+.preview-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.preview-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-detail {
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-keep,
+.btn-delete-confirm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-keep {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+}
+
+.btn-keep:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-delete-confirm {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-delete-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.btn-delete-confirm:disabled,
+.btn-keep:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-keep svg,
+.btn-delete-confirm svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Responsive for Delete Modal */
+@media (max-width: 768px) {
+  .delete-modal {
+    padding: 24px;
+    max-width: 90%;
+  }
+
+  .icon-circle {
+    width: 72px;
+    height: 72px;
+  }
+
+  .icon-circle svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .delete-modal-content h3 {
+    font-size: 20px;
+  }
+
+  .delete-modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-keep,
+  .btn-delete-confirm {
     width: 100%;
   }
 }

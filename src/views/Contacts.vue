@@ -388,6 +388,53 @@
       </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay delete-modal-overlay" @click="cancelDelete">
+      <div class="delete-modal" @click.stop>
+        <div class="delete-modal-icon">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="delete-modal-content">
+          <h3>Hapus Kontak Ini?</h3>
+          <p class="delete-warning">Tindakan ini tidak dapat dibatalkan. Kontak akan dihapus secara permanen.</p>
+          
+          <div class="contact-preview" v-if="contactToDelete">
+            <div class="preview-avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div class="preview-info">
+              <div class="preview-name">{{ contactToDelete.firstName }} {{ contactToDelete.lastName || '' }}</div>
+              <div class="preview-phone">{{ contactToDelete.phone }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="delete-modal-actions">
+          <button type="button" class="btn-keep" @click="cancelDelete" :disabled="deleting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+            Batal
+          </button>
+          <button type="button" class="btn-delete-confirm" @click="confirmDelete" :disabled="deleting">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="M10 11v6M14 11v6"/>
+            </svg>
+            {{ deleting ? 'Menghapus...' : 'Ya, Hapus' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <p v-if="msg" class="success-message">{{ msg }}</p>
     <p v-if="err" class="error-message">{{ err }}</p>
   </div>
@@ -409,6 +456,11 @@ const showAddForm = ref(false);
 const editingContact = ref(null);
 const msg = ref('');
 const err = ref('');
+
+// New: Delete confirmation modal state
+const showDeleteModal = ref(false);
+const contactToDelete = ref(null);
+const deleting = ref(false);
 
 // New: Import/Export state
 const fileInput = ref(null);
@@ -691,15 +743,41 @@ const saveContact = async () => {
 };
 
 const deleteContact = async (contactId) => {
-  if (!confirm('Hapus kontak ini?')) return;
+  // Show custom delete modal instead of browser confirm
+  const contact = contacts.value.find(c => c.id === contactId);
+  if (contact) {
+    contactToDelete.value = contact;
+    showDeleteModal.value = true;
+  }
+};
+
+// New: Confirm delete action
+const confirmDelete = async () => {
+  if (!contactToDelete.value) return;
+  
+  deleting.value = true;
   
   try {
-    await userApi.delete('/contacts', { data: { contactIds: [contactId] } });
+    await userApi.delete('/contacts', { data: { contactIds: [contactToDelete.value.id] } });
     toast.success('Kontak berhasil dihapus');
+    
+    // Close modal
+    showDeleteModal.value = false;
+    contactToDelete.value = null;
+    
+    // Reload contacts
     await loadContacts();
   } catch (e) {
     toast.error(e?.response?.data?.message || 'Gagal menghapus kontak');
+  } finally {
+    deleting.value = false;
   }
+};
+
+// New: Cancel delete action
+const cancelDelete = () => {
+  showDeleteModal.value = false;
+  contactToDelete.value = null;
 };
 
 // New: Import handlers
@@ -1678,6 +1756,266 @@ onMounted(async () => {
 .btn-cancel svg,
 .btn-submit svg {
   width: 18px;
+}
+
+/* Delete Modal */
+.delete-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.delete-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 32px;
+  text-align: center;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.delete-modal-icon {
+  margin-bottom: 20px;
+  animation: pulse 0.5s ease-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.icon-circle::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  opacity: 0.3;
+  animation: ripple 1.5s infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.icon-circle svg {
+  width: 40px;
+  height: 40px;
+  color: #dc2626;
+  position: relative;
+  z-index: 1;
+}
+
+.delete-modal-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.delete-warning {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.contact-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.contact-preview:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.preview-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.preview-avatar svg {
+  width: 24px;
+  height: 24px;
+  color: #1e40af;
+}
+
+.preview-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.preview-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-phone {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-keep,
+.btn-delete-confirm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-keep {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+}
+
+.btn-keep:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-delete-confirm {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-delete-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.btn-delete-confirm:disabled,
+.btn-keep:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-keep svg,
+.btn-delete-confirm svg {
+  width: 18px;
+}
+
+/* Responsive for Delete Modal */
+@media (max-width: 768px) {
+  .delete-modal {
+    padding: 24px;
+    max-width: 90%;
+  }
+
+  .icon-circle {
+    width: 72px;
+    height: 72px;
+  }
+
+  .icon-circle svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .delete-modal-content h3 {
+    font-size: 20px;
+  }
+
+  .delete-modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-keep,
+  .btn-delete-confirm {
+    width: 100%;
+  }
 }
 
 /* Messages */
