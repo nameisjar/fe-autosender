@@ -296,6 +296,79 @@ export function useGroups() {
     }
   };
 
+  // Join group via invite link
+  const joinGroup = async (inviteLink) => {
+    const deviceId = getDeviceId();
+    if (!deviceId) {
+      throw new Error('Device ID tidak ditemukan');
+    }
+    
+    if (!inviteLink || typeof inviteLink !== 'string') {
+      throw new Error('Link invite grup harus diisi');
+    }
+    
+    console.log('Joining group with link:', inviteLink);
+    
+    try {
+      loading.value = true;
+      error.value = '';
+      
+      const res = await userApi.post(`/whatsapp-groups/device/${deviceId}/join`, {
+        inviteLink: inviteLink.trim()
+      });
+      
+      console.log('Join group response:', res.data);
+      
+      // Reload groups after joining
+      await loadGroups({ force: true });
+      
+      return res.data;
+    } catch (e) {
+      const errorMsg = e?.response?.data?.message || e?.message || 'Gagal join grup';
+      error.value = errorMsg;
+      console.error('Error joining group:', e);
+      throw new Error(errorMsg);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // Leave group
+  const leaveGroup = async (groupJid) => {
+    const deviceId = getDeviceId();
+    if (!deviceId) {
+      throw new Error('Device ID tidak ditemukan');
+    }
+    
+    if (!groupJid) {
+      throw new Error('Group JID harus diisi');
+    }
+    
+    console.log('Leaving group:', groupJid);
+    
+    try {
+      loading.value = true;
+      error.value = '';
+      
+      const res = await userApi.post(`/whatsapp-groups/device/${deviceId}/leave/${groupJid}`);
+      
+      console.log('Leave group response:', res.data);
+      
+      // Remove group from local state immediately
+      const groupIdNormalized = normalizeGroupValue({ groupId: groupJid });
+      groups.value = groups.value.filter(g => g.value !== groupIdNormalized);
+      
+      return res.data;
+    } catch (e) {
+      const errorMsg = e?.response?.data?.message || e?.message || 'Gagal keluar dari grup';
+      error.value = errorMsg;
+      console.error('Error leaving group:', e);
+      throw new Error(errorMsg);
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     groups,
     loadingGroups: loading,
@@ -305,5 +378,7 @@ export function useGroups() {
     ensureFullGroupJid,
     clearGroups,
     syncGroups,
+    joinGroup,
+    leaveGroup,
   };
 }

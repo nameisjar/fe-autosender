@@ -450,7 +450,7 @@
           :disabled="loading || !!validationError"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1-2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
           <span v-if="loading">Memproses...</span>
           <span v-else>Jadwalkan Feedback</span>
@@ -943,9 +943,9 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
     selectedGroupId.value = '';
     selectedLabelValue.value = '';
     
-    // Auto-refresh semua data
+    // Auto-refresh semua data (termasuk GROUPS dengan force!)
     await Promise.allSettled([
-      loadGroups(),
+      loadGroups({ force: true }), // 🔥 Tambahkan force: true untuk memaksa reload
       loadContacts(),
       loadLabels()
     ]);

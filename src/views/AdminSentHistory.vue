@@ -213,8 +213,8 @@
               </td>
               <td class="col-contact">
                 <div class="contact-cell">
-                  <div class="contact-name">{{ r.contact ? (r.contact.firstName + ' ' + (r.contact.lastName||'')) : 'Tidak Ada Nama' }}</div>
-                  <div class="phone-number">{{ normalizeNumber(r.to) }}</div>
+                  <div class="contact-name">{{ getDisplayName(r) }}</div>
+                  <div class="phone-number">{{ getPhoneNumber(r) }}</div>
                 </div>
               </td>
               <td class="col-message">
@@ -335,7 +335,7 @@
                   </svg>
                   Nama
                 </label>
-                <div class="info-value">{{ selectedMessage.contact ? (selectedMessage.contact.firstName + ' ' + (selectedMessage.contact.lastName||'')) : 'Tidak Ada Nama' }}</div>
+                <div class="info-value">{{ getDisplayName(selectedMessage) }}</div>
               </div>
 
               <div class="info-item">
@@ -345,7 +345,7 @@
                   </svg>
                   Nomor Telepon
                 </label>
-                <div class="info-value phone-value">{{ normalizeNumber(selectedMessage.to) }}</div>
+                <div class="info-value phone-value">{{ getPhoneNumber(selectedMessage) }}</div>
               </div>
             </div>
           </div>
@@ -581,6 +581,9 @@ const deviceTutorMap = ref({});
 const sessionTutorMap = ref({});
 const tutorMapLoaded = ref(false);
 
+// Group name mapping
+const groupNameMap = ref({});
+
 const broadcastNameMap = ref({});
 const getBroadcastPkId = (id) => {
   const m = String(id || '').match(/^BC_(\d+)_/);
@@ -599,10 +602,134 @@ const loadBroadcasts = async () => {
   } catch (_) { /* ignore */ }
 };
 
+// Load group names from all devices
+const loadGroupNames = async () => {
+  try {
+    // Get all devices first
+    const { data: devicesData } = await userApi.get('/devices');
+    const devices = Array.isArray(devicesData) ? devicesData : [];
+    
+    const map = {};
+    
+    // Load groups from each device
+    for (const device of devices) {
+      if (device && device.id) {
+        try {
+          const { data: groupsData } = await userApi.get(`/whatsapp-groups/device/${device.id}/active`);
+          
+          if (groupsData && groupsData.status && Array.isArray(groupsData.data)) {
+            groupsData.data.forEach(group => {
+              // Get group ID and name from various possible fields
+              const groupId = group.id || group.groupId || group.value || group._id || '';
+              const groupName = group.name || group.subject || group.label || group.groupName || group.title || '';
+              
+              if (groupId && groupName) {
+                // Store with full ID format (@g.us)
+                const fullId = groupId.includes('@g.us') ? groupId : `${groupId}@g.us`;
+                map[fullId] = groupName;
+                
+                // Also store without @g.us for flexibility
+                const shortId = groupId.replace('@g.us', '');
+                map[shortId] = groupName;
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error loading groups for device ${device.id}:`, error);
+        }
+      }
+    }
+    
+    groupNameMap.value = map;
+    console.log('Loaded group names:', groupNameMap.value);
+  } catch (error) {
+    console.error('Error loading group names:', error);
+  }
+};
+
+// Check if recipient is a group
+const isGroup = (to) => {
+  const recipient = String(to || '');
+  return recipient.includes('@g.us') || recipient.includes('-');
+};
+
+// Get group name from mapping or return cleaned ID
+const getGroupName = (to) => {
+  const recipient = String(to || '');
+  
+  // Check if it's a group
+  if (!isGroup(recipient)) {
+    return null; // Not a group
+  }
+  
+  // Try to find group name in mapping
+  let groupName = groupNameMap.value[recipient];
+  
+  // If not found with full format, try without @g.us
+  if (!groupName) {
+    const shortId = recipient.replace('@g.us', '');
+    groupName = groupNameMap.value[shortId];
+  }
+  
+  return groupName || null;
+};
+
+// Get display name for contact or group
+const getDisplayName = (r) => {
+  const recipient = String(r.to || '');
+  
+  // Check if it's a group
+  if (isGroup(recipient)) {
+    const groupName = getGroupName(recipient);
+    if (groupName) {
+      return groupName; // Return group name
+    }
+    // If no group name found, return cleaned ID
+    return recipient.replace('@g.us', '').replace('@s.whatsapp.net', '');
+  }
+  
+  // For regular contacts, return contact name
+  if (r.contact) {
+    return (r.contact.firstName + ' ' + (r.contact.lastName || '')).trim();
+  }
+  
+  return 'Tidak Ada Nama';
+};
+
+// Get phone number - return empty string for groups
+const getPhoneNumber = (r) => {
+  const recipient = String(r.to || '');
+  
+  // If it's a group, return empty string
+  if (isGroup(recipient)) {
+    return '';
+  }
+  
+  // For regular contacts, return cleaned phone number
+  return recipient.replace('@s.whatsapp.net', '');
+};
+
 const fmt = (d) => {
   try { const dd = new Date(d); return isNaN(dd.getTime()) ? '-' : dd.toLocaleString(); } catch { return '-'; }
 };
-const normalizeNumber = (to) => String(to || '').replace('@s.whatsapp.net','');
+
+const normalizeNumber = (to) => {
+  const recipient = String(to || '');
+  
+  // If it's a group, try to get the group name
+  if (isGroup(recipient)) {
+    const groupName = getGroupName(recipient);
+    if (groupName) {
+      return groupName; // Return group name instead of ID
+    }
+    // If no group name found, return a cleaned version without @g.us
+    return recipient.replace('@g.us', '').replace('@s.whatsapp.net', '');
+  }
+  
+  // For regular contacts, just remove @s.whatsapp.net
+  return recipient.replace('@s.whatsapp.net', '');
+};
+
 const badgeClass = (status) => {
   const s = String(status || '').toLowerCase();
   if (s.includes('fail') || s.includes('error')) return 'warn';
@@ -854,7 +981,14 @@ watch([sortBy, sortDir, pageSize], () => {
 });
 
 onMounted(async () => {
-  await Promise.allSettled([loadTutorDeviceMap(), loadSessionTutorMap(), loadBroadcasts(), loadFbNameMap(), load(1)]);
+  await Promise.allSettled([
+    loadTutorDeviceMap(), 
+    loadSessionTutorMap(), 
+    loadBroadcasts(), 
+    loadFbNameMap(), 
+    loadGroupNames(), // Load group names
+    load(1)
+  ]);
 });
 
 const showDetailModal = ref(false);
@@ -1235,11 +1369,13 @@ const truncateMessage = (message, length) => {
 
 .contact-name {
   font-weight: 600;
+  font-size: 14px;
   color: #1e293b;
 }
 
 .phone-number {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -1944,10 +2080,13 @@ const truncateMessage = (message, length) => {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+  min-height: 42px;
 }
 
 .phone-value {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .message-preview-full {
@@ -2011,9 +2150,9 @@ const truncateMessage = (message, length) => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 10px 14px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   border: 1px solid;
   white-space: nowrap;

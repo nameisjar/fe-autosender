@@ -934,9 +934,9 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
     selectedGroupId.value = '';
     selectedLabelValue.value = '';
     
-    // Auto-refresh semua data
+    // Auto-refresh semua data (termasuk GROUPS dengan force!)
     await Promise.allSettled([
-      loadGroups(),
+      loadGroups({ force: true }), // 🔥 Tambahkan force: true untuk memaksa reload
       loadContacts(),
       loadLabels()
     ]);

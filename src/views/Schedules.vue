@@ -97,74 +97,76 @@
 
     <!-- Table View -->
     <div class="table-container">
-      <table class="schedules-table" v-if="!loading && visibleGroups.length > 0">
-        <thead>
-          <tr>
-            <th class="col-expand"></th>
-            <th class="col-name">Nama Jadwal</th>
-            <th class="col-schedule">Waktu Jadwal</th>
-            <th class="col-status">Status</th>
-            <th class="col-recipients">Penerima</th>
-            <th class="col-actions">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="g in visibleGroups" :key="g.name" class="schedule-row">
-            <td class="col-expand">
-              <button 
-                class="btn-expand" 
-                @click="openDetailModal(g)"
-                title="Lihat detail"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-              </button>
-            </td>
-            <td class="col-name">
-              <div class="name-cell">
-                <div class="name-text">{{ displayName(g) }}</div>
-                <div class="name-meta">{{ g.broadcasts.length }} jadwal</div>
-              </div>
-            </td>
-            <td class="col-schedule">
-              <div class="schedule-cell">
-                {{ fmtWithDay(selectedOf(g)?.schedule) }}
-              </div>
-            </td>
-            <td class="col-status">
-              <span class="status-badge" :class="badgeClass(selectedOf(g))">
-                <span class="badge-dot"></span>
-                {{ badgeText(selectedOf(g)) }}
-              </span>
-            </td>
-            <td class="col-recipients">
-              <div class="recipients-summary">
-                {{ getRecipientsSummary(selectedOf(g)) }}
-              </div>
-            </td>
-            <td class="col-actions">
-              <div class="action-buttons">
+      <div class="table-wrapper">
+        <table class="schedules-table" v-if="!loading && visibleGroups.length > 0">
+          <thead>
+            <tr>
+              <th class="col-expand"></th>
+              <th class="col-name">Nama Jadwal</th>
+              <th class="col-schedule">Waktu Jadwal</th>
+              <th class="col-status">Status</th>
+              <th class="col-recipients">Penerima</th>
+              <th class="col-actions">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="g in visibleGroups" :key="g.name" class="schedule-row">
+              <td class="col-expand">
                 <button 
-                  v-if="canDelete(selectedOf(g))" 
-                  class="btn-action btn-delete-action" 
-                  @click="openDeleteDialog(g.name)"
-                  title="Hapus jadwal"
+                  class="btn-expand" 
+                  @click="openDetailModal(g)"
+                  title="Lihat detail"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    <line x1="10" y1="11" x2="10" y2="17"/>
-                    <line x1="14" y1="11" x2="14" y2="17"/>
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
                   </svg>
                 </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td class="col-name">
+                <div class="name-cell">
+                  <div class="name-text">{{ displayName(g) }}</div>
+                  <div class="name-meta">{{ g.broadcasts.length }} jadwal</div>
+                </div>
+              </td>
+              <td class="col-schedule">
+                <div class="schedule-cell">
+                  {{ fmtWithDay(selectedOf(g)?.schedule) }}
+                </div>
+              </td>
+              <td class="col-status">
+                <span class="status-badge" :class="badgeClass(selectedOf(g))">
+                  <span class="badge-dot"></span>
+                  {{ badgeText(selectedOf(g)) }}
+                </span>
+              </td>
+              <td class="col-recipients">
+                <div class="recipients-summary">
+                  {{ getRecipientsSummary(selectedOf(g)) }}
+                </div>
+              </td>
+              <td class="col-actions">
+                <div class="action-buttons">
+                  <button 
+                    v-if="canDelete(selectedOf(g))" 
+                    class="btn-action btn-delete-action" 
+                    @click="openDeleteDialog(g.name)"
+                    title="Hapus jadwal"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div v-if="!loading && visibleGroups.length === 0" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -447,29 +449,53 @@ const loadGroupNames = async () => {
       return;
     }
 
+    console.log('Loading groups from database for device:', deviceId);
+
     // Ambil data group dari database melalui API
     const { data } = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
+    console.log('Groups API response:', data);
+    
     const groups = Array.isArray(data?.data) ? data.data : [];
+    console.log('Parsed groups:', groups);
     
     const map = {};
     for (const g of groups) {
-      const groupId = g.groupId || '';
-      const groupName = g.groupName || 'Tanpa Nama';
+      // Backend sekarang mengembalikan:
+      // - id: WhatsApp JID (groupId dari database)
+      // - groupId: WhatsApp JID (sama dengan id)
+      // - name: nama grup (groupName dari database)
+      // - subject: nama grup (alias dari name)
+      const groupJid = g.id || g.groupId || '';
+      const groupName = g.name || g.subject || 'Tanpa Nama';
       
-      // Simpan dengan berbagai format ID untuk memudahkan pencarian
-      map[groupId] = groupName;
+      console.log('Mapping group:', { jid: groupJid, name: groupName });
       
-      // Jika groupId tidak mengandung @g.us, tambahkan juga versi dengan @g.us
-      if (!groupId.includes('@')) {
-        map[`${groupId}@g.us`] = groupName;
+      // Simpan dengan berbagai format JID untuk memudahkan pencarian
+      if (groupJid) {
+        map[groupJid] = groupName;
+        
+        // Jika JID tidak mengandung @g.us, tambahkan juga versi dengan @g.us
+        if (!groupJid.includes('@')) {
+          map[`${groupJid}@g.us`] = groupName;
+        }
+        
+        // Simpan juga dengan ID saja (tanpa @g.us)
+        const idOnly = groupJid.split('@')[0];
+        if (idOnly && idOnly !== groupJid) {
+          map[idOnly] = groupName;
+        }
       }
     }
     
+    console.log('Groups map created:', map);
     groupsMap.value = map;
   } catch (error) {
     console.error('Error loading groups from database:', error);
+    console.error('Error response:', error?.response?.data);
+    
     // Fallback ke method lama jika API database gagal
     try {
+      console.log('Attempting fallback to old API...');
       let res;
       try { res = await deviceApi.get('/messages/get-groups/detail'); }
       catch { res = await deviceApi.get('/messages/get-groups'); }
@@ -482,7 +508,10 @@ const loadGroupNames = async () => {
         map[full] = name;
       }
       groupsMap.value = map;
-    } catch (_) { /* ignore */ }
+      console.log('Fallback groups map:', map);
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+    }
   }
 };
 
@@ -1236,6 +1265,10 @@ onMounted(async () => {
 /* Table View */
 .table-container {
   margin-bottom: 32px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
 .schedules-table {

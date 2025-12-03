@@ -13,6 +13,7 @@ import SendMessage from '../views/SendMessage.vue';
 import Schedules from '../views/Schedules.vue';
 import Broadcasts from '../views/Broadcasts.vue';
 import Contacts from '../views/Contacts.vue';
+import Groups from '../views/Groups.vue';
 import { userApi } from '../api/http.js';
 
 const routes = [
@@ -25,6 +26,7 @@ const routes = [
             { path: 'add-device', name: 'add-device', component: AddDevice },
             { path: 'pairing', redirect: { name: 'add-device' } },
             { path: 'contacts', name: 'contacts', component: Contacts },
+            { path: 'groups', name: 'groups', component: Groups },
             { path: 'schedule-feedback', name: 'schedule-feedback', component: ScheduleFeedback },
             { path: 'schedule-reminder', name: 'schedule-reminder', component: ScheduleReminder },
             { path: 'reminder-algo', name: 'reminder-algo', component: ReminderAlgo },

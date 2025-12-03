@@ -929,7 +929,7 @@ onMounted(async () => {
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
     console.log('[Broadcasts] Device berubah dari', oldDeviceId, 'ke', newDeviceId);
-    console.log('[Broadcasts] Auto-refresh data: Kontak, Grup, dan Label...');
+    console.log('[Broadcasts] Auto-refresh data: Grup, Kontak, dan Label...');
     
     // Clear recipients ketika ganti device
     recipients.value = [];
@@ -938,14 +938,14 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
     selectedGroupId.value = '';
     selectedLabelValue.value = '';
     
-    // Auto-refresh semua data
+    // Auto-refresh semua data (termasuk GROUPS!)
     await Promise.allSettled([
-      loadGroups(),
+      loadGroups({ force: true }), // 🔥 Tambahkan force: true untuk memaksa reload
       loadContacts(),
       loadLabels()
     ]);
     
-    toast.success('Device berhasil diganti. Data kontak, grup, dan label telah di-refresh.');
+    toast.success('Device berhasil diganti. Data grup, kontak, dan label telah di-refresh.');
   }
 });
 
