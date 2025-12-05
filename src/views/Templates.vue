@@ -48,81 +48,49 @@
       </div>
     </div>
 
-    <section v-if="isAdmin" class="create-card">
+    <section class="create-card">
       <div class="card-header-section">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          Tambah Template Baru
+          Import Data dari Excel
         </h3>
       </div>
-      <form @submit.prevent="createFeedback" class="form-grid">
-        <div class="form-group">
-          <label>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/>
-            </svg>
-            Nama Course
-          </label>
-          <input v-model="fb.courseName" placeholder="Contoh: Algorithmics" required />
+      
+      <div class="import-section">
+        <div class="import-info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <p>Upload file CSV atau XLSX dengan format: Course Name, Lesson, Message</p>
         </div>
-        <div class="form-group compact">
-          <label>
+        
+        <div class="import-actions">
+          <input ref="tplFileInput" type="file" accept=".csv,text/csv,.xlsx,.xls" style="display:none" @change="onTplImportFileChange" />
+          <button class="btn-import" @click="triggerTplImport" :disabled="!isAdmin || importBusy">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            Lesson
-          </label>
-          <input v-model.number="fb.lesson" type="number" min="1" placeholder="1" required />
-        </div>
-        <div class="form-group full-width">
-          <label>
+            {{ importBusy ? 'Mengimpor...' : 'Import XLSX' }}
+          </button>
+          <button class="btn-export" @click="exportXLSX" :disabled="!feedbacks.length">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Pesan Template
-          </label>
-          <textarea 
-            v-model="fb.message" 
-            placeholder="Tulis pesan feedback di sini... (Gunakan enter untuk baris baru)"
-            rows="5"
-            required
-          ></textarea>
-        </div>
-        <div class="form-actions">
-          <button class="btn-submit" type="submit" :disabled="submitting">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            {{ submitting ? 'Menyimpan...' : 'Tambah Template' }}
+            Export XLSX
           </button>
         </div>
-      </form>
-      <div class="form-hint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="16" x2="12" y2="12"/>
-          <line x1="12" y1="8" x2="12.01" y2="8"/>
-        </svg>
-        Format pesan akan dipertahankan seperti yang Anda ketik (termasuk baris baru dan spasi)
       </div>
-      <p v-if="msg" class="success-message">{{ msg }}</p>
-      <p v-if="err" class="error-message">{{ err }}</p>
     </section>
-
-    <div v-else class="admin-only-card">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-      </svg>
-      <p>Hanya admin yang dapat mengelola template feedback</p>
-    </div>
 
     <section class="list-card">
       <div class="card-header-section">
@@ -142,13 +110,28 @@
       </div>
 
       <div class="toolbar-section">
-        <div class="search-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input v-model="fbFilter" placeholder="Cari nama course..." />
+        <div class="filter-group">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input v-model="fbFilter" placeholder="Cari nama course..." />
+          </div>
+          
+          <div class="course-filter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M7 12h10M10 18h4"/>
+            </svg>
+            <select v-model="selectedCourse">
+              <option value="">Semua Course</option>
+              <option v-for="course in allCourses" :key="course" :value="course">
+                {{ course }}
+              </option>
+            </select>
+          </div>
         </div>
+        
         <div class="action-buttons">
           <button class="btn-action collapse" @click="collapseAll" v-if="courses.length">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -168,23 +151,13 @@
             </svg>
             Buka Semua
           </button>
-          <button class="btn-action export" @click="exportXLSX" :disabled="!feedbacks.length">
+          <button class="btn-add-new" @click="openAddModal" v-if="isAdmin">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Export XLSX
+            Tambah Template
           </button>
-          <button class="btn-action import" @click="triggerTplImport" :disabled="!isAdmin || importBusy" v-if="isAdmin">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            {{ importBusy ? 'Mengimpor...' : 'Import CSV/XLSX' }}
-          </button>
-          <input ref="tplFileInput" type="file" accept=".csv,text/csv,.xlsx,.xls" style="display:none" @change="onTplImportFileChange" />
         </div>
       </div>
 
@@ -209,85 +182,40 @@
           <div class="course-body" v-show="!collapsed[c]">
             <div class="templates-grid">
               <div v-for="t in grouped[c]" :key="t.id" class="template-card">
-                <template v-if="editId === t.id">
-                  <div class="edit-mode">
-                    <div class="edit-header">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                      <h5>Edit Template</h5>
-                    </div>
-                    <div class="edit-form">
-                      <div class="form-group">
-                        <label>Lesson</label>
-                        <input type="number" v-model.number="ed.lesson" min="1" />
-                      </div>
-                      <div class="form-group">
-                        <label>Pesan</label>
-                        <textarea 
-                          v-model="ed.message" 
-                          placeholder="Pesan template" 
-                          rows="6"
-                        ></textarea>
-                      </div>
-                    </div>
-                    <div class="edit-actions">
-                      <button class="btn-save" @click="saveEdit" :disabled="submitting">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                          <polyline points="17 21 17 13 7 13 7 21"/>
-                          <polyline points="7 3 7 8 15 8"/>
-                        </svg>
-                        {{ submitting ? 'Menyimpan...' : 'Simpan' }}
-                      </button>
-                      <button class="btn-cancel" @click="cancelEdit" :disabled="submitting">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <circle cx="12" cy="12" r="10"/>
-                          <line x1="15" y1="9" x2="9" y2="15"/>
-                          <line x1="9" y1="9" x2="15" y2="15"/>
-                        </svg>
-                        Batal
-                      </button>
-                    </div>
+                <div class="template-header">
+                  <div class="lesson-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                      <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    Lesson {{ t.lesson }}
                   </div>
-                </template>
-                <template v-else>
-                  <div class="template-header">
-                    <div class="lesson-badge">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-                      </svg>
-                      Lesson {{ t.lesson }}
-                    </div>
+                </div>
+                <div class="template-body">
+                  <div class="message-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Pesan Template
                   </div>
-                  <div class="template-body">
-                    <div class="message-label">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      </svg>
-                      Pesan Template
-                    </div>
-                    <div class="message-preview">{{ t.message }}</div>
-                  </div>
-                  <div class="template-footer" v-if="isAdmin">
-                    <button class="btn-edit" @click="startEditInline(t)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                      Edit
-                    </button>
-                    <button class="btn-delete" @click="deleteFeedback(t)" :disabled="submitting">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      </svg>
-                      {{ submitting ? 'Menghapus...' : 'Hapus' }}
-                    </button>
-                  </div>
-                </template>
+                  <div class="message-preview">{{ t.message }}</div>
+                </div>
+                <div class="template-footer" v-if="isAdmin">
+                  <button class="btn-edit" @click="startEditInline(t)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit
+                  </button>
+                  <button class="btn-delete" @click="deleteFeedback(t)" :disabled="submitting">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    {{ submitting ? 'Menghapus...' : 'Hapus' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -303,6 +231,75 @@
         <p>Mulai dengan menambahkan template feedback baru</p>
       </div>
     </section>
+
+    <!-- Add/Edit Modal -->
+    <div v-if="showFormModal" class="modal-overlay" @click="closeFormModal">
+      <div class="form-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ isEditMode ? 'Edit Template' : 'Tambah Template Baru' }}</h3>
+          <button class="btn-close" @click="closeFormModal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <form @submit.prevent="saveTemplate">
+            <div class="form-grid-modal">
+              <div class="form-group">
+                <label for="courseName">Nama Course <span class="required">*</span></label>
+                <input 
+                  id="courseName" 
+                  v-model="formData.courseName" 
+                  type="text" 
+                  placeholder="Contoh: Algorithmics" 
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="lesson">Lesson <span class="required">*</span></label>
+                <input 
+                  id="lesson" 
+                  v-model.number="formData.lesson" 
+                  type="number" 
+                  min="1" 
+                  placeholder="1" 
+                  required
+                />
+              </div>
+
+              <div class="form-group full">
+                <label for="message">Pesan Template <span class="required">*</span></label>
+                <textarea 
+                  id="message" 
+                  v-model="formData.message" 
+                  rows="5" 
+                  placeholder="Tulis pesan feedback di sini... (Gunakan enter untuk baris baru)" 
+                  required
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-cancel" @click="closeFormModal">
+                Batal
+              </button>
+              <button type="submit" class="btn-save" :disabled="saving">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                  <polyline points="17 21 17 13 7 13 7 21"/>
+                  <polyline points="7 3 7 8 15 8"/>
+                </svg>
+                {{ saving ? 'Menyimpan...' : (isEditMode ? 'Update Template' : 'Simpan Template') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="modal-overlay delete-modal-overlay" @click="cancelDelete">
@@ -424,6 +421,7 @@ const isAdmin = computed(() => auth.isAdmin);
 
 const feedbacks = ref([]);
 const fbFilter = ref('');
+const selectedCourse = ref('');
 const fb = ref({ courseName: '', lesson: 1, message: '' });
 const ed = ref({ id: '', courseName: '', lesson: 1, message: '' });
 const editId = ref('');
@@ -451,15 +449,20 @@ const grouped = computed(() => {
   const map = {};
   const arr = Array.isArray(feedbacks.value) ? feedbacks.value.slice() : [];
   const filter = (fbFilter.value || '').trim().toLowerCase();
+  const courseFilter = selectedCourse.value;
+  
   for (const t of arr) {
     const course = t.courseName || '';
     if (filter && !course.toLowerCase().includes(filter)) continue;
+    if (courseFilter && course !== courseFilter) continue;
     (map[course] ||= []).push(t);
   }
   Object.keys(map).forEach((k) => map[k].sort((a, b) => Number(a.lesson) - Number(b.lesson)));
   return map;
 });
+
 const courses = computed(() => Object.keys(grouped.value).sort((a, b) => a.localeCompare(b)));
+const allCourses = computed(() => [...new Set(feedbacks.value.map(t => t.courseName))].sort());
 const collapsed = ref({});
 const toggleGroup = (c) => { collapsed.value[c] = !collapsed.value[c]; };
 const expandAll = () => { courses.value.forEach((c) => (collapsed.value[c] = false)); };
@@ -478,15 +481,20 @@ const loadFeedbacks = async () => {
   loading.value = true;
   err.value = '';
   try {
+    console.log('🔍 Loading templates...');
+    
     if (fbFilter.value) {
-      const { data } = await userApi.get(`/algorithmics/feedback/${encodeURIComponent(fbFilter.value)}`);
+      const { data } = await userApi.get(`/course/feedback/${encodeURIComponent(fbFilter.value)}`);
       feedbacks.value = data.feedbacks || [];
     } else {
-      const { data } = await userApi.get('/algorithmics/feedbacks');
+      const { data } = await userApi.get('/course/feedbacks');
       feedbacks.value = data.feedbacks || [];
     }
+    
+    console.log('✅ Templates loaded:', feedbacks.value.length);
     collapsed.value = {};
   } catch (e) {
+    console.error('❌ Error loading templates:', e);
     toast.error(e?.response?.data?.message || e?.message || 'Gagal memuat template');
   } finally {
     loading.value = false;
@@ -498,7 +506,7 @@ const createFeedback = async () => {
   msg.value = '';
   err.value = '';
   try {
-    await userApi.post('/algorithmics/feedback', fb.value);
+    await userApi.post('/course/feedback', fb.value);
     fb.value = { courseName: '', lesson: 1, message: '' };
     toast.success('Template berhasil ditambahkan');
     await loadFeedbacks();
@@ -511,9 +519,17 @@ const createFeedback = async () => {
 
 // inline edit helpers
 const startEditInline = (t) => {
-  editId.value = t.id;
-  ed.value = { id: t.id, courseName: t.courseName, lesson: t.lesson, message: t.message };
+  // Open modal in edit mode
+  isEditMode.value = true;
+  formData.value = { 
+    id: t.id, 
+    courseName: t.courseName, 
+    lesson: t.lesson, 
+    message: t.message 
+  };
+  showFormModal.value = true;
 };
+
 const startEdit = (t) => startEditInline(t);
 const cancelEdit = () => { editId.value = ''; };
 const saveEdit = async () => {
@@ -522,7 +538,7 @@ const saveEdit = async () => {
   msg.value = '';
   err.value = '';
   try {
-    await userApi.put(`/algorithmics/feedback/${encodeURIComponent(editId.value)}`, { courseName: ed.value.courseName, lesson: ed.value.lesson, message: ed.value.message });
+    await userApi.put(`/course/feedback/${encodeURIComponent(editId.value)}`, { courseName: ed.value.courseName, lesson: ed.value.lesson, message: ed.value.message });
     toast.success('Template berhasil diperbarui');
     editId.value = '';
     await loadFeedbacks();
@@ -548,7 +564,7 @@ const handleConfirmDelete = async () => {
   err.value = '';
   
   try {
-    await userApi.delete(`/algorithmics/feedback/${encodeURIComponent(templateToDelete.value.id)}`);
+    await userApi.delete(`/course/feedback/${encodeURIComponent(templateToDelete.value.id)}`);
     toast.success('Template berhasil dihapus');
     
     // Close modal
@@ -631,7 +647,7 @@ const confirmImport = async () => {
   try {
     const form = new FormData();
     form.append('file', selectedImportFile.value);
-    await userApi.post(`/algorithmics/feedback/import`, form, {
+    await userApi.post(`/course/feedback/import`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       params: { replace: importReplaceMode.value },
     });
@@ -653,6 +669,45 @@ const cancelImport = () => {
   selectedImportFile.value = null;
   importReplaceMode.value = false;
   if (tplFileInput.value) tplFileInput.value.value = '';
+};
+
+// Add/Edit Modal State
+const showFormModal = ref(false);
+const isEditMode = ref(false);
+const formData = ref({ courseName: '', lesson: 1, message: '' });
+const saving = ref(false);
+
+const openAddModal = () => {
+  isEditMode.value = false;
+  formData.value = { courseName: '', lesson: 1, message: '' };
+  showFormModal.value = true;
+};
+
+const closeFormModal = () => {
+  showFormModal.value = false;
+};
+
+const saveTemplate = async () => {
+  saving.value = true;
+  try {
+    if (isEditMode.value) {
+      await userApi.put(`/course/feedback/${encodeURIComponent(formData.value.id)}`, {
+        courseName: formData.value.courseName,
+        lesson: formData.value.lesson,
+        message: formData.value.message
+      });
+      toast.success('Template berhasil diperbarui');
+    } else {
+      await userApi.post('/course/feedback', formData.value);
+      toast.success('Template berhasil ditambahkan');
+    }
+    await loadFeedbacks();
+    closeFormModal();
+  } catch (e) {
+    toast.error(e?.response?.data?.message || e?.message || 'Gagal menyimpan template');
+  } finally {
+    saving.value = false;
+  }
 };
 
 loadFeedbacks();
@@ -997,6 +1052,13 @@ loadFeedbacks();
   flex-wrap: wrap;
 }
 
+.filter-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .search-box {
   flex: 1;
   min-width: 250px;
@@ -1031,6 +1093,34 @@ loadFeedbacks();
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.course-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.course-filter svg {
+  width: 20px;
+  height: 20px;
+  color: #94a3b8;
+}
+
+.course-filter select {
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+}
+
+.course-filter select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 .action-buttons {
   display: flex;
   gap: 8px;
@@ -1040,12 +1130,12 @@ loadFeedbacks();
 .btn-action {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
+  gap: 8px;
+  padding: 12px 18px;
   border: 1.5px solid;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1056,8 +1146,8 @@ loadFeedbacks();
 }
 
 .btn-action svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .btn-action.collapse,
@@ -1071,6 +1161,7 @@ loadFeedbacks();
 .btn-action.expand:hover:not(:disabled) {
   background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-action.export {
@@ -1095,6 +1186,298 @@ loadFeedbacks();
   background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(30, 64, 175, 0.2);
+}
+
+.btn-add-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-add-new svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-add-new:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-add-new:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Import Section */
+.import-section {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.import-info {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  min-width: 300px;
+}
+
+.import-info svg {
+  width: 24px;
+  height: 24px;
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.import-info p {
+  margin: 0;
+  color: #0c4a6e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.import-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-import,
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-import {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-import:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-export {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-export:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-import:disabled,
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-import svg,
+.btn-export svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Form Modal */
+.form-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+.modal-header {
+  padding: 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.btn-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-close:hover {
+  background: #e2e8f0;
+}
+
+.btn-close svg {
+  width: 18px;
+  height: 18px;
+  color: #475569;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.form-grid-modal {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.form-grid-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-grid-modal .form-group.full {
+  grid-column: 1 / -1;
+}
+
+.form-grid-modal .form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-grid-modal .form-group .required {
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.form-grid-modal .form-group input,
+.form-grid-modal .form-group textarea {
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.form-grid-modal .form-group input:focus,
+.form-grid-modal .form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-grid-modal .form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+.form-grid-modal .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 2px solid #e2e8f0;
+}
+
+.form-grid-modal .btn-cancel,
+.form-grid-modal .btn-save {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.form-grid-modal .btn-cancel {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 2px solid #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.form-grid-modal .btn-cancel:hover {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.form-grid-modal .btn-save {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+}
+
+.form-grid-modal .btn-save:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.45);
+}
+
+.form-grid-modal .btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.form-grid-modal .btn-save svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* Templates Container */

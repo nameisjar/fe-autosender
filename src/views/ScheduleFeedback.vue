@@ -739,31 +739,48 @@ const extractCourseOptions = (items) => {
 
 const loadTemplates = async () => {
   try {
+    console.log('🔍 Loading templates...', filterCourse.value ? `for course: ${filterCourse.value}` : 'all courses');
+    
     let data;
     if (filterCourse.value) {
-      try {
-        const res = await userApi.get(`/algorithmics/feedback/${encodeURIComponent(filterCourse.value)}`);
-        data = res.data;
-        templates.value = data.feedbacks || [];
-      } catch (e) {
-        console.error('Error loading course templates:', e);
-        templates.value = [];
-      }
+      const res = await userApi.get(`/course/feedback/${encodeURIComponent(filterCourse.value)}`);
+      data = res.data;
+      templates.value = data.feedbacks || [];
     } else {
-      try {
-        const res = await userApi.get('/algorithmics/feedbacks');
-        data = res.data;
-        templates.value = data.feedbacks || [];
-      } catch (e) {
-        console.error('Error loading all templates:', e);
-        templates.value = [];
-      }
+      const res = await userApi.get('/course/feedbacks');
+      data = res.data;
+      templates.value = data.feedbacks || [];
     }
+    
     extractCourseOptions(templates.value);
+    
+    console.log('✅ Templates loaded successfully:', {
+      totalTemplates: templates.value.length,
+      courses: courseOptions.value,
+      coursesCount: courseOptions.value.length
+    });
   } catch (e) {
-    console.error('Error in loadTemplates:', e);
-    templates.value = [];
-    courseOptions.value = [];
+    console.error('❌ Error loading templates:', e);
+    console.error('Error details:', {
+      message: e?.message,
+      response: e?.response?.data,
+      status: e?.response?.status
+    });
+    
+    // Tetap ekstrak course options dari templates yang sudah ada (jika ada)
+    extractCourseOptions(templates.value);
+    
+    // Tampilkan error yang lebih informatif
+    const errorMsg = e?.response?.data?.message || e?.message || 'Gagal memuat templates';
+    toast.error('Gagal memuat templates: ' + errorMsg);
+    
+    // Set default values untuk mencegah undefined
+    if (!Array.isArray(templates.value)) {
+      templates.value = [];
+    }
+    if (!Array.isArray(courseOptions.value)) {
+      courseOptions.value = [];
+    }
   }
 };
 

@@ -85,6 +85,16 @@
             </svg>
             <span>Reminder (Algo)</span>
           </router-link>
+          <router-link to="/monthly-feedback" @click="closeSidebar">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>
+            </svg>
+            <span>Feedback Bulanan (Algo)</span>
+          </router-link>
           <router-link to="/schedules" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
@@ -105,6 +115,15 @@
                 <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span>Templates</span>
+            </router-link>
+            <router-link to="/admin/monthly-templates" @click="closeSidebar">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span>Templates Bulanan</span>
             </router-link>
             <router-link to="/admin/tutors" @click="closeSidebar">
               <svg class="nav-icon" viewBox="0 0 24 24" fill="none">

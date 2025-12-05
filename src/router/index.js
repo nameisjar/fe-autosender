@@ -7,6 +7,8 @@ import ScheduleReminder from '../views/ScheduleReminder.vue';
 import ReminderAlgo from '../views/ReminderAlgo.vue';
 import SentHistory from '../views/SentHistory.vue';
 import Templates from '../views/Templates.vue';
+import MonthlyTemplates from '../views/MonthlyTemplates.vue';
+import MonthlyFeedback from '../views/MonthlyFeedback.vue';
 import AdminTutors from '../views/AdminTutors.vue';
 import AdminSentHistory from '../views/AdminSentHistory.vue';
 import SendMessage from '../views/SendMessage.vue';
@@ -32,6 +34,12 @@ const routes = [
             { path: 'reminder-algo', name: 'reminder-algo', component: ReminderAlgo },
             { path: 'schedules', name: 'schedules', component: Schedules },
             { path: 'broadcasts', name: 'broadcasts', component: Broadcasts },
+            // Feedback Bulanan (Algo) - Accessible by Admin & Tutor
+            {
+                path: 'monthly-feedback',
+                name: 'monthly-feedback',
+                component: MonthlyFeedback,
+            },
             // keep legacy paths but protect as admin-only
             {
                 path: 'sent-history',
@@ -56,6 +64,12 @@ const routes = [
                 path: 'admin/sent-history',
                 name: 'admin-sent-history',
                 component: AdminSentHistory,
+                meta: { requiresAdmin: true },
+            },
+            {
+                path: 'admin/monthly-templates',
+                name: 'admin-monthly-templates',
+                component: MonthlyTemplates,
                 meta: { requiresAdmin: true },
             },
             {

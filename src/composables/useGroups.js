@@ -82,6 +82,58 @@ const fetchGroupsFromDatabase = async () => {
   }
 };
 
+// 🔥 Internal load function at module scope
+const loadGroupsInternal = async ({ force = false } = {}) => {
+  errorState.value = '';
+  
+  if (!force && groupsState.value && groupsState.value.length > 0) {
+    console.log('Using cached groups:', groupsState.value.length, 'groups');
+    return groupsState.value;
+  }
+
+  if (inFlight && !force) {
+    console.log('Groups already loading, waiting for existing request...');
+    return inFlight;
+  }
+  
+  loadingState.value = true;
+  console.log('Starting to load groups from database...');
+  
+  inFlight = (async () => {
+    try {
+      const data = await fetchGroupsFromDatabase();
+      groupsState.value = data;
+      console.log('Successfully loaded', data.length, 'groups');
+      
+      if (data.length === 0) {
+        console.warn('No groups found. Make sure WhatsApp is connected and groups exist.');
+      }
+      
+      // Setup socket listeners setelah load groups
+      const deviceId = getDeviceId();
+      if (deviceId) {
+        setupGroupSocketListeners(deviceId);
+      }
+      
+      return groupsState.value;
+    } catch (e) {
+      const errorMsg = e?.response?.data?.message || e?.message || 'Gagal memuat grup dari database';
+      errorState.value = errorMsg;
+      console.error('Error loading groups from database:', e);
+      console.error('Error details:', {
+        status: e?.response?.status,
+        statusText: e?.response?.statusText,
+        data: e?.response?.data
+      });
+      return [];
+    } finally {
+      loadingState.value = false;
+      inFlight = null;
+    }
+  })();
+  return inFlight;
+};
+
 const clearGroups = () => {
   groupsState.value = [];
   errorState.value = '';
@@ -115,7 +167,7 @@ const setupGroupSocketListeners = (deviceId) => {
       console.log('[Groups Socket] ✅ Group removed from list:', data.groupId);
     } else {
       // Untuk update lainnya, lakukan full refresh
-      await loadGroups({ force: true });
+      await loadGroupsInternal({ force: true });
     }
   });
   
@@ -147,7 +199,7 @@ const setupGroupSocketListeners = (deviceId) => {
     
     // Optional: Full refresh untuk memastikan data konsisten
     setTimeout(() => {
-      loadGroups({ force: true });
+      loadGroupsInternal({ force: true });
     }, 2000);
   });
   
@@ -194,55 +246,9 @@ export function useGroups() {
   const loading = loadingState;
   const error = errorState;
 
+  // Wrapper function yang memanggil internal function
   const loadGroups = async ({ force = false } = {}) => {
-    error.value = '';
-    
-    if (!force && groups.value && groups.value.length > 0) {
-      console.log('Using cached groups:', groups.value.length, 'groups');
-      return groups.value;
-    }
-
-    if (inFlight && !force) {
-      console.log('Groups already loading, waiting for existing request...');
-      return inFlight;
-    }
-    
-    loading.value = true;
-    console.log('Starting to load groups from database...');
-    
-    inFlight = (async () => {
-      try {
-        const data = await fetchGroupsFromDatabase();
-        groups.value = data;
-        console.log('Successfully loaded', data.length, 'groups');
-        
-        if (data.length === 0) {
-          console.warn('No groups found. Make sure WhatsApp is connected and groups exist.');
-        }
-        
-        // 🆕 Setup socket listeners setelah load groups
-        const deviceId = getDeviceId();
-        if (deviceId) {
-          setupGroupSocketListeners(deviceId);
-        }
-        
-        return groups.value;
-      } catch (e) {
-        const errorMsg = e?.response?.data?.message || e?.message || 'Gagal memuat grup dari database';
-        error.value = errorMsg;
-        console.error('Error loading groups from database:', e);
-        console.error('Error details:', {
-          status: e?.response?.status,
-          statusText: e?.response?.statusText,
-          data: e?.response?.data
-        });
-        return [];
-      } finally {
-        loading.value = false;
-        inFlight = null;
-      }
-    })();
-    return inFlight;
+    return loadGroupsInternal({ force });
   };
 
   const refreshGroups = async () => {

@@ -1,0 +1,59 @@
+const onFileChange = async (e) => {
+  const file = e?.target?.files?.[0];
+  if (filebaru.txt -r ./folder3/filebaru.txt) return;
+  
+    toast.error('Pilih file Excel (.xlsx)');
+    e.target.value = '';
+    return;
+  }
+
+  importing.value = true;
+  try {
+    const XLSX = await loadXLSX();
+    const reader = new FileReader();
+    
+    reader.onload = async (evt) => {
+      try {
+        const data = evt.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        
+        // Skip header row
+        const dataRows = rows.slice(1).filter(row => row.length > 0);
+        const importData = dataRows.map(row => ({
+          courseName: row[0] || '',      // Nama Course
+          code: row[1] || '',             // code
+          month: Number(row[2]) || 1,     // month
+          topicModule: row[3] || '',      // Topic
+          result: row[4] || '',           // Key results
+          skillsAcquired: row[5] || '',   // New Skills
+          level: row[6] || ''             // Level
+        }));
+
+        // Send to backend
+        await userApi.post('/algorithmics/monthly-templates/import', { templates: importData });
+        toast.success(`Berhasil mengimport ${importData.length} template`);
+        await loadTemplates();
+      } catch (err) {
+        console.error('Import error:', err);
+        toast.error(err?.response?.data?.message || 'Gagal mengimport data');
+      } finally {
+        importing.value = false;
+        if (fileInput.value) fileInput.value.value = '';
+      }
+    };
+    
+    reader.onerror = () => {
+      toast.error('Gagal membaca file');
+      importing.value = false;
+      if (fileInput.value) fileInput.value.value = '';
+    };
+    
+    reader.readAsBinaryString(file);
+  } catch (e) {
+    toast.error('Gagal memuat library Excel');
+    importing.value = false;
+    if (fileInput.value) fileInput.value.value = '';
+  }
+};
