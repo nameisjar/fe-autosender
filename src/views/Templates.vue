@@ -1366,13 +1366,12 @@ loadFeedbacks();
 .form-grid-modal {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
 .form-grid-modal .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .form-grid-modal .form-group.full {
@@ -1380,93 +1379,78 @@ loadFeedbacks();
 }
 
 .form-grid-modal .form-group label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #475569;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  color: #64748b;
+  margin-bottom: 8px;
 }
 
 .form-grid-modal .form-group .required {
   color: #dc2626;
-  font-size: 14px;
 }
 
 .form-grid-modal .form-group input,
 .form-grid-modal .form-group textarea {
-  padding: 12px 14px;
+  padding: 12px;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
-  background: #f8fafc;
   transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .form-grid-modal .form-group input:focus,
 .form-grid-modal .form-group textarea:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-grid-modal .form-group textarea {
-  resize: vertical;
-  min-height: 120px;
-  line-height: 1.6;
 }
 
 .form-grid-modal .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 24px;
-  margin-top: 40px;
-  padding-top: 28px;
-  border-top: 2px solid #e2e8f0;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .form-grid-modal .btn-cancel,
 .form-grid-modal .btn-save {
-  padding: 14px 32px;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-width: 160px;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 140px;
   justify-content: center;
 }
 
 .form-grid-modal .btn-cancel {
   background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
   color: #475569;
-  border: 2px solid #cbd5e1;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1.5px solid #cbd5e1;
 }
 
 .form-grid-modal .btn-cancel:hover {
   background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .form-grid-modal .btn-save {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .form-grid-modal .btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .form-grid-modal .btn-save:disabled {
