@@ -5,12 +5,15 @@
       <div class="header-content">
         <h2>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
           </svg>
           Broadcast Berulang
         </h2>
-        <p class="subtitle">Jadwalkan pengiriman pesan yang berulang secara otomatis berdasarkan interval waktu yang Anda tentukan. Waktu akan dikirim sesuai persis dengan input Anda.</p>
+        <p class="subtitle">
+          Jadwalkan pengiriman pesan yang berulang secara otomatis berdasarkan interval
+          waktu yang Anda tentukan. Waktu akan dikirim sesuai persis dengan input Anda.
+        </p>
       </div>
     </div>
 
@@ -21,51 +24,74 @@
         <div class="card-header">
           <h3 class="card-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
             </svg>
             Pilih Device WhatsApp
           </h3>
-          <button 
-            type="button" 
-            class="btn-refresh-header" 
-            @click="loadDevices" 
+          <button
+            type="button"
+            class="btn-refresh-header"
+            @click="loadDevices"
             :disabled="loadingDevices"
             title="Refresh device list"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingDevices }">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1-18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              :class="{ spinning: loadingDevices }"
+            >
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
             </svg>
-            {{ loadingDevices ? 'Loading...' : 'Refresh' }}
+            {{ loadingDevices ? "Loading..." : "Refresh" }}
           </button>
         </div>
         <div class="card-body">
           <!-- Device Info Card (when device is selected) -->
-          <div v-if="selectedDevice" class="device-info-card" :class="{ 'connected': selectedDevice.isConnected, 'disconnected': !selectedDevice.isConnected }">
+          <div
+            v-if="selectedDevice"
+            class="device-info-card"
+            :class="{
+              connected: selectedDevice.isConnected,
+              disconnected: !selectedDevice.isConnected,
+            }"
+          >
             <div class="device-avatar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1-2-2h14a2 2 0 0 1 2 2z"/>
-                <path d="M12 8v4"/>
-                <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                <path d="M12 8v4" />
+                <circle cx="12" cy="16" r="0.5" fill="currentColor" />
               </svg>
-              <div class="status-indicator" :class="{ 'online': selectedDevice.isConnected }"></div>
+              <div
+                class="status-indicator"
+                :class="{ online: selectedDevice.isConnected }"
+              ></div>
             </div>
             <div class="device-details">
-              <div class="device-name">{{ selectedDevice.name || 'Unknown Device' }}</div>
+              <div class="device-name">{{ selectedDevice.name || "Unknown Device" }}</div>
               <div class="device-meta">
-                <span class="device-status" :class="{ 'online': selectedDevice.isConnected }">
+                <span
+                  class="device-status"
+                  :class="{ online: selectedDevice.isConnected }"
+                >
                   <svg viewBox="0 0 8 8" fill="currentColor">
-                    <circle cx="4" cy="4" r="3"/>
+                    <circle cx="4" cy="4" r="3" />
                   </svg>
-                  {{ selectedDevice.isConnected ? 'Online' : 'Offline' }}
+                  {{ selectedDevice.isConnected ? "Online" : "Offline" }}
                 </span>
                 <span class="device-divider">•</span>
-                <span class="device-id">{{ selectedDevice.status || 'Unknown' }}</span>
+                <span class="device-id">{{ selectedDevice.status || "Unknown" }}</span>
               </div>
             </div>
             <button type="button" class="btn-change-device" @click="handleChangeDevice">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                <path
+                  d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+                />
               </svg>
               Ganti Device
             </button>
@@ -75,8 +101,8 @@
           <div v-else class="device-selector-empty">
             <div class="empty-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
               </svg>
             </div>
             <div class="empty-text">
@@ -88,7 +114,9 @@
           <!-- Device List -->
           <div v-if="otherDevices.length > 0" class="device-list">
             <label class="form-label">
-              {{ selectedDevice ? 'Atau pilih device lain:' : 'Pilih dari daftar device:' }}
+              {{
+                selectedDevice ? "Atau pilih device lain:" : "Pilih dari daftar device:"
+              }}
             </label>
             <div class="device-grid">
               <button
@@ -96,24 +124,35 @@
                 :key="device.id"
                 type="button"
                 class="device-item"
-                :class="{ 
-                  'active': device.id === selectedDeviceId,
-                  'connected': device.isConnected,
-                  'disconnected': !device.isConnected
+                :class="{
+                  active: device.id === selectedDeviceId,
+                  connected: device.isConnected,
+                  disconnected: !device.isConnected,
                 }"
                 @click="handleSelectDevice(device.id)"
               >
                 <div class="device-item-avatar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-                    <line x1="12" y1="18" x2="12.01" y2="18"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                    <line x1="12" y1="18" x2="12.01" y2="18" />
                   </svg>
-                  <div class="device-item-status" :class="{ 'online': device.isConnected }"></div>
+                  <div
+                    class="device-item-status"
+                    :class="{ online: device.isConnected }"
+                  ></div>
                 </div>
                 <div class="device-item-info">
                   <div class="device-item-name">{{ device.name }}</div>
-                  <div class="device-item-status-text" :class="{ 'online': device.isConnected }">
-                    {{ device.isConnected ? 'Terhubung' : 'Terputus' }}
+                  <div
+                    class="device-item-status-text"
+                    :class="{ online: device.isConnected }"
+                  >
+                    {{ device.isConnected ? "Terhubung" : "Terputus" }}
                   </div>
                 </div>
               </button>
@@ -127,8 +166,8 @@
         <div class="card-header">
           <h3 class="card-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
             Informasi Dasar
           </h3>
@@ -139,29 +178,25 @@
               <label class="form-label">
                 Nama Broadcast <span class="required">*</span>
               </label>
-              <input 
-                v-model.trim="form.name" 
-                placeholder="Contoh: Pengingat kelas mingguan" 
-                required 
+              <input
+                v-model.trim="form.name"
+                placeholder="Contoh: Pengingat kelas mingguan"
+                required
                 class="form-input"
               />
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">
-              Pesan <span class="required">*</span>
-            </label>
-            <textarea 
-              v-model.trim="form.message" 
-              rows="4" 
-              placeholder="Tulis pesan yang akan dikirim secara berulang..." 
-              required 
+            <label class="form-label"> Pesan <span class="required">*</span> </label>
+            <textarea
+              v-model.trim="form.message"
+              rows="4"
+              placeholder="Tulis pesan yang akan dikirim secara berulang..."
+              required
               class="form-textarea"
             />
-            <div class="form-help">
-              {{ form.message.length }} karakter
-            </div>
+            <div class="form-help">{{ form.message.length }} karakter</div>
           </div>
         </div>
       </div>
@@ -171,8 +206,8 @@
         <div class="card-header">
           <h3 class="card-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
             </svg>
             Pengaturan Jadwal
           </h3>
@@ -193,24 +228,38 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">
-                Interval <span class="required">*</span>
-              </label>
-              <input 
-                v-model.number="form.interval" 
-                type="number" 
-                min="1" 
-                required 
+              <label class="form-label"> Interval <span class="required">*</span> </label>
+              <input
+                v-model.number="form.interval"
+                type="number"
+                min="1"
+                required
                 class="form-input"
                 placeholder="Contoh: 1"
               />
               <small class="help-text">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
-                Setiap berapa {{ form.recurrence === 'minute' ? 'menit' : form.recurrence === 'hourly' ? 'jam' : form.recurrence === 'daily' ? 'hari' : form.recurrence === 'weekly' ? 'minggu' : 'bulan' }}
+                Setiap berapa
+                {{
+                  form.recurrence === "minute"
+                    ? "menit"
+                    : form.recurrence === "hourly"
+                    ? "jam"
+                    : form.recurrence === "daily"
+                    ? "hari"
+                    : form.recurrence === "weekly"
+                    ? "minggu"
+                    : "bulan"
+                }}
               </small>
             </div>
 
@@ -218,17 +267,22 @@
               <label class="form-label">
                 Tanggal Mulai <span class="required">*</span>
               </label>
-              <input 
-                v-model="form.startDate" 
-                type="datetime-local" 
-                required 
+              <input
+                v-model="form.startDate"
+                type="datetime-local"
+                required
                 class="form-input"
               />
               <small class="help-text">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 Waktu akan dikirim sesuai persis dengan input Anda
               </small>
@@ -238,17 +292,22 @@
               <label class="form-label">
                 Tanggal Selesai <span class="required">*</span>
               </label>
-              <input 
-                v-model="form.endDate" 
-                type="datetime-local" 
-                required 
+              <input
+                v-model="form.endDate"
+                type="datetime-local"
+                required
                 class="form-input"
               />
               <small class="help-text">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 Jadwal terakhir sebelum waktu ini
               </small>
@@ -262,9 +321,9 @@
         <div class="card-header">
           <h3 class="card-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
             </svg>
             Media
           </h3>
@@ -272,24 +331,32 @@
         </div>
         <div class="card-body">
           <div class="upload-section">
-            <input 
-              type="file" 
-              @change="onFile" 
+            <input
+              type="file"
+              @change="onFile"
               :accept="acceptTypes"
               class="file-input"
               id="media-upload"
             />
             <label v-if="!mediaFile" for="media-upload" class="upload-label">
               <div class="upload-icon-wrapper">
-                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
+                <svg
+                  class="upload-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
               </div>
               <div class="upload-text">
                 <p class="upload-title">Klik untuk upload media</p>
-                <p class="upload-subtitle">Mendukung: Gambar, Video, Audio, dan Dokumen</p>
+                <p class="upload-subtitle">
+                  Mendukung: Gambar, Video, Audio, dan Dokumen
+                </p>
               </div>
             </label>
 
@@ -303,11 +370,18 @@
               <!-- Document Preview -->
               <div v-else class="media-preview document-preview">
                 <div class="doc-icon-wrapper">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
                   </svg>
                 </div>
                 <div class="doc-details">
@@ -316,9 +390,16 @@
               </div>
 
               <button type="button" class="btn-remove-media" @click="removeMedia">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
                 </svg>
                 Hapus Media
               </button>
@@ -332,14 +413,16 @@
         <div class="card-header">
           <h3 class="card-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
             Penerima
           </h3>
-          <span class="badge-count" v-if="recipients.length > 0">{{ recipients.length }} dipilih</span>
+          <span class="badge-count" v-if="recipients.length > 0"
+            >{{ recipients.length }} dipilih</span
+          >
         </div>
         <div class="card-body">
           <!-- Selected Recipients -->
@@ -348,9 +431,14 @@
               <span v-for="(r, i) in recipients" :key="r + i" class="recipient-chip">
                 <span class="chip-label">{{ chipLabel(r) }}</span>
                 <button type="button" class="chip-close" @click="removeRecipient(i)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 </button>
               </span>
@@ -359,53 +447,55 @@
 
           <!-- Add Recipients Tabs -->
           <div class="recipient-tabs">
-            <button 
+            <button
               type="button"
               class="recipient-tab"
               :class="{ active: activeTab === 'manual' }"
               @click="activeTab = 'manual'"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
               Manual
             </button>
-            <button 
+            <button
               type="button"
               class="recipient-tab"
               :class="{ active: activeTab === 'contacts' }"
               @click="activeTab = 'contacts'"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
               Kontak
             </button>
-            <button 
+            <button
               type="button"
               class="recipient-tab"
               :class="{ active: activeTab === 'groups' }"
               @click="activeTab = 'groups'"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               Grup
             </button>
-            <button 
+            <button
               type="button"
               class="recipient-tab"
               :class="{ active: activeTab === 'labels' }"
               @click="activeTab = 'labels'"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                <line x1="7" y1="7" x2="7.01" y2="7"/>
+                <path
+                  d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+                />
+                <line x1="7" y1="7" x2="7.01" y2="7" />
               </svg>
               Label
             </button>
@@ -423,9 +513,14 @@
                   class="form-input"
                 />
                 <button type="button" class="btn-primary" @click="addRecipientsFromInput">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                   Tambah
                 </button>
@@ -441,16 +536,39 @@
                     {{ contactDisplay(c) }}
                   </option>
                 </select>
-                <button type="button" class="btn-primary" @click="addSelectedContact" :disabled="!selectedContactId">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
+                <button
+                  type="button"
+                  class="btn-primary"
+                  @click="addSelectedContact"
+                  :disabled="!selectedContactId"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                   Tambah
                 </button>
-                <button type="button" class="btn-secondary" @click="loadContacts" :disabled="loadingContacts">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  @click="loadContacts"
+                  :disabled="loadingContacts"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    :class="{ spinning: loadingGroups }"
+                  >
+                    <path
+                      d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                    />
                   </svg>
                 </button>
               </div>
@@ -461,18 +579,43 @@
               <div class="input-with-button">
                 <select v-model="selectedGroupId" class="form-select">
                   <option value="" disabled>Pilih grup...</option>
-                  <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
+                  <option v-for="g in groups" :key="g.value" :value="g.value">
+                    {{ g.label }}
+                  </option>
                 </select>
-                <button type="button" class="btn-primary" @click="addSelectedGroup" :disabled="!selectedGroupId">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
+                <button
+                  type="button"
+                  class="btn-primary"
+                  @click="addSelectedGroup"
+                  :disabled="!selectedGroupId"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                   Tambah
                 </button>
-                <button type="button" class="btn-secondary" @click="loadGroups" :disabled="loadingGroups">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  @click="loadGroups"
+                  :disabled="loadingGroups"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    :class="{ spinning: loadingGroups }"
+                  >
+                    <path
+                      d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                    />
                   </svg>
                 </button>
               </div>
@@ -483,18 +626,43 @@
               <div class="input-with-button">
                 <select v-model="selectedLabelValue" class="form-select">
                   <option value="" disabled>Pilih label...</option>
-                  <option v-for="l in filteredLabels" :key="l.value" :value="l.value">{{ l.label }}</option>
+                  <option v-for="l in filteredLabels" :key="l.value" :value="l.value">
+                    {{ l.label }}
+                  </option>
                 </select>
-                <button type="button" class="btn-primary" @click="addSelectedLabel" :disabled="!selectedLabelValue">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
+                <button
+                  type="button"
+                  class="btn-primary"
+                  @click="addSelectedLabel"
+                  :disabled="!selectedLabelValue"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                   Tambah
                 </button>
-                <button type="button" class="btn-secondary" @click="loadLabels" :disabled="loadingLabels">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  @click="loadLabels"
+                  :disabled="loadingLabels"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    :class="{ spinning: loadingGroups }"
+                  >
+                    <path
+                      d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                    />
                   </svg>
                 </button>
               </div>
@@ -507,9 +675,9 @@
       <div class="info-section">
         <div class="info-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
           <div class="info-content">
             <div class="info-text">
@@ -520,25 +688,25 @@
 
         <div v-if="validationError" class="alert alert-error">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           {{ validationError }}
         </div>
 
         <div v-if="msg" class="alert alert-success">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
+            <polyline points="20 6 9 17 4 12" />
           </svg>
           {{ msg }}
         </div>
 
         <div v-if="err" class="alert alert-error">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
           {{ err }}
         </div>
@@ -546,14 +714,10 @@
 
       <!-- Submit Button -->
       <div class="form-actions">
-        <button 
-          type="submit"
-          class="btn-submit" 
-          :disabled="loading || !!validationError"
-        >
+        <button type="submit" class="btn-submit" :disabled="loading || !!validationError">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
           </svg>
           <span v-if="loading">Memproses...</span>
           <span v-else>Jadwalkan Broadcast</span>
@@ -564,79 +728,82 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { deviceApi, userApi } from '../api/http.js';
-import { useGroups } from '../composables/useGroups.js';
-import { useDevices } from '../composables/useDevices.js';
-import { useToast } from '../composables/useToast.js';
-import { 
-  convertToServerTime, 
-  formatLocalTime, 
+import { ref, computed, onMounted, watch } from "vue";
+import { deviceApi, userApi } from "../api/http.js";
+import { useGroups } from "../composables/useGroups.js";
+import { useDevices } from "../composables/useDevices.js";
+import { useToast } from "../composables/useToast.js";
+import {
+  convertToServerTime,
+  formatLocalTime,
   isValidDateTime,
-  calculateEstimatedCount 
-} from '../utils/datetime.js';
+  calculateEstimatedCount,
+} from "../utils/datetime.js";
 
 const toast = useToast();
 
 // Device management
-const { 
-  selectedDeviceId, 
-  selectedDevice, 
-  availableDevices, 
-  loading: loadingDevices, 
-  loadDevices, 
-  selectDevice 
+const {
+  selectedDeviceId,
+  selectedDevice,
+  availableDevices,
+  loading: loadingDevices,
+  loadDevices,
+  selectDevice,
 } = useDevices();
 
 const ensureDeviceId = async () => {
-  let deviceId = localStorage.getItem('device_selected_id');
+  let deviceId = localStorage.getItem("device_selected_id");
   if (deviceId) return deviceId;
   try {
-    const { data } = await userApi.get('/devices');
+    const { data } = await userApi.get("/devices");
     const devices = Array.isArray(data) ? data : [];
-    const current = devices.find((d) => d.status === 'open') || devices[0];
+    const current = devices.find((d) => d.status === "open") || devices[0];
     if (current) {
-      if (current.id) localStorage.setItem('device_selected_id', current.id);
-      if (current.name) localStorage.setItem('device_selected_name', current.name);
-      if (current.apiKey) localStorage.setItem('device_api_key', current.apiKey);
-      return current.id || '';
+      if (current.id) localStorage.setItem("device_selected_id", current.id);
+      if (current.name) localStorage.setItem("device_selected_name", current.name);
+      if (current.apiKey) localStorage.setItem("device_api_key", current.apiKey);
+      return current.id || "";
     }
   } catch (_) {}
-  return '';
+  return "";
 };
 
 const form = ref({
-  name: '',
-  message: '',
+  name: "",
+  message: "",
   delay: 5000,
-  recurrence: 'daily',
+  recurrence: "daily",
   interval: 1,
-  startDate: '',
-  endDate: ''
+  startDate: "",
+  endDate: "",
 });
 
 const recipients = ref([]);
-const recipientInput = ref('');
+const recipientInput = ref("");
 const mediaFile = ref(null);
-const mediaPreview = ref('');
+const mediaPreview = ref("");
 
-const acceptTypes = '.png,.jpg,.jpeg,.webp,.gif,.mp4,.mp3,.wav,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+const acceptTypes =
+  ".png,.jpg,.jpeg,.webp,.gif,.mp4,.mp3,.wav,.pdf,.doc,.docx,.xls,.xlsx,.txt";
 
-const isImage = computed(() => mediaFile.value && mediaFile.value.type?.startsWith('image'));
-const mediaName = computed(() => mediaFile.value?.name || '');
+const isImage = computed(
+  () => mediaFile.value && mediaFile.value.type?.startsWith("image")
+);
+const mediaName = computed(() => mediaFile.value?.name || "");
 
 const loading = ref(false);
-const msg = ref('');
-const err = ref('');
+const msg = ref("");
+const err = ref("");
 
 const { groups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups } = useGroups();
-const selectedGroupId = ref('');
+const selectedGroupId = ref("");
 const recipientLabels = ref({});
 
 const contacts = ref([]);
-const selectedContactId = ref('');
+const selectedContactId = ref("");
 const loadingContacts = ref(false);
-const contactSearch = ref('');
+const contactSearch = ref("");
 const filteredContacts = computed(() => {
   const q = contactSearch.value.toLowerCase();
   if (!q) return contacts.value;
@@ -648,9 +815,9 @@ const filteredContacts = computed(() => {
 });
 
 const labels = ref([]);
-const selectedLabelValue = ref('');
+const selectedLabelValue = ref("");
 const loadingLabels = ref(false);
-const labelSearch = ref('');
+const labelSearch = ref("");
 const filteredLabels = computed(() => {
   const q = labelSearch.value.toLowerCase();
   if (!q) return labels.value;
@@ -661,12 +828,12 @@ const mapLabels = (items) => {
   const arr = Array.isArray(items) ? items : [];
   return arr
     .map((it) => {
-      if (typeof it === 'string') {
+      if (typeof it === "string") {
         const name = it;
         return { value: `label_${name}`, label: name };
       }
-      const name = it.name || it.label || it.title || '';
-      const slug = it.slug || '';
+      const name = it.name || it.label || it.title || "";
+      const slug = it.slug || "";
       const value = `label_${slug || name}`;
       return name ? { value, label: name } : null;
     })
@@ -678,7 +845,7 @@ const deriveLabelsFromContacts = () => {
   (contacts.value || []).forEach((c) => {
     (c.ContactLabel || []).forEach((cl) => {
       const n = cl?.label?.name;
-      if (n && !String(n).startsWith('device_')) names.add(n);
+      if (n && !String(n).startsWith("device_")) names.add(n);
     });
   });
   return Array.from(names);
@@ -688,9 +855,15 @@ const loadLabels = async () => {
   try {
     loadingLabels.value = true;
     const deviceId = (await ensureDeviceId()) || undefined;
-    const res = await userApi.get('/contacts/labels', { params: deviceId ? { deviceId } : {} });
+    const res = await userApi.get("/contacts/labels", {
+      params: deviceId ? { deviceId } : {},
+    });
     const data = res?.data;
-    let list = Array.isArray(data?.labels) ? data.labels : Array.isArray(data) ? data : [];
+    let list = Array.isArray(data?.labels)
+      ? data.labels
+      : Array.isArray(data)
+      ? data
+      : [];
     if (!Array.isArray(list) || list.length === 0) {
       if (!contacts.value || contacts.value.length === 0) {
         await loadContacts().catch(() => {});
@@ -712,12 +885,12 @@ const loadLabels = async () => {
 const loadContacts = async () => {
   try {
     loadingContacts.value = true;
-    err.value = '';
+    err.value = "";
     const deviceId = (await ensureDeviceId()) || undefined;
-    const res = await userApi.get('/contacts', { params: deviceId ? { deviceId } : {} });
+    const res = await userApi.get("/contacts", { params: deviceId ? { deviceId } : {} });
     contacts.value = Array.isArray(res?.data) ? res.data : [];
   } catch (e) {
-    toast.error(e?.response?.data?.message || e?.message || 'Gagal memuat kontak');
+    toast.error(e?.response?.data?.message || e?.message || "Gagal memuat kontak");
   } finally {
     loadingContacts.value = false;
   }
@@ -732,27 +905,31 @@ const addSelectedGroup = async () => {
     const found = groups.value.find((g) => g.value === selectedGroupId.value);
     if (found) recipientLabels.value[fullJid] = `Group: ${found.label}`;
   }
-  selectedGroupId.value = '';
+  selectedGroupId.value = "";
 };
 
 const handleSyncGroups = async () => {
   try {
-    err.value = '';
+    err.value = "";
     await syncGroups();
-    toast.success('Grup berhasil disinkronkan dari WhatsApp');
+    toast.success("Grup berhasil disinkronkan dari WhatsApp");
   } catch (e) {
-    toast.error(e?.message || 'Gagal sinkronisasi grup');
+    toast.error(e?.message || "Gagal sinkronisasi grup");
   }
 };
 
 const contactLabelNames = (c) => {
   try {
-    const arr = (c?.ContactLabel || []).map((x) => x?.label?.name).filter((n) => n && !String(n).startsWith('device_'));
-    return arr.join(', ');
-  } catch { return ''; }
+    const arr = (c?.ContactLabel || [])
+      .map((x) => x?.label?.name)
+      .filter((n) => n && !String(n).startsWith("device_"));
+    return arr.join(", ");
+  } catch {
+    return "";
+  }
 };
 const contactDisplay = (c) => {
-  const name = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.phone || '-';
+  const name = `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.phone || "-";
   const labels = contactLabelNames(c);
   return labels ? `${name} (${c.phone}) — [${labels}]` : `${name} (${c.phone})`;
 };
@@ -764,10 +941,12 @@ const addSelectedContact = () => {
     const found = contacts.value.find((c) => c.phone === selectedContactId.value);
     if (found) {
       const labels = contactLabelNames(found);
-      recipientLabels.value[selectedContactId.value] = `Kontak: ${found.firstName} ${found.lastName || ''}${labels ? ' [' + labels + ']' : ''}`;
+      recipientLabels.value[selectedContactId.value] = `Kontak: ${found.firstName} ${
+        found.lastName || ""
+      }${labels ? " [" + labels + "]" : ""}`;
     }
   }
-  selectedContactId.value = '';
+  selectedContactId.value = "";
 };
 
 const addSelectedLabel = () => {
@@ -778,7 +957,7 @@ const addSelectedLabel = () => {
     const found = labels.value.find((l) => l.value === val);
     if (found) recipientLabels.value[val] = `Label: ${found.label}`;
   }
-  selectedLabelValue.value = '';
+  selectedLabelValue.value = "";
 };
 
 const chipLabel = (r) => recipientLabels.value[r] || r;
@@ -790,52 +969,52 @@ loadLabels().catch(() => {});
 function onFile(e) {
   const file = e.target.files?.[0];
   mediaFile.value = file || null;
-  if (file && file.type?.startsWith('image')) {
+  if (file && file.type?.startsWith("image")) {
     mediaPreview.value = URL.createObjectURL(file);
   } else {
-    mediaPreview.value = '';
+    mediaPreview.value = "";
   }
 }
 
 function removeMedia() {
   mediaFile.value = null;
-  mediaPreview.value = '';
-  const input = document.getElementById('media-upload');
-  if (input) input.value = '';
+  mediaPreview.value = "";
+  const input = document.getElementById("media-upload");
+  if (input) input.value = "";
 }
 
 // ✅ Fungsi validasi nomor telepon
 function isValidPhoneNumber(phone) {
   // Nomor harus berupa string yang hanya mengandung digit
-  const cleaned = String(phone).replace(/\D/g, '');
-  
+  const cleaned = String(phone).replace(/\D/g, "");
+
   // Nomor harus dimulai dengan 62 dan minimal 10 digit (62 + 8 digit)
   // Format yang valid: 628xxx (minimal) hingga 62xxxxxxxxxxxxxx
-  if (!cleaned.startsWith('62')) {
+  if (!cleaned.startsWith("62")) {
     return false;
   }
-  
+
   // Panjang minimal 10 digit (62 + 8 digit nomor)
   // Panjang maksimal 15 digit (standar internasional)
   if (cleaned.length < 10 || cleaned.length > 15) {
     return false;
   }
-  
+
   return true;
 }
 
 function addRecipientsFromInput() {
   if (!recipientInput.value) return;
-  
+
   const items = recipientInput.value
     .split(/[\s,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  
+
   // ✅ Validasi setiap nomor sebelum ditambahkan
   const validNumbers = [];
   const invalidNumbers = [];
-  
+
   items.forEach((item) => {
     if (isValidPhoneNumber(item)) {
       validNumbers.push(item);
@@ -843,24 +1022,30 @@ function addRecipientsFromInput() {
       invalidNumbers.push(item);
     }
   });
-  
+
   // Tambahkan nomor valid ke recipients
   if (validNumbers.length > 0) {
     const set = new Set([...recipients.value, ...validNumbers]);
     recipients.value = Array.from(set);
   }
-  
+
   // Tampilkan notifikasi
   if (validNumbers.length > 0 && invalidNumbers.length > 0) {
     toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-    toast.error(`${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(', ')}`);
+    toast.error(
+      `${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(", ")}`
+    );
   } else if (validNumbers.length > 0) {
     toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
   } else if (invalidNumbers.length > 0) {
-    toast.error(`Nomor tidak valid: ${invalidNumbers.join(', ')}. Format harus: 62xxx (minimal 10 digit)`);
+    toast.error(
+      `Nomor tidak valid: ${invalidNumbers.join(
+        ", "
+      )}. Format harus: 62xxx (minimal 10 digit)`
+    );
   }
-  
-  recipientInput.value = '';
+
+  recipientInput.value = "";
 }
 
 function removeRecipient(index) {
@@ -868,36 +1053,36 @@ function removeRecipient(index) {
 }
 
 const validationError = computed(() => {
-  if (!form.value.name) return 'Nama wajib diisi';
-  if (!form.value.message) return 'Pesan wajib diisi';
-  if (!form.value.startDate || !form.value.endDate) return 'Rentang tanggal wajib diisi';
+  if (!form.value.name) return "Nama wajib diisi";
+  if (!form.value.message) return "Pesan wajib diisi";
+  if (!form.value.startDate || !form.value.endDate) return "Rentang tanggal wajib diisi";
   if (!isValidDateTime(form.value.startDate) || !isValidDateTime(form.value.endDate)) {
-    return 'Format tanggal tidak valid';
+    return "Format tanggal tidak valid";
   }
   const start = new Date(form.value.startDate);
   const end = new Date(form.value.endDate);
-  if (start > end) return 'Tanggal mulai harus sebelum tanggal selesai';
+  if (start > end) return "Tanggal mulai harus sebelum tanggal selesai";
   if (!form.value.interval || Number(form.value.interval) <= 0)
-    return 'Interval harus lebih dari 0';
-  if (recipients.value.length === 0) return 'Minimal satu penerima';
-  const hasAll = recipients.value.includes('all');
-  const hasLabel = recipients.value.some((r) => r.startsWith('label'));
-  if (hasAll && hasLabel) return 'Tidak boleh mencampur all dan label_* dalam penerima';
-  return '';
+    return "Interval harus lebih dari 0";
+  if (recipients.value.length === 0) return "Minimal satu penerima";
+  const hasAll = recipients.value.includes("all");
+  const hasLabel = recipients.value.some((r) => r.startsWith("label"));
+  if (hasAll && hasLabel) return "Tidak boleh mencampur all dan label_* dalam penerima";
+  return "";
 });
 
 const estimatedCount = computed(() => {
   return calculateEstimatedCount(
     form.value.startDate,
-    form.value.endDate, 
+    form.value.endDate,
     form.value.recurrence,
     form.value.interval
   );
 });
 
 async function submit() {
-  msg.value = '';
-  err.value = '';
+  msg.value = "";
+  err.value = "";
   if (validationError.value) {
     toast.error(validationError.value);
     return;
@@ -908,16 +1093,16 @@ async function submit() {
     // Gunakan deviceId dari device selector
     const deviceId = selectedDeviceId.value || (await ensureDeviceId());
     if (!deviceId) {
-      toast.error('Device tidak ditemukan atau belum login WhatsApp');
+      toast.error("Device tidak ditemukan atau belum login WhatsApp");
       loading.value = false;
       return;
     }
-    
+
     const startDateISO = convertToServerTime(form.value.startDate);
     const endDateISO = convertToServerTime(form.value.endDate);
-    
+
     if (!mediaFile.value) {
-      await deviceApi.post('/messages/broadcasts/scheduled', {
+      await deviceApi.post("/messages/broadcasts/scheduled", {
         name: form.value.name,
         message: form.value.message,
         delay: form.value.delay ?? 5000,
@@ -930,49 +1115,56 @@ async function submit() {
       });
     } else {
       const fd = new FormData();
-      fd.append('name', form.value.name);
-      fd.append('message', form.value.message);
-      fd.append('delay', String(form.value.delay ?? 5000));
-      fd.append('recurrence', form.value.recurrence);
-      fd.append('interval', String(form.value.interval));
-      fd.append('startDate', startDateISO);
-      fd.append('endDate', endDateISO);
-      fd.append('deviceId', deviceId); // Kirim deviceId
-      recipients.value.forEach((r) => fd.append('recipients', r));
-      fd.append('media', mediaFile.value);
+      fd.append("name", form.value.name);
+      fd.append("message", form.value.message);
+      fd.append("delay", String(form.value.delay ?? 5000));
+      fd.append("recurrence", form.value.recurrence);
+      fd.append("interval", String(form.value.interval));
+      fd.append("startDate", startDateISO);
+      fd.append("endDate", endDateISO);
+      fd.append("deviceId", deviceId); // Kirim deviceId
+      recipients.value.forEach((r) => fd.append("recipients", r));
+      fd.append("media", mediaFile.value);
 
-      await deviceApi.post('/messages/broadcasts/scheduled', fd);
+      await deviceApi.post("/messages/broadcasts/scheduled", fd);
     }
 
-    toast.success('Jadwal broadcast berulang berhasil dibuat');
-    form.value.name = '';
-    form.value.message = '';
+    toast.success("Jadwal broadcast berulang berhasil dibuat");
+    form.value.name = "";
+    form.value.message = "";
     form.value.delay = 5000;
     form.value.interval = 1;
-    form.value.recurrence = 'daily';
-    form.value.startDate = '';
-    form.value.endDate = '';
+    form.value.recurrence = "daily";
+    form.value.startDate = "";
+    form.value.endDate = "";
     recipients.value = [];
     mediaFile.value = null;
-    mediaPreview.value = '';
+    mediaPreview.value = "";
   } catch (e) {
-    toast.error('Gagal membuat jadwal broadcast berulang. Pastikan WhatsApp sudah terhubung' || e?.response?.data?.message || e?.response?.data?.error || e?.message);
+    toast.error(
+      "Gagal membuat jadwal broadcast berulang. Pastikan WhatsApp sudah terhubung" ||
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message
+    );
   } finally {
     loading.value = false;
   }
 }
 
-const otherDevices = computed(() => availableDevices.value.filter(device => device.id !== selectedDeviceId.value));
+const otherDevices = computed(() =>
+  availableDevices.value.filter((device) => device.id !== selectedDeviceId.value)
+);
 
 function handleChangeDevice() {
-  selectedDeviceId.value = '';
+  selectedDeviceId.value = "";
 }
 
 function handleSelectDevice(deviceId) {
   selectDevice(deviceId);
 }
 
-const activeTab = ref('manual');
+const activeTab = ref("manual");
 
 // Load devices on mount
 loadDevices().catch(() => {});
@@ -981,23 +1173,25 @@ loadDevices().catch(() => {});
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
     // ✅ Dispatch custom event untuk Dashboard.vue
-    window.dispatchEvent(new Event('deviceChanged'));
-    
+    window.dispatchEvent(new Event("deviceChanged"));
+
     // Clear recipients ketika ganti device
     recipients.value = [];
     recipientLabels.value = {};
-    selectedContactId.value = '';
-    selectedGroupId.value = '';
-    selectedLabelValue.value = '';
-    
+    selectedContactId.value = "";
+    selectedGroupId.value = "";
+    selectedLabelValue.value = "";
+
     // Auto-refresh semua data (termasuk GROUPS dengan force!)
     await Promise.allSettled([
       loadGroups({ force: true }), // 🔥 Tambahkan force: true untuk memaksa reload
       loadContacts(),
-      loadLabels()
+      loadLabels(),
     ]);
-    
-    toast.success('Device berhasil diganti. Data kontak, grup, dan label telah di-refresh.');
+
+    toast.success(
+      "Device berhasil diganti. Data kontak, grup, dan label telah di-refresh."
+    );
   }
 });
 </script>
@@ -1189,7 +1383,8 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
   }
   50% {
@@ -1241,7 +1436,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 }
 
 .device-id {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
 }
 
