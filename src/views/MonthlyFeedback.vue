@@ -4,11 +4,11 @@
       <div class="header-content">
         <h2>
           <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-            <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>
+            <!-- Clipboard dengan checklist untuk feedback -->
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+            <rect x="9" y="3" width="6" height="4" rx="1"/>
+            <path d="M9 12l2 2 4-4"/>
+            <line x1="9" y1="17" x2="15" y2="17"/>
           </svg>
           Feedback Bulanan (Algo)
         </h2>
@@ -2180,7 +2180,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 
 .modal-header {
   padding: 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
