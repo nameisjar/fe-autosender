@@ -111,11 +111,11 @@ async function fetchDeviceApiKey(deviceId) {
     
     // Check memory cache first
     if (deviceApiKeyCache.has(deviceId)) {
-        console.log('[fetchDeviceApiKey] Using cached API key for device:', deviceId);
+        // console.log('[fetchDeviceApiKey] Using cached API key for device:', deviceId);
         return deviceApiKeyCache.get(deviceId);
     }
     
-    console.log('[fetchDeviceApiKey] Fetching API key for device:', deviceId);
+    // console.log('[fetchDeviceApiKey] Fetching API key for device:', deviceId);
     
     // Fetch from backend
     const paths = [
@@ -125,19 +125,19 @@ async function fetchDeviceApiKey(deviceId) {
     
     for (const p of paths) {
         try {
-            console.log('[fetchDeviceApiKey] Trying path:', p);
+            // console.log('[fetchDeviceApiKey] Trying path:', p);
             const { data } = await userApi.get(p);
             
             if (data && data.apiKey) {
-                console.log('[fetchDeviceApiKey] ✅ API key found for device:', deviceId);
+                // console.log('[fetchDeviceApiKey] ✅ API key found for device:', deviceId);
                 // ✅ Cache in memory only (not localStorage)
                 deviceApiKeyCache.set(deviceId, data.apiKey);
                 return data.apiKey;
             } else {
-                console.warn('[fetchDeviceApiKey] ⚠️ Response has no apiKey:', data);
+                // console.warn('[fetchDeviceApiKey] ⚠️ Response has no apiKey:', data);
             }
         } catch (error) {
-            console.warn('[fetchDeviceApiKey] Failed to fetch from path:', p, error?.response?.status || error?.message);
+            // console.warn('[fetchDeviceApiKey] Failed to fetch from path:', p, error?.response?.status || error?.message);
         }
     }
     
@@ -163,7 +163,7 @@ deviceApi.interceptors.request.use(async (config) => {
         if (apiKey) {
             config.headers['X-Forwardin-Key-Device'] = apiKey;
         } else {
-            console.warn('Could not retrieve API key for device:', deviceId);
+            // console.warn('Could not retrieve API key for device:', deviceId);
         }
     } else {
         // Fallback: auto-select first available device
@@ -194,7 +194,7 @@ deviceApi.interceptors.response.use(
     (r) => r,
     async (err) => {
         if (err && err.response && err.response.status === 401) {
-            console.warn('Device API unauthorized. Device session may be closed.');
+            // console.warn('Device API unauthorized. Device session may be closed.');
             
             // 🔐 Clear memory cache (not localStorage)
             const deviceId = localStorage.getItem('device_selected_id');

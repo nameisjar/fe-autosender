@@ -34,7 +34,7 @@
             title="Refresh device list"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingDevices }">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1-18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
             </svg>
             {{ loadingDevices ? 'Loading...' : 'Refresh' }}
           </button>
@@ -44,7 +44,7 @@
           <div v-if="selectedDevice" class="device-info-card" :class="{ 'connected': selectedDevice.isConnected, 'disconnected': !selectedDevice.isConnected }">
             <div class="device-avatar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1-2-2h14a2 2 0 0 1 2 2z"/>
                 <path d="M12 8v4"/>
                 <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
               </svg>
@@ -980,6 +980,9 @@ loadDevices().catch(() => {});
 // 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
+    // ✅ Dispatch custom event untuk Dashboard.vue
+    window.dispatchEvent(new Event('deviceChanged'));
+    
     // Clear recipients ketika ganti device
     recipients.value = [];
     recipientLabels.value = {};

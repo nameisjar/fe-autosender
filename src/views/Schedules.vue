@@ -4,8 +4,21 @@
       <div class="header-content">
         <h2>
           <svg class="header-icon" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-            <path d="M16 2V6M8 2V6M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="18"
+              rx="2"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="M16 2V6M8 2V6M3 10H21"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
           </svg>
           Jadwal Saya
         </h2>
@@ -14,32 +27,42 @@
       <div class="stats-row">
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
           <div>
-            <div class="stat-value">{{ sortedGroups.filter(g => selectedOf(g)?.isSent).length }}</div>
+            <div class="stat-value">
+              {{ sortedGroups.filter((g) => selectedOf(g)?.isSent).length }}
+            </div>
             <div class="stat-label">Terkirim</div>
           </div>
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
           </svg>
           <div>
-            <div class="stat-value">{{ sortedGroups.filter(g => !selectedOf(g)?.isSent && selectedOf(g)?.status !== false).length }}</div>
+            <div class="stat-value">
+              {{
+                sortedGroups.filter(
+                  (g) => !selectedOf(g)?.isSent && selectedOf(g)?.status !== false
+                ).length
+              }}
+            </div>
             <div class="stat-label">Terjadwal</div>
           </div>
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
           <div>
-            <div class="stat-value">{{ sortedGroups.filter(g => selectedOf(g)?.status === false).length }}</div>
+            <div class="stat-value">
+              {{ sortedGroups.filter((g) => selectedOf(g)?.status === false).length }}
+            </div>
             <div class="stat-label">Nonaktif</div>
           </div>
         </div>
@@ -50,12 +73,12 @@
       <div class="toolbar">
         <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
           </svg>
           <input v-model="q" placeholder="Cari nama jadwal..." />
         </div>
-        
+
         <div class="filter-group">
           <select v-model="statusFilter" class="filter-select">
             <option value="all">📋 Semua Status</option>
@@ -63,34 +86,52 @@
             <option value="sent">✅ Sudah Dikirim</option>
             <option value="inactive">❌ Nonaktif</option>
           </select>
-          
-          <select v-model="selectedDeviceId" @change="onDeviceChange" class="filter-select">
+
+          <select
+            v-model="selectedDeviceId"
+            @change="onDeviceChange"
+            class="filter-select"
+          >
             <option value="">📱 Pilih Perangkat</option>
-            <option v-for="d in devices" :key="d.id" :value="d.id">{{ d.name || d.id }} — {{ d.status }}</option>
+            <option v-for="d in devices" :key="d.id" :value="d.id">
+              {{ d.name || d.id }} — {{ d.status }}
+            </option>
           </select>
-          
+
           <select v-model="sortBy" class="filter-select" title="Urutkan berdasarkan">
             <option value="schedule">📅 Jadwal Terdekat</option>
             <option value="name">🔤 Nama</option>
           </select>
-          
+
           <select v-model="sortDir" class="filter-select sort-dir" title="Arah urutan">
             <option value="asc">↑ Naik</option>
             <option value="desc">↓ Turun</option>
           </select>
-          
-          <select v-model.number="pageSize" class="filter-select" title="Jumlah baris per halaman">
+
+          <select
+            v-model.number="pageSize"
+            class="filter-select"
+            title="Jumlah baris per halaman"
+          >
             <option :value="10">10 baris</option>
             <option :value="25">25 baris</option>
             <option :value="50">50 baris</option>
           </select>
         </div>
-        
+
         <button class="btn-reload" @click="load" :disabled="loading">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loading }">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            :class="{ spinning: loading }"
+          >
+            <path
+              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1-18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+            />
           </svg>
-          {{ loading ? 'Memuat...' : 'Muat Ulang' }}
+          {{ loading ? "Memuat..." : "Muat Ulang" }}
         </button>
       </div>
     </div>
@@ -112,15 +153,20 @@
           <tbody>
             <tr v-for="g in visibleGroups" :key="g.name" class="schedule-row">
               <td class="col-expand">
-                <button 
-                  class="btn-expand" 
+                <button
+                  class="btn-expand"
                   @click="openDetailModal(g)"
                   title="Lihat detail"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="16" x2="12" y2="12"/>
-                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
                   </svg>
                 </button>
               </td>
@@ -148,17 +194,24 @@
               </td>
               <td class="col-actions">
                 <div class="action-buttons">
-                  <button 
-                    v-if="canDelete(selectedOf(g))" 
-                    class="btn-action btn-delete-action" 
+                  <button
+                    v-if="canDelete(selectedOf(g))"
+                    class="btn-action btn-delete-action"
                     @click="openDeleteDialog(g.name)"
                     title="Hapus jadwal"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      <line x1="10" y1="11" x2="10" y2="17"/>
-                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      />
+                      <line x1="10" y1="11" x2="10" y2="17" />
+                      <line x1="14" y1="11" x2="14" y2="17" />
                     </svg>
                   </button>
                 </div>
@@ -170,8 +223,8 @@
 
       <div v-if="!loading && visibleGroups.length === 0" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <path d="M16 2V6M8 2V6M3 10H21"/>
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <path d="M16 2V6M8 2V6M3 10H21" />
         </svg>
         <h3>Tidak Ada Jadwal</h3>
         <p>Belum ada jadwal broadcast yang ditemukan</p>
@@ -179,9 +232,9 @@
     </div>
 
     <div class="pagination" v-if="meta.totalPages > 1">
-      <button class="btn-page" :disabled="page<=1 || loading" @click="goPrev">
+      <button class="btn-page" :disabled="page <= 1 || loading" @click="goPrev">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
+          <polyline points="15 18 9 12 15 6" />
         </svg>
         Sebelumnya
       </button>
@@ -193,7 +246,7 @@
       <button class="btn-page" :disabled="!meta.hasMore || loading" @click="goNext">
         Selanjutnya
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"/>
+          <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
     </div>
@@ -204,8 +257,8 @@
         <div class="detail-modal-header">
           <div class="detail-modal-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
             </svg>
             <div>
               <h3>{{ displayName(selectedGroup) }}</h3>
@@ -214,8 +267,8 @@
           </div>
           <button class="btn-close-modal" @click="closeDetailModal" title="Tutup">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -224,8 +277,8 @@
           <div class="detail-section">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2"/>
-                <path d="M16 2V6M8 2V6M3 10H21"/>
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2V6M8 2V6M3 10H21" />
               </svg>
               Pilih Jadwal
             </label>
@@ -239,20 +292,32 @@
           <div class="info-grid">
             <div class="info-item">
               <label class="info-label">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
                 </svg>
                 Waktu Jadwal
               </label>
-              <div class="info-value">{{ fmtWithDay(selectedOf(selectedGroup)?.schedule) }}</div>
+              <div class="info-value">
+                {{ fmtWithDay(selectedOf(selectedGroup)?.schedule) }}
+              </div>
             </div>
 
             <div class="info-item">
               <label class="info-label">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 8v4m0 4h.01"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4m0 4h.01" />
                 </svg>
                 Status
               </label>
@@ -266,7 +331,7 @@
           <div class="detail-section" v-if="selectedOf(selectedGroup)?.message">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               Pesan
             </label>
@@ -276,18 +341,28 @@
           <div class="detail-section" v-if="selectedOf(selectedGroup)?.mediaPath">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <path d="m21 15-5-5L5 21"/>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="m21 15-5-5L5 21" />
               </svg>
               Media
             </label>
             <div class="media-preview">
-              <a :href="mediaUrl(selectedOf(selectedGroup).mediaPath)" target="_blank" rel="noopener" class="media-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                  <polyline points="15 3 21 3 21 9"/>
-                  <line x1="10" y1="14" x2="21" y2="3"/>
+              <a
+                :href="mediaUrl(selectedOf(selectedGroup).mediaPath)"
+                target="_blank"
+                rel="noopener"
+                class="media-link"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
                 Lihat Media
               </a>
@@ -303,68 +378,126 @@
           <div class="detail-section">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               Penerima ({{ getRecipientCount(selectedOf(selectedGroup)) }})
             </label>
             <div class="recipients-grid">
-              <span v-for="lbl in groupRecipientLabels(selectedOf(selectedGroup))" :key="'g-'+lbl" class="recipient-chip group-chip">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <span
+                v-for="lbl in groupRecipientLabels(selectedOf(selectedGroup))"
+                :key="'g-' + lbl"
+                class="recipient-chip group-chip"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
                 {{ lbl }}
               </span>
-              <span v-for="lbl in labelRecipientLabels(selectedOf(selectedGroup))" :key="'l-'+lbl" class="recipient-chip label-chip">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+              <span
+                v-for="lbl in labelRecipientLabels(selectedOf(selectedGroup))"
+                :key="'l-' + lbl"
+                class="recipient-chip label-chip"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+                  />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
                 </svg>
                 {{ lbl }}
               </span>
-              <span v-for="num in phoneRecipients(selectedOf(selectedGroup))" :key="'p-'+num" class="recipient-chip phone-chip">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              <span
+                v-for="num in phoneRecipients(selectedOf(selectedGroup))"
+                :key="'p-' + num"
+                class="recipient-chip phone-chip"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                  />
                 </svg>
                 {{ getPhoneDisplay(num) }}
               </span>
             </div>
           </div>
 
-          <div class="detail-section" v-if="getFailedInfo(selectedOf(selectedGroup)).count > 0">
+          <div
+            class="detail-section"
+            v-if="getFailedInfo(selectedOf(selectedGroup)).count > 0"
+          >
             <label class="detail-label error-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               Gagal Terkirim ({{ getFailedInfo(selectedOf(selectedGroup)).count }})
             </label>
             <div class="failed-container">
-              <div v-if="getFailedInfo(selectedOf(selectedGroup)).groups.length > 0" class="failed-section">
+              <div
+                v-if="getFailedInfo(selectedOf(selectedGroup)).groups.length > 0"
+                class="failed-section"
+              >
                 <div class="recipients-grid">
-                  <span v-for="grp in getFailedInfo(selectedOf(selectedGroup)).groups" :key="grp" class="recipient-chip failed-chip">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="15" y1="9" x2="9" y2="15"/>
-                      <line x1="9" y1="9" x2="15" y2="15"/>
+                  <span
+                    v-for="grp in getFailedInfo(selectedOf(selectedGroup)).groups"
+                    :key="grp"
+                    class="recipient-chip failed-chip"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
                     </svg>
                     {{ grp }}
                   </span>
                 </div>
               </div>
-              <div v-if="getFailedInfo(selectedOf(selectedGroup)).phones.length > 0" class="failed-section">
+              <div
+                v-if="getFailedInfo(selectedOf(selectedGroup)).phones.length > 0"
+                class="failed-section"
+              >
                 <div class="recipients-grid">
-                  <span v-for="phone in getFailedInfo(selectedOf(selectedGroup)).phones" :key="phone" class="recipient-chip failed-chip">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="15" y1="9" x2="9" y2="15"/>
-                      <line x1="9" y1="9" x2="15" y2="15"/>
+                  <span
+                    v-for="phone in getFailedInfo(selectedOf(selectedGroup)).phones"
+                    :key="phone"
+                    class="recipient-chip failed-chip"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
                     </svg>
                     {{ phone }}
                   </span>
@@ -377,7 +510,7 @@
         <div class="detail-modal-footer">
           <button class="btn-close-footer" @click="closeDetailModal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Tutup
           </button>
@@ -386,35 +519,54 @@
     </div>
 
     <!-- Delete Confirmation Dialog -->
-    <div v-if="showDeleteDialog" class="modal-overlay delete-modal-overlay" @click.self="closeDeleteDialog">
+    <div
+      v-if="showDeleteDialog"
+      class="modal-overlay delete-modal-overlay"
+      @click.self="closeDeleteDialog"
+    >
       <div class="delete-modal" @click.stop>
         <div class="delete-modal-icon">
           <div class="icon-circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
         </div>
-        
+
         <div class="delete-modal-content">
           <h3>Hapus Jadwal Ini?</h3>
-          <p class="delete-warning">Hapus jadwal "{{ scheduleToDelete }}" yang belum terkirim? Tindakan ini tidak dapat dibatalkan.</p>
+          <p class="delete-warning">
+            Hapus jadwal "{{ scheduleToDelete }}" yang belum terkirim? Tindakan ini tidak
+            dapat dibatalkan.
+          </p>
         </div>
 
         <div class="delete-modal-actions">
-          <button type="button" class="btn-keep" @click="closeDeleteDialog" :disabled="loading">
+          <button
+            type="button"
+            class="btn-keep"
+            @click="closeDeleteDialog"
+            :disabled="loading"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
             Batal
           </button>
-          <button type="button" class="btn-delete-confirm" @click="confirmDelete" :disabled="loading">
+          <button
+            type="button"
+            class="btn-delete-confirm"
+            @click="confirmDelete"
+            :disabled="loading"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="M3 6h18" />
+              <path
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
             </svg>
             Ya, Hapus
           </button>
@@ -428,36 +580,36 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { deviceApi, userApi } from '../api/http.js';
-import { useToast } from '../composables/useToast.js';
+import { ref, computed, onMounted, watch } from "vue";
+import { deviceApi, userApi } from "../api/http.js";
+import { useToast } from "../composables/useToast.js";
 
 const toast = useToast();
 
 const items = ref([]);
 const loading = ref(false);
-const err = ref('');
-const msg = ref('');
-const q = ref('');
-const statusFilter = ref('upcoming');
+const err = ref("");
+const msg = ref("");
+const q = ref("");
+const statusFilter = ref("upcoming");
 
 const groupsMap = ref({});
 const loadGroupNames = async () => {
   try {
-    const deviceId = localStorage.getItem('device_selected_id') || '';
+    const deviceId = localStorage.getItem("device_selected_id") || "";
     if (!deviceId) {
       return;
     }
 
-    console.log('Loading groups from database for device:', deviceId);
+    // console.log('Loading groups from database for device:', deviceId);
 
     // Ambil data group dari database melalui API
     const { data } = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
-    console.log('Groups API response:', data);
-    
+    // console.log("Groups API response:", data);
+
     const groups = Array.isArray(data?.data) ? data.data : [];
-    console.log('Parsed groups:', groups);
-    
+    // console.log("Parsed groups:", groups);
+
     const map = {};
     for (const g of groups) {
       // Backend sekarang mengembalikan:
@@ -465,52 +617,57 @@ const loadGroupNames = async () => {
       // - groupId: WhatsApp JID (sama dengan id)
       // - name: nama grup (groupName dari database)
       // - subject: nama grup (alias dari name)
-      const groupJid = g.id || g.groupId || '';
-      const groupName = g.name || g.subject || 'Tanpa Nama';
-      
-      console.log('Mapping group:', { jid: groupJid, name: groupName });
-      
+      const groupJid = g.id || g.groupId || "";
+      const groupName = g.name || g.subject || "Tanpa Nama";
+
+      // console.log("Mapping group:", { jid: groupJid, name: groupName });
+
       // Simpan dengan berbagai format JID untuk memudahkan pencarian
       if (groupJid) {
         map[groupJid] = groupName;
-        
+
         // Jika JID tidak mengandung @g.us, tambahkan juga versi dengan @g.us
-        if (!groupJid.includes('@')) {
+        if (!groupJid.includes("@")) {
           map[`${groupJid}@g.us`] = groupName;
         }
-        
+
         // Simpan juga dengan ID saja (tanpa @g.us)
-        const idOnly = groupJid.split('@')[0];
+        const idOnly = groupJid.split("@")[0];
         if (idOnly && idOnly !== groupJid) {
           map[idOnly] = groupName;
         }
       }
     }
-    
-    console.log('Groups map created:', map);
+
+    // console.log("Groups map created:", map);
     groupsMap.value = map;
   } catch (error) {
-    console.error('Error loading groups from database:', error);
-    console.error('Error response:', error?.response?.data);
-    
+    // console.error("Error loading groups from database:", error);
+    // console.error("Error response:", error?.response?.data);
+
     // Fallback ke method lama jika API database gagal
     try {
-      console.log('Attempting fallback to old API...');
+      // console.log("Attempting fallback to old API...");
       let res;
-      try { res = await deviceApi.get('/messages/get-groups/detail'); }
-      catch { res = await deviceApi.get('/messages/get-groups'); }
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.data || []);
+      try {
+        res = await deviceApi.get("/messages/get-groups/detail");
+      } catch {
+        res = await deviceApi.get("/messages/get-groups");
+      }
+      const raw = Array.isArray(res.data)
+        ? res.data
+        : res.data?.results || res.data?.data || [];
       const map = {};
       for (const g of raw) {
-        const id = (g.id || g.jid || '').toString();
-        const full = id.includes('@') ? id : `${id}@g.us`;
-        const name = g.subject || g.name || g.title || g.id || 'Tanpa Nama';
+        const id = (g.id || g.jid || "").toString();
+        const full = id.includes("@") ? id : `${id}@g.us`;
+        const name = g.subject || g.name || g.title || g.id || "Tanpa Nama";
         map[full] = name;
       }
       groupsMap.value = map;
-      console.log('Fallback groups map:', map);
+      // console.log("Fallback groups map:", map);
     } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
+      // console.error("Fallback also failed:", fallbackError);
     }
   }
 };
@@ -520,8 +677,10 @@ const loadingContacts = ref(false);
 const loadContacts = async () => {
   try {
     loadingContacts.value = true;
-    const deviceId = localStorage.getItem('device_selected_id') || '';
-    const { data } = await userApi.get('/contacts', { params: deviceId ? { deviceId } : {} });
+    const deviceId = localStorage.getItem("device_selected_id") || "";
+    const { data } = await userApi.get("/contacts", {
+      params: deviceId ? { deviceId } : {},
+    });
     contacts.value = Array.isArray(data) ? data : [];
   } catch (_) {
     contacts.value = [];
@@ -533,12 +692,12 @@ const loadContacts = async () => {
 const labelToPhones = computed(() => {
   const map = {};
   for (const c of contacts.value || []) {
-    const phone = String(c.phone || '').trim();
+    const phone = String(c.phone || "").trim();
     if (!phone) continue;
     const cLabels = Array.isArray(c.ContactLabel) ? c.ContactLabel : [];
     for (const cl of cLabels) {
       const name = cl?.label?.name;
-      if (!name || String(name).startsWith('device_')) continue;
+      if (!name || String(name).startsWith("device_")) continue;
       if (!map[name]) map[name] = new Set();
       map[name].add(phone);
     }
@@ -550,26 +709,26 @@ const labelToPhones = computed(() => {
 const phoneToContactMap = computed(() => {
   const map = {};
   for (const c of contacts.value || []) {
-    const phone = String(c.phone || '').trim();
+    const phone = String(c.phone || "").trim();
     if (!phone) continue;
-    
+
     // Gabungkan firstName dan lastName untuk nama lengkap
-    const firstName = String(c.firstName || '').trim();
-    const lastName = String(c.lastName || '').trim();
+    const firstName = String(c.firstName || "").trim();
+    const lastName = String(c.lastName || "").trim();
     const fullName = lastName ? `${firstName} ${lastName}` : firstName;
     const displayName = fullName || phone;
-    
+
     // Normalisasi nomor untuk pencocokan yang lebih baik
-    const normalized = phone.replace(/@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
-    
+    const normalized = phone.replace(/@s\.whatsapp\.net$/i, "").replace(/\D/g, "");
+
     // Simpan dengan berbagai format untuk matching yang lebih baik
     map[phone] = displayName;
     map[normalized] = displayName;
     map[`${phone}@s.whatsapp.net`] = displayName;
     map[`${normalized}@s.whatsapp.net`] = displayName;
-    
+
     // Tambahkan format dengan +62 jika dimulai dengan 62
-    if (normalized.startsWith('62')) {
+    if (normalized.startsWith("62")) {
       map[`+${normalized}`] = displayName;
     }
   }
@@ -578,48 +737,52 @@ const phoneToContactMap = computed(() => {
 
 // Fungsi untuk mendapatkan display name dari nomor (nama kontak atau nomor)
 const getPhoneDisplay = (phoneNum) => {
-  if (!phoneNum) return '';
-  
+  if (!phoneNum) return "";
+
   const phoneStr = String(phoneNum).trim();
-  
+
   // Coba cari langsung
   if (phoneToContactMap.value[phoneStr]) {
     return phoneToContactMap.value[phoneStr];
   }
-  
+
   // Coba dengan normalisasi
-  const normalized = phoneStr.replace(/@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
+  const normalized = phoneStr.replace(/@s\.whatsapp\.net$/i, "").replace(/\D/g, "");
   if (phoneToContactMap.value[normalized]) {
     return phoneToContactMap.value[normalized];
   }
-  
+
   // Coba cari dengan suffix @s.whatsapp.net
   if (phoneToContactMap.value[`${phoneStr}@s.whatsapp.net`]) {
     return phoneToContactMap.value[`${phoneStr}@s.whatsapp.net`];
   }
-  
+
   if (phoneToContactMap.value[`${normalized}@s.whatsapp.net`]) {
     return phoneToContactMap.value[`${normalized}@s.whatsapp.net`];
   }
-  
+
   // Jika tidak ditemukan di kontak, tampilkan nomor yang sudah dinormalisasi
   return normalizeNumber(phoneStr);
 };
 
 const selections = ref({});
 const pickDefault = (arr) => {
-  const upcoming = arr.find((b) => !b.isSent && b.status !== false && new Date(b.schedule).getTime() > Date.now());
+  const upcoming = arr.find(
+    (b) => !b.isSent && b.status !== false && new Date(b.schedule).getTime() > Date.now()
+  );
   return upcoming?.id || arr[arr.length - 1]?.id;
 };
 
 const grouped = computed(() => {
   const byName = {};
   for (const b of items.value) {
-    const n = b.name || '(Tanpa Nama)';
+    const n = b.name || "(Tanpa Nama)";
     (byName[n] ||= []).push(b);
   }
   const groups = Object.keys(byName).map((name) => {
-    const arr = byName[name].slice().sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+    const arr = byName[name]
+      .slice()
+      .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
     if (!selections.value[name]) selections.value[name] = pickDefault(arr);
     return { name, broadcasts: arr };
   });
@@ -628,25 +791,28 @@ const grouped = computed(() => {
   return filteredByName;
 });
 
-const selectedOf = (g) => g.broadcasts.find((b) => b.id === selections.value[g.name]) || g.broadcasts[g.broadcasts.length - 1];
+const selectedOf = (g) =>
+  g.broadcasts.find((b) => b.id === selections.value[g.name]) ||
+  g.broadcasts[g.broadcasts.length - 1];
 
 const statusShort = (b) => {
-  if (!b) return '';
-  if (b.status === false) return 'Nonaktif';
-  if (b.isSent) return 'Terkirim';
+  if (!b) return "";
+  if (b.status === false) return "Nonaktif";
+  if (b.isSent) return "Terkirim";
   const due = new Date(b.schedule).getTime();
-  return due > Date.now() ? 'Terjadwal' : 'Tertunda';
+  return due > Date.now() ? "Terjadwal" : "Tertunda";
 };
 
 const matchesStatus = (g) => {
   const b = selectedOf(g);
   if (!b) return false;
-  if (statusFilter.value === 'all') return true;
-  if (statusFilter.value === 'inactive') return b.status === false;
+  if (statusFilter.value === "all") return true;
+  if (statusFilter.value === "inactive") return b.status === false;
   const isSent = !!b.isSent;
   const sched = new Date(b.schedule).getTime();
-  if (statusFilter.value === 'sent') return isSent;
-  if (statusFilter.value === 'upcoming') return !isSent && b.status !== false && sched > Date.now();
+  if (statusFilter.value === "sent") return isSent;
+  if (statusFilter.value === "upcoming")
+    return !isSent && b.status !== false && sched > Date.now();
   return true;
 };
 
@@ -655,60 +821,66 @@ const filtered = computed(() => grouped.value.filter(matchesStatus));
 const fmt = (d) => {
   try {
     const dd = new Date(d);
-    if (isNaN(dd.getTime())) return '-';
+    if (isNaN(dd.getTime())) return "-";
     return dd.toLocaleString();
   } catch {
-    return '-';
+    return "-";
   }
 };
 
 const fmtWithDay = (d) => {
   try {
     const dd = new Date(d);
-    if (isNaN(dd.getTime())) return '-';
-    const hari = dd.toLocaleDateString('id-ID', { weekday: 'long' });
-    const tanggal = dd.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
-    const jam = dd.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    if (isNaN(dd.getTime())) return "-";
+    const hari = dd.toLocaleDateString("id-ID", { weekday: "long" });
+    const tanggal = dd.toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+    const jam = dd.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     return `${hari}, ${tanggal} ${jam}`;
-  } catch { return '-'; }
+  } catch {
+    return "-";
+  }
 };
 
 const badgeClass = (b) => {
-  if (b.status === false) return 'warn';
-  if (b.isSent) return 'ok';
+  if (b.status === false) return "warn";
+  if (b.isSent) return "ok";
   const due = new Date(b.schedule).getTime();
-  return due > Date.now() ? 'info' : 'warn';
+  return due > Date.now() ? "info" : "warn";
 };
 
 const badgeText = (b) => {
-  if (b.status === false) return 'Nonaktif';
-  if (b.isSent) return 'Terkirim';
+  if (b.status === false) return "Nonaktif";
+  if (b.isSent) return "Terkirim";
   const due = new Date(b.schedule).getTime();
-  return due > Date.now() ? 'Terjadwal' : 'Tertunda';
+  return due > Date.now() ? "Terjadwal" : "Tertunda";
 };
 
 const groupRecipientLabels = (b) => {
   if (!b) return [];
   const arr = Array.isArray(b.recipients) ? b.recipients : [];
   return arr
-    .filter((r) => typeof r === 'string' && r.includes('@g.us'))
+    .filter((r) => typeof r === "string" && r.includes("@g.us"))
     .map((jid) => {
       // Normalisasi jid untuk mencocokkan dengan groupsMap
-      const normalizedJid = jid.includes('@') ? jid : `${jid}@g.us`;
-      
+      const normalizedJid = jid.includes("@") ? jid : `${jid}@g.us`;
+
       // Cek di groupsMap dengan berbagai variasi
       if (groupsMap.value[normalizedJid]) {
         return groupsMap.value[normalizedJid];
       }
-      
+
       // Coba cari dengan ID tanpa suffix
-      const idOnly = jid.split('@')[0];
+      const idOnly = jid.split("@")[0];
       for (const [key, value] of Object.entries(groupsMap.value)) {
         if (key.startsWith(idOnly)) {
           return value;
         }
       }
-      
+
       // Jika tidak ditemukan, tampilkan ID yang lebih bersih (tanpa @g.us)
       return idOnly;
     });
@@ -718,8 +890,8 @@ const labelRecipientLabels = (b) => {
   if (!b) return [];
   const arr = Array.isArray(b.recipients) ? b.recipients : [];
   return arr
-    .filter((r) => typeof r === 'string' && r.toLowerCase().startsWith('label_'))
-    .map((r) => String(r).slice('label_'.length));
+    .filter((r) => typeof r === "string" && r.toLowerCase().startsWith("label_"))
+    .map((r) => String(r).slice("label_".length));
 };
 
 const canDelete = (b) => b && !b.isSent && b.status !== false;
@@ -740,17 +912,22 @@ const closeDeleteDialog = () => {
 
 const confirmDelete = async () => {
   if (!scheduleToDelete.value) return;
-  
-  msg.value = '';
-  err.value = '';
-  
+
+  msg.value = "";
+  err.value = "";
+
   try {
-    await userApi.delete('/broadcasts/by-name', { data: { name: scheduleToDelete.value } });
-    toast.success(`Jadwal "${scheduleToDelete.value}" yang belum terkirim berhasil dihapus`);
+    await userApi.delete("/broadcasts/by-name", {
+      data: { name: scheduleToDelete.value },
+    });
+    toast.success(
+      `Jadwal "${scheduleToDelete.value}" yang belum terkirim berhasil dihapus`
+    );
     closeDeleteDialog();
     await load();
   } catch (e) {
-    const errorMessage = e?.response?.data?.message || e?.message || 'Gagal menghapus jadwal';
+    const errorMessage =
+      e?.response?.data?.message || e?.message || "Gagal menghapus jadwal";
     toast.error(errorMessage);
     closeDeleteDialog();
   }
@@ -758,21 +935,21 @@ const confirmDelete = async () => {
 
 const load = async () => {
   loading.value = true;
-  err.value = '';
+  err.value = "";
   try {
-    const { data } = await deviceApi.get('/messages/broadcasts');
+    const { data } = await deviceApi.get("/messages/broadcasts");
     items.value = Array.isArray(data) ? data : [];
     await loadGroupNames(); // Reload group names when loading broadcasts
   } catch (e) {
-    toast.error('Gagal memuat jadwal. Pastikan WhatsApp sudah terhubung');
+    toast.error("Gagal memuat jadwal. Pastikan WhatsApp sudah terhubung");
   } finally {
     loading.value = false;
   }
 };
 
 const displayName = (g) => {
-  const n = g?.name || '';
-  return n || 'Tanpa Nama';
+  const n = g?.name || "";
+  return n || "Tanpa Nama";
 };
 
 const phoneRecipients = (b) => {
@@ -781,13 +958,13 @@ const phoneRecipients = (b) => {
   const set = new Set(
     arr
       .map((r) => String(r))
-      .filter((r) => !r.includes('@g.us'))
-      .filter((r) => r.toLowerCase() !== 'all')
-      .filter((r) => !r.toLowerCase().startsWith('label'))
-      .filter((r) => r.trim().length > 0),
+      .filter((r) => !r.includes("@g.us"))
+      .filter((r) => r.toLowerCase() !== "all")
+      .filter((r) => !r.toLowerCase().startsWith("label"))
+      .filter((r) => r.trim().length > 0)
   );
 
-  if (arr.some((r) => String(r).toLowerCase() === 'all')) {
+  if (arr.some((r) => String(r).toLowerCase() === "all")) {
     for (const c of contacts.value || []) {
       if (c?.phone) set.add(String(c.phone));
     }
@@ -795,8 +972,8 @@ const phoneRecipients = (b) => {
 
   for (const r of arr) {
     const s = String(r).toLowerCase();
-    if (s.startsWith('label_')) {
-      const labelName = String(r).slice('label_'.length);
+    if (s.startsWith("label_")) {
+      const labelName = String(r).slice("label_".length);
       const phones = labelToPhones.value[labelName];
       if (phones) {
         for (const p of phones) set.add(String(p));
@@ -807,39 +984,44 @@ const phoneRecipients = (b) => {
   return Array.from(set);
 };
 
-const normalizeNumber = (num) => String(num).trim().replace(/@s\.whatsapp\.net$/i, '');
+const normalizeNumber = (num) =>
+  String(num)
+    .trim()
+    .replace(/@s\.whatsapp\.net$/i, "");
 
 const devices = ref([]);
-const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
+const selectedDeviceId = ref(localStorage.getItem("device_selected_id") || "");
 
 const fetchDevices = async () => {
   try {
-    const { data } = await userApi.get('/devices');
+    const { data } = await userApi.get("/devices");
     devices.value = Array.isArray(data) ? data : [];
-  } catch { devices.value = []; }
+  } catch {
+    devices.value = [];
+  }
 };
 
 const ensureDeviceKeyValid = () => {
-  const key = localStorage.getItem('device_api_key');
-  const selId = localStorage.getItem('device_selected_id');
+  const key = localStorage.getItem("device_api_key");
+  const selId = localStorage.getItem("device_selected_id");
   if (!key || !selId) return false;
   const ok = devices.value.some((d) => d.id === selId && d.apiKey === key);
   if (!ok) {
-    localStorage.removeItem('device_api_key');
-    localStorage.removeItem('device_selected_id');
-    localStorage.removeItem('device_selected_name');
-    selectedDeviceId.value = '';
+    localStorage.removeItem("device_api_key");
+    localStorage.removeItem("device_selected_id");
+    localStorage.removeItem("device_selected_name");
+    selectedDeviceId.value = "";
   }
   return ok;
 };
 
 const pickDefaultDevice = () => {
   if (!devices.value.length) return;
-  const current = devices.value.find((d) => d.status === 'open') || devices.value[0];
+  const current = devices.value.find((d) => d.status === "open") || devices.value[0];
   if (current) {
-    localStorage.setItem('device_api_key', current.apiKey);
-    localStorage.setItem('device_selected_id', current.id);
-    localStorage.setItem('device_selected_name', current.name || '');
+    localStorage.setItem("device_api_key", current.apiKey);
+    localStorage.setItem("device_selected_id", current.id);
+    localStorage.setItem("device_selected_name", current.name || "");
     selectedDeviceId.value = current.id;
   }
 };
@@ -847,9 +1029,13 @@ const pickDefaultDevice = () => {
 const onDeviceChange = () => {
   const dev = devices.value.find((d) => d.id === selectedDeviceId.value);
   if (dev && dev.apiKey) {
-    localStorage.setItem('device_api_key', dev.apiKey);
-    localStorage.setItem('device_selected_id', dev.id);
-    localStorage.setItem('device_selected_name', dev.name || '');
+    localStorage.setItem("device_api_key", dev.apiKey);
+    localStorage.setItem("device_selected_id", dev.id);
+    localStorage.setItem("device_selected_name", dev.name || "");
+    
+    // ✅ Dispatch custom event untuk Dashboard.vue
+    window.dispatchEvent(new Event('deviceChanged'));
+    
     load();
     loadContacts();
     loadGroupNames(); // Reload group names when device changes
@@ -858,13 +1044,13 @@ const onDeviceChange = () => {
 
 const page = ref(1);
 const pageSize = ref(25);
-const sortBy = ref('schedule');
-const sortDir = ref('asc');
+const sortBy = ref("schedule");
+const sortDir = ref("asc");
 const meta = ref({ totalGroups: 0, currentPage: 1, totalPages: 1, hasMore: false });
 
 const sortedGroups = computed(() => {
   const arr = filtered.value.slice();
-  if (sortBy.value === 'name') {
+  if (sortBy.value === "name") {
     arr.sort((a, b) => a.name.localeCompare(b.name));
   } else {
     arr.sort((a, b) => {
@@ -873,7 +1059,7 @@ const sortedGroups = computed(() => {
       return sa - sb;
     });
   }
-  if (sortDir.value === 'desc') arr.reverse();
+  if (sortDir.value === "desc") arr.reverse();
   return arr;
 });
 
@@ -882,56 +1068,61 @@ const visibleGroups = computed(() => {
   const end = start + pageSize.value;
   const total = sortedGroups.value.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize.value));
-  meta.value = { totalGroups: total, currentPage: page.value, totalPages, hasMore: page.value < totalPages };
+  meta.value = {
+    totalGroups: total,
+    currentPage: page.value,
+    totalPages,
+    hasMore: page.value < totalPages,
+  };
   return sortedGroups.value.slice(start, end);
 });
 
 const mediaUrl = (p) => {
-  if (!p) return '';
-  
+  if (!p) return "";
+
   // Get API base URL from environment
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-  
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
   // Remove leading slash if present to avoid double slashes
-  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
-  
+  const cleanPath = p.startsWith("/") ? p.slice(1) : p;
+
   // Construct full URL with API base
   return `${API_BASE}/${cleanPath}`;
 };
 
-const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || '');
+const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || "");
 
 // Fungsi untuk mendapatkan informasi pesan yang gagal terkirim
 const getFailedInfo = (b) => {
   if (!b) return { count: 0, groups: [], phones: [] };
-  
+
   const failedCount = b.failedCount || 0;
-  
+
   if (failedCount === 0) {
     return { count: 0, groups: [], phones: [] };
   }
-  
+
   const failedGroups = [];
   const failedPhones = [];
-  
+
   // Ekstrak JID dari lastError jika ada
-  const lastError = b.lastError || '';
+  const lastError = b.lastError || "";
   const jidMatches = lastError.match(/(\d+)@g\.us/g) || [];
-  
+
   if (jidMatches.length > 0) {
     // Ada JID group di error message, ekstrak dan konversi ke nama
     for (const jidMatch of jidMatches) {
       const groupName = groupsMap.value[jidMatch];
-      
+
       if (groupName) {
         if (!failedGroups.includes(groupName)) {
           failedGroups.push(groupName);
         }
       } else {
         // Coba cari dengan ID saja (tanpa @g.us)
-        const idOnly = jidMatch.split('@')[0];
+        const idOnly = jidMatch.split("@")[0];
         let found = false;
-        
+
         for (const [key, value] of Object.entries(groupsMap.value)) {
           if (key.includes(idOnly)) {
             if (!failedGroups.includes(value)) {
@@ -941,7 +1132,7 @@ const getFailedInfo = (b) => {
             break;
           }
         }
-        
+
         // Jika tetap tidak ditemukan, tampilkan nama generic
         if (!found) {
           failedGroups.push(`Group (${idOnly.substring(0, 8)}...)`);
@@ -950,21 +1141,26 @@ const getFailedInfo = (b) => {
     }
   } else {
     // Tidak ada JID di error, gunakan logic lama
-    const groupRecipients = (b.recipients || [])
-      .filter((r) => typeof r === 'string' && r.includes('@g.us'));
-    
-    const phoneRecipients = (b.recipients || [])
-      .filter((r) => typeof r === 'string' && !r.includes('@g.us') && !r.toLowerCase().startsWith('label'));
-    
+    const groupRecipients = (b.recipients || []).filter(
+      (r) => typeof r === "string" && r.includes("@g.us")
+    );
+
+    const phoneRecipients = (b.recipients || []).filter(
+      (r) =>
+        typeof r === "string" &&
+        !r.includes("@g.us") &&
+        !r.toLowerCase().startsWith("label")
+    );
+
     if (failedCount >= groupRecipients.length && groupRecipients.length > 0) {
       for (const jid of groupRecipients) {
-        const normalizedJid = jid.includes('@') ? jid : `${jid}@g.us`;
+        const normalizedJid = jid.includes("@") ? jid : `${jid}@g.us`;
         const groupName = groupsMap.value[normalizedJid];
-        
+
         if (groupName) {
           failedGroups.push(groupName);
         } else {
-          const idOnly = jid.split('@')[0];
+          const idOnly = jid.split("@")[0];
           let found = false;
           for (const [key, value] of Object.entries(groupsMap.value)) {
             if (key.startsWith(idOnly)) {
@@ -979,7 +1175,7 @@ const getFailedInfo = (b) => {
         }
       }
     }
-    
+
     const remainingFailed = failedCount - failedGroups.length;
     if (remainingFailed > 0 && phoneRecipients.length > 0) {
       const phonesToShow = Math.min(remainingFailed, 3);
@@ -987,32 +1183,38 @@ const getFailedInfo = (b) => {
         const phone = normalizeNumber(phoneRecipients[i]);
         failedPhones.push(phone);
       }
-      
+
       if (phoneRecipients.length > phonesToShow) {
         failedPhones.push(`+${phoneRecipients.length - phonesToShow} lainnya`);
       }
     }
   }
-  
+
   return {
     count: failedCount,
     groups: failedGroups,
-    phones: failedPhones
+    phones: failedPhones,
   };
 };
 
 // Fungsi untuk memotong pesan error jika terlalu panjang
 const truncateError = (error) => {
-  if (!error) return '';
+  if (!error) return "";
   const maxLength = 100;
   if (error.length <= maxLength) return error;
-  return error.substring(0, maxLength) + '...';
+  return error.substring(0, maxLength) + "...";
 };
 
-watch([q, statusFilter, sortBy, sortDir, pageSize], () => { page.value = 1; });
+watch([q, statusFilter, sortBy, sortDir, pageSize], () => {
+  page.value = 1;
+});
 
-const goPrev = () => { if (page.value > 1) page.value -= 1; };
-const goNext = () => { if (meta.value.hasMore) page.value += 1; };
+const goPrev = () => {
+  if (page.value > 1) page.value -= 1;
+};
+const goNext = () => {
+  if (meta.value.hasMore) page.value += 1;
+};
 
 const showDetailModal = ref(false);
 const selectedGroup = ref(null);
@@ -1028,7 +1230,7 @@ const closeDetailModal = () => {
 };
 
 const getRecipientsSummary = (b) => {
-  if (!b) return '';
+  if (!b) return "";
   const groupCount = groupRecipientLabels(b).length;
   const labelCount = labelRecipientLabels(b).length;
   const phoneCount = phoneRecipients(b).length;
@@ -1037,7 +1239,11 @@ const getRecipientsSummary = (b) => {
 
 const getRecipientCount = (b) => {
   if (!b) return 0;
-  return groupRecipientLabels(b).length + labelRecipientLabels(b).length + phoneRecipients(b).length;
+  return (
+    groupRecipientLabels(b).length +
+    labelRecipientLabels(b).length +
+    phoneRecipients(b).length
+  );
 };
 
 onMounted(async () => {
@@ -1049,9 +1255,9 @@ onMounted(async () => {
 
 <style scoped>
 /* Base Styles - Konsisten dengan menu Broadcast */
-.wrapper { 
-  max-width: 1400px; 
-  margin: 0 auto; 
+.wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
   padding: 0 24px;
 }
 
@@ -1254,8 +1460,12 @@ onMounted(async () => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {
@@ -1961,7 +2171,8 @@ onMounted(async () => {
 }
 
 /* Messages */
-.error, .success {
+.error,
+.success {
   margin-top: 20px;
   padding: 14px 18px;
   border-radius: 12px;
@@ -2033,7 +2244,7 @@ onMounted(async () => {
 }
 
 .icon-circle::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 100%;
   height: 100%;

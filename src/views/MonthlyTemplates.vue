@@ -3,22 +3,28 @@
     <div class="page-header">
       <div class="header-content">
         <h2>
-          <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <path d="M9 13l2 2 4-4"/>
-            <line x1="9" y1="17" x2="15" y2="17"/>
+          <svg
+            class="header-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <path d="M9 13l2 2 4-4" />
+            <line x1="9" y1="17" x2="15" y2="17" />
           </svg>
           Templates Bulanan
         </h2>
         <p class="subtitle">Kelola template data bulanan untuk feedback Algorithmics</p>
       </div>
-      
+
       <div class="stats-row">
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
           </svg>
           <div>
             <div class="stat-value">{{ templates.length }}</div>
@@ -27,8 +33,8 @@
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/>
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z" />
           </svg>
           <div>
             <div class="stat-value">{{ courses.length }}</div>
@@ -42,39 +48,52 @@
       <div class="card-header-section">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
           Import Data dari Excel
         </h3>
       </div>
-      
+
       <div class="import-section">
         <div class="import-info">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
-          <p>Upload file Excel (.xlsx) dengan format: Nama Course, Code, Bulan Ke, Level, Topik Modul, Hasil, Keahlian yang Didapatkan</p>
+          <p>
+            Upload file Excel (.xlsx) dengan format: Nama Course, Code, Bulan Ke, Level,
+            Topik Modul, Hasil, Keahlian yang Didapatkan
+          </p>
         </div>
-        
+
         <div class="import-actions">
-          <input ref="fileInput" type="file" accept=".xlsx,.xls" style="display:none" @change="onFileChange" />
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".xlsx,.xls"
+            style="display: none"
+            @change="onFileChange"
+          />
           <button class="btn-import" @click="triggerImport" :disabled="importing">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            {{ importing ? 'Mengimpor...' : 'Import Excel' }}
+            {{ importing ? "Mengimpor..." : "Import Excel" }}
           </button>
-          <button class="btn-export" @click="exportTemplate" :disabled="!templates.length">
+          <button
+            class="btn-export"
+            @click="exportTemplate"
+            :disabled="!templates.length"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             Export Excel
           </button>
@@ -86,16 +105,20 @@
       <div class="card-header-section">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-            <rect x="8" y="2" width="8" height="4" rx="1"/>
+            <path
+              d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+            />
+            <rect x="8" y="2" width="8" height="4" rx="1" />
           </svg>
           Daftar Templates ({{ templates.length }})
         </h3>
         <button class="btn-reload" @click="loadTemplates" :disabled="loading">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            <path
+              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+            />
           </svg>
-          {{ loading ? 'Memuat...' : 'Muat Ulang' }}
+          {{ loading ? "Memuat..." : "Muat Ulang" }}
         </button>
       </div>
 
@@ -103,15 +126,15 @@
         <div class="filter-group">
           <div class="search-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/>
-              <path d="m21 21-4.35-4.35"/>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
             </svg>
             <input v-model="searchQuery" placeholder="Cari nama course atau code..." />
           </div>
-          
+
           <div class="course-filter">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M7 12h10M10 18h4"/>
+              <path d="M3 6h18M7 12h10M10 18h4" />
             </svg>
             <select v-model="selectedCourse">
               <option value="">Semua Course</option>
@@ -125,26 +148,26 @@
         <div class="action-buttons">
           <button class="btn-collapse" @click="collapseAll" v-if="courses.length">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="4 14 10 14 10 20"/>
-              <polyline points="20 10 14 10 14 4"/>
-              <line x1="14" y1="10" x2="21" y2="3"/>
-              <line x1="3" y1="21" x2="10" y2="14"/>
+              <polyline points="4 14 10 14 10 20" />
+              <polyline points="20 10 14 10 14 4" />
+              <line x1="14" y1="10" x2="21" y2="3" />
+              <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
             Tutup Semua
           </button>
           <button class="btn-expand" @click="expandAll" v-if="courses.length">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 3 21 3 21 9"/>
-              <polyline points="9 21 3 21 3 15"/>
-              <line x1="21" y1="3" x2="14" y2="10"/>
-              <line x1="3" y1="21" x2="10" y2="14"/>
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
             Buka Semua
           </button>
           <button class="btn-add-new" @click="openAddModal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Tambah Template
           </button>
@@ -155,13 +178,25 @@
         <div v-for="course in courses" :key="course" class="course-group">
           <div class="course-header" @click="toggleGroup(course)">
             <div class="header-left">
-              <svg class="chevron-icon" :class="{ open: !collapsed[course] }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
+              <svg
+                class="chevron-icon"
+                :class="{ open: !collapsed[course] }"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="9 18 15 12 9 6" />
               </svg>
               <div class="course-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z" />
                 </svg>
               </div>
               <h4>{{ course }}</h4>
@@ -171,20 +206,29 @@
 
           <div class="course-body" v-show="!collapsed[course]">
             <div class="templates-grid">
-              <div v-for="template in grouped[course]" :key="template.id" class="template-card">
+              <div
+                v-for="template in grouped[course]"
+                :key="template.id"
+                class="template-card"
+              >
                 <div class="template-header">
                   <div class="month-badge">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="4" width="18" height="18" rx="2"/>
-                      <line x1="16" y1="2" x2="16" y2="6"/>
-                      <line x1="8" y1="2" x2="8" y2="6"/>
-                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
                     Bulan {{ template.month }}
                   </div>
                   <span class="level-badge">{{ template.level }}</span>
                 </div>
-                
+
                 <div class="template-body">
                   <div class="template-field">
                     <label>Code:</label>
@@ -202,23 +246,46 @@
 
                 <div class="template-footer">
                   <button class="btn-view" @click="viewTemplate(template)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
                     </svg>
                     Lihat Detail
                   </button>
                   <button class="btn-edit" @click="editTemplate(template)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                      />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                     Edit
                   </button>
-                  <button class="btn-delete" @click="confirmDelete(template)" :disabled="deleting">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <button
+                    class="btn-delete"
+                    @click="confirmDelete(template)"
+                    :disabled="deleting"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      />
                     </svg>
                     Hapus
                   </button>
@@ -231,8 +298,8 @@
 
       <div v-else class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
         </svg>
         <h3>Belum Ada Template</h3>
         <p>Import data dari Excel untuk menambahkan template</p>
@@ -246,12 +313,12 @@
           <h3>Detail Template</h3>
           <button class="btn-close" @click="closeDetailModal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-        
+
         <div class="modal-body" v-if="selectedTemplate">
           <div class="detail-row">
             <label>Nama Course:</label>
@@ -289,93 +356,99 @@
     <div v-if="showFormModal" class="modal-overlay" @click="closeFormModal">
       <div class="form-modal" @click.stop>
         <div class="modal-header">
-          <h3>{{ isEditMode ? 'Edit Template' : 'Tambah Template Baru' }}</h3>
+          <h3>{{ isEditMode ? "Edit Template" : "Tambah Template Baru" }}</h3>
           <button class="btn-close" @click="closeFormModal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-        
+
         <div class="modal-body">
           <form @submit.prevent="saveTemplate">
             <div class="form-grid">
               <div class="form-group">
-                <label for="courseName">Nama Course <span class="required">*</span></label>
-                <input 
-                  id="courseName" 
-                  v-model="formData.courseName" 
-                  type="text" 
-                  placeholder="Contoh: Python Start" 
+                <label for="courseName"
+                  >Nama Course <span class="required">*</span></label
+                >
+                <input
+                  id="courseName"
+                  v-model="formData.courseName"
+                  type="text"
+                  placeholder="Contoh: Python Start"
                   required
                 />
               </div>
 
               <div class="form-group">
                 <label for="code">Code <span class="required">*</span></label>
-                <input 
-                  id="code" 
-                  v-model="formData.code" 
-                  type="text" 
-                  placeholder="Contoh: PS" 
+                <input
+                  id="code"
+                  v-model="formData.code"
+                  type="text"
+                  placeholder="Contoh: PS"
                   required
                 />
               </div>
 
               <div class="form-group">
                 <label for="month">Bulan Ke <span class="required">*</span></label>
-                <input 
-                  id="month" 
-                  v-model.number="formData.month" 
-                  type="number" 
-                  min="1" 
-                  max="24" 
-                  placeholder="1-24" 
+                <input
+                  id="month"
+                  v-model.number="formData.month"
+                  type="number"
+                  min="1"
+                  max="24"
+                  placeholder="1-24"
                   required
                 />
               </div>
 
               <div class="form-group">
                 <label for="level">Level <span class="required">*</span></label>
-                <input 
-                  id="level" 
-                  v-model="formData.level" 
-                  type="text" 
-                  placeholder="Contoh: Junior" 
+                <input
+                  id="level"
+                  v-model="formData.level"
+                  type="text"
+                  placeholder="Contoh: Junior"
                   required
                 />
               </div>
 
               <div class="form-group full">
-                <label for="topicModule">Topik Modul <span class="required">*</span></label>
-                <textarea 
-                  id="topicModule" 
-                  v-model="formData.topicModule" 
-                  rows="3" 
-                  placeholder="Masukkan topik modul yang dipelajari..." 
+                <label for="topicModule"
+                  >Topik Modul <span class="required">*</span></label
+                >
+                <textarea
+                  id="topicModule"
+                  v-model="formData.topicModule"
+                  rows="3"
+                  placeholder="Masukkan topik modul yang dipelajari..."
                   required
                 ></textarea>
               </div>
 
               <div class="form-group full">
                 <label for="result">Hasil <span class="required">*</span></label>
-                <textarea 
-                  id="result" 
-                  v-model="formData.result" 
-                  rows="3" 
-                  placeholder="Masukkan hasil pembelajaran..." 
+                <textarea
+                  id="result"
+                  v-model="formData.result"
+                  rows="3"
+                  placeholder="Masukkan hasil pembelajaran..."
                   required
                 ></textarea>
               </div>
 
               <div class="form-group full">
-                <label for="skillsAcquired">Keahlian yang Didapatkan <span class="required">*</span></label>
-                <textarea 
-                  id="skillsAcquired" 
-                  v-model="formData.skillsAcquired" 
-                  rows="3" 
-                  placeholder="Masukkan keahlian yang didapatkan..." 
+                <label for="skillsAcquired"
+                  >Keahlian yang Didapatkan <span class="required">*</span></label
+                >
+                <textarea
+                  id="skillsAcquired"
+                  v-model="formData.skillsAcquired"
+                  rows="3"
+                  placeholder="Masukkan keahlian yang didapatkan..."
                   required
                 ></textarea>
               </div>
@@ -386,12 +459,25 @@
                 Batal
               </button>
               <button type="submit" class="btn-save" :disabled="saving">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <polyline points="17 21 17 13 7 13 7 21"/>
-                  <polyline points="7 3 7 8 15 8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                  />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
                 </svg>
-                {{ saving ? 'Menyimpan...' : (isEditMode ? 'Update Template' : 'Simpan Template') }}
+                {{
+                  saving
+                    ? "Menyimpan..."
+                    : isEditMode
+                    ? "Update Template"
+                    : "Simpan Template"
+                }}
               </button>
             </div>
           </form>
@@ -400,49 +486,80 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay delete-modal-overlay" @click="cancelDelete">
+    <div
+      v-if="showDeleteModal"
+      class="modal-overlay delete-modal-overlay"
+      @click="cancelDelete"
+    >
       <div class="delete-modal" @click.stop>
         <div class="delete-modal-icon">
           <div class="icon-circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           </div>
         </div>
-        
+
         <div class="delete-modal-content">
           <h3>Hapus Template Ini?</h3>
-          <p class="delete-warning">Tindakan ini tidak dapat dibatalkan. Template feedback akan dihapus secara permanen.</p>
-          
+          <p class="delete-warning">
+            Tindakan ini tidak dapat dibatalkan. Template feedback akan dihapus secara
+            permanen.
+          </p>
+
           <div class="template-preview" v-if="templateToDelete">
             <div class="preview-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             </div>
             <div class="preview-info">
-              <div class="preview-name">{{ templateToDelete.courseName }} - Bulan {{ templateToDelete.month }}</div>
-              <div class="preview-detail">{{ templateToDelete.topicModule ? templateToDelete.topicModule.substring(0, 50) : '' }}{{ templateToDelete.topicModule && templateToDelete.topicModule.length > 50 ? '...' : '' }}</div>
+              <div class="preview-name">
+                {{ templateToDelete.courseName }} - Bulan {{ templateToDelete.month }}
+              </div>
+              <div class="preview-detail">
+                {{
+                  templateToDelete.topicModule
+                    ? templateToDelete.topicModule.substring(0, 50)
+                    : ""
+                }}{{
+                  templateToDelete.topicModule && templateToDelete.topicModule.length > 50
+                    ? "..."
+                    : ""
+                }}
+              </div>
             </div>
           </div>
         </div>
 
         <div class="delete-modal-actions">
-          <button type="button" class="btn-keep" @click="cancelDelete" :disabled="deleting">
+          <button
+            type="button"
+            class="btn-keep"
+            @click="cancelDelete"
+            :disabled="deleting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Batal
           </button>
-          <button type="button" class="btn-delete-confirm" @click="handleConfirmDelete" :disabled="deleting">
+          <button
+            type="button"
+            class="btn-delete-confirm"
+            @click="handleConfirmDelete"
+            :disabled="deleting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              <path d="M10 11v6M14 11v6"/>
+              <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
+              <path d="M10 11v6M14 11v6" />
             </svg>
-            {{ deleting ? 'Menghapus...' : 'Ya, Hapus Template' }}
+            {{ deleting ? "Menghapus..." : "Ya, Hapus Template" }}
           </button>
         </div>
       </div>
@@ -451,16 +568,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { userApi } from '../api/http.js';
-import { useToast } from '../composables/useToast.js';
-import { loadXLSX } from '../utils/xlsx-loader.js';
+import { ref, computed, onMounted } from "vue";
+import { userApi } from "../api/http.js";
+import { useToast } from "../composables/useToast.js";
+import { loadXLSX } from "../utils/xlsx-loader.js";
 
 const toast = useToast();
 
 const templates = ref([]);
-const searchQuery = ref('');
-const selectedCourse = ref('');
+const searchQuery = ref("");
+const selectedCourse = ref("");
 const loading = ref(false);
 const importing = ref(false);
 const deleting = ref(false);
@@ -473,13 +590,13 @@ const selectedTemplate = ref(null);
 const showFormModal = ref(false);
 const isEditMode = ref(false);
 const formData = ref({
-  courseName: '',
-  code: '',
+  courseName: "",
+  code: "",
   month: 1,
-  level: '',
-  topicModule: '',
-  result: '',
-  skillsAcquired: ''
+  level: "",
+  topicModule: "",
+  result: "",
+  skillsAcquired: "",
 });
 const saving = ref(false);
 
@@ -489,24 +606,31 @@ const templateToDelete = ref(null);
 const filtered = computed(() => {
   const query = searchQuery.value.toLowerCase().trim();
   const courseFilter = selectedCourse.value;
-  return templates.value.filter(t => 
-    (!query || t.courseName?.toLowerCase().includes(query) || t.code?.toLowerCase().includes(query)) &&
-    (!courseFilter || t.courseName === courseFilter)
+  return templates.value.filter(
+    (t) =>
+      (!query ||
+        t.courseName?.toLowerCase().includes(query) ||
+        t.code?.toLowerCase().includes(query)) &&
+      (!courseFilter || t.courseName === courseFilter)
   );
 });
 
 const grouped = computed(() => {
   const map = {};
   for (const t of filtered.value) {
-    const course = t.courseName || 'Unknown';
+    const course = t.courseName || "Unknown";
     (map[course] ||= []).push(t);
   }
-  Object.keys(map).forEach(k => map[k].sort((a, b) => Number(a.month) - Number(b.month)));
+  Object.keys(map).forEach((k) =>
+    map[k].sort((a, b) => Number(a.month) - Number(b.month))
+  );
   return map;
 });
 
 const courses = computed(() => Object.keys(grouped.value).sort());
-const allCourses = computed(() => [...new Set(templates.value.map(t => t.courseName))].sort());
+const allCourses = computed(() =>
+  [...new Set(templates.value.map((t) => t.courseName))].sort()
+);
 
 const toggleGroup = (course) => {
   collapsed.value[course] = !collapsed.value[course];
@@ -527,11 +651,11 @@ const expandAll = () => {
 const loadTemplates = async () => {
   loading.value = true;
   try {
-    const { data } = await userApi.get('/algorithmics/monthly-templates');
+    const { data } = await userApi.get("/algorithmics/monthly-templates");
     templates.value = data.templates || [];
     collapsed.value = {};
   } catch (e) {
-    toast.error(e?.response?.data?.message || 'Gagal memuat templates');
+    toast.error(e?.response?.data?.message || "Gagal memuat templates");
   } finally {
     loading.value = false;
   }
@@ -544,10 +668,10 @@ const triggerImport = () => {
 const onFileChange = async (e) => {
   const file = e?.target?.files?.[0];
   if (!file) return;
-  
+
   if (!/\.xlsx?$/i.test(file.name)) {
-    toast.error('Pilih file Excel (.xlsx)');
-    e.target.value = '';
+    toast.error("Pilih file Excel (.xlsx)");
+    e.target.value = "";
     return;
   }
 
@@ -555,52 +679,54 @@ const onFileChange = async (e) => {
   try {
     const XLSX = await loadXLSX();
     const reader = new FileReader();
-    
+
     reader.onload = async (evt) => {
       try {
         const data = evt.target.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: "binary" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-        
+
         // Skip header row
-        const dataRows = rows.slice(1).filter(row => row.length > 0);
-        
+        const dataRows = rows.slice(1).filter((row) => row.length > 0);
+
         // PERBAIKAN: Sesuaikan urutan kolom dengan export
         // Export: Nama Course, Code, Bulan Ke, Level, Topik Modul, Hasil, Keahlian yang Didapatkan
-        const importData = dataRows.map(row => ({
-          courseName: row[0] || '',      // Nama Course
-          code: row[1] || '',             // Code
-          month: Number(row[2]) || 1,     // Bulan Ke
-          level: row[3] || '',            // Level
-          topicModule: row[4] || '',      // Topik Modul
-          result: row[5] || '',           // Hasil
-          skillsAcquired: row[6] || ''    // Keahlian yang Didapatkan
+        const importData = dataRows.map((row) => ({
+          courseName: row[0] || "", // Nama Course
+          code: row[1] || "", // Code
+          month: Number(row[2]) || 1, // Bulan Ke
+          level: row[3] || "", // Level
+          topicModule: row[4] || "", // Topik Modul
+          result: row[5] || "", // Hasil
+          skillsAcquired: row[6] || "", // Keahlian yang Didapatkan
         }));
 
         // Send to backend
-        await userApi.post('/algorithmics/monthly-templates/import', { templates: importData });
+        await userApi.post("/algorithmics/monthly-templates/import", {
+          templates: importData,
+        });
         toast.success(`Berhasil mengimport ${importData.length} template`);
         await loadTemplates();
       } catch (err) {
-        toast.error(err?.response?.data?.message || 'Gagal mengimport data');
+        toast.error(err?.response?.data?.message || "Gagal mengimport data");
       } finally {
         importing.value = false;
-        if (fileInput.value) fileInput.value.value = '';
+        if (fileInput.value) fileInput.value.value = "";
       }
     };
-    
+
     reader.onerror = () => {
-      toast.error('Gagal membaca file');
+      toast.error("Gagal membaca file");
       importing.value = false;
-      if (fileInput.value) fileInput.value.value = '';
+      if (fileInput.value) fileInput.value.value = "";
     };
-    
+
     reader.readAsBinaryString(file);
   } catch (e) {
-    toast.error('Gagal memuat library Excel');
+    toast.error("Gagal memuat library Excel");
     importing.value = false;
-    if (fileInput.value) fileInput.value.value = '';
+    if (fileInput.value) fileInput.value.value = "";
   }
 };
 
@@ -608,9 +734,17 @@ const exportTemplate = async () => {
   try {
     const XLSX = await loadXLSX();
     const rows = [
-      ['Nama Course', 'Code', 'Bulan Ke', 'Level', 'Topik Modul', 'Hasil', 'Keahlian yang Didapatkan']
+      [
+        "Nama Course",
+        "Code",
+        "Bulan Ke",
+        "Level",
+        "Topik Modul",
+        "Hasil",
+        "Keahlian yang Didapatkan",
+      ],
     ];
-    
+
     for (const t of templates.value) {
       rows.push([
         t.courseName,
@@ -619,17 +753,17 @@ const exportTemplate = async () => {
         t.level,
         t.topicModule,
         t.result,
-        t.skillsAcquired
+        t.skillsAcquired,
       ]);
     }
-    
+
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Monthly Templates');
-    XLSX.writeFile(wb, 'monthly-templates.xlsx');
-    toast.success('File berhasil diekspor');
+    XLSX.utils.book_append_sheet(wb, ws, "Monthly Templates");
+    XLSX.writeFile(wb, "monthly-templates.xlsx");
+    toast.success("File berhasil diekspor");
   } catch (e) {
-    toast.error('Gagal mengekspor file');
+    toast.error("Gagal mengekspor file");
   }
 };
 
@@ -646,13 +780,13 @@ const closeDetailModal = () => {
 const openAddModal = () => {
   isEditMode.value = false;
   formData.value = {
-    courseName: '',
-    code: '',
+    courseName: "",
+    code: "",
     month: 1,
-    level: '',
-    topicModule: '',
-    result: '',
-    skillsAcquired: ''
+    level: "",
+    topicModule: "",
+    result: "",
+    skillsAcquired: "",
   };
   showFormModal.value = true;
 };
@@ -666,13 +800,13 @@ const editTemplate = (template) => {
 const closeFormModal = () => {
   showFormModal.value = false;
   formData.value = {
-    courseName: '',
-    code: '',
+    courseName: "",
+    code: "",
     month: 1,
-    level: '',
-    topicModule: '',
-    result: '',
-    skillsAcquired: ''
+    level: "",
+    topicModule: "",
+    result: "",
+    skillsAcquired: "",
   };
 };
 
@@ -680,16 +814,19 @@ const saveTemplate = async () => {
   saving.value = true;
   try {
     if (isEditMode.value) {
-      await userApi.put(`/algorithmics/monthly-templates/${formData.value.id}`, formData.value);
-      toast.success('Template berhasil diperbarui');
+      await userApi.put(
+        `/algorithmics/monthly-templates/${formData.value.id}`,
+        formData.value
+      );
+      toast.success("Template berhasil diperbarui");
     } else {
-      await userApi.post('/algorithmics/monthly-templates', formData.value);
-      toast.success('Template berhasil ditambahkan');
+      await userApi.post("/algorithmics/monthly-templates", formData.value);
+      toast.success("Template berhasil ditambahkan");
     }
     await loadTemplates();
     closeFormModal();
   } catch (e) {
-    toast.error(e?.response?.data?.message || 'Gagal menyimpan template');
+    toast.error(e?.response?.data?.message || "Gagal menyimpan template");
   } finally {
     saving.value = false;
   }
@@ -711,11 +848,11 @@ const handleConfirmDelete = async () => {
   deleting.value = true;
   try {
     await userApi.delete(`/algorithmics/monthly-templates/${templateToDelete.value.id}`);
-    toast.success('Template berhasil dihapus');
+    toast.success("Template berhasil dihapus");
     await loadTemplates();
     cancelDelete();
   } catch (e) {
-    toast.error(e?.response?.data?.message || 'Gagal menghapus template');
+    toast.error(e?.response?.data?.message || "Gagal menghapus template");
   } finally {
     deleting.value = false;
   }
@@ -1380,8 +1517,12 @@ onMounted(() => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .detail-modal,

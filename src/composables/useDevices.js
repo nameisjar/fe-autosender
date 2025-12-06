@@ -22,10 +22,10 @@ export function useDevices() {
           
           // ⚠️ Cek jika device sudah closed, auto-select device lain yang open
           if (deviceExists.status !== 'open') {
-            console.warn('[useDevices] Selected device is not open, finding alternative...');
+            // console.warn('[useDevices] Selected device is not open, finding alternative...');
             const openDevice = devices.value.find((d) => d.status === 'open');
             if (openDevice) {
-              console.log('[useDevices] Auto-selecting open device:', openDevice.name);
+              // console.log('[useDevices] Auto-selecting open device:', openDevice.name);
               selectDevice(openDevice.id);
             }
           }
@@ -103,7 +103,7 @@ export function useDevices() {
   // 🆕 Listen untuk event device session closed
   const handleDeviceSessionClosed = (event) => {
     const { deviceId } = event.detail || {};
-    console.warn('[useDevices] Device session closed:', deviceId);
+    // console.warn('[useDevices] Device session closed:', deviceId);
     
     // Jika device yang closed adalah device yang sedang dipilih
     if (deviceId === selectedDeviceId.value) {

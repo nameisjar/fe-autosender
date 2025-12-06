@@ -5,10 +5,28 @@
       <div class="header-content">
         <h2>
           <svg class="header-icon" viewBox="0 0 24 24" fill="none">
-            <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-            <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+            <path
+              d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
           Kelola Grup WhatsApp
         </h2>
@@ -18,23 +36,26 @@
       <!-- Stats Row -->
       <div class="stats-row">
         <div class="stat-card">
-          <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24"
-     fill="none"
-     stroke="currentColor"
-     stroke-width="2"
-     stroke-linecap="round"
-     stroke-linejoin="round"
-     aria-hidden="true" role="img">
-  <!-- badan / bahu user utama -->
-  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-  <!-- kepala user utama -->
-  <circle cx="9" cy="7" r="4"/>
-  <!-- badan / bahu user kedua (kanan) -->
-  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-  <!-- kepala user kedua (kanan) -->
-  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-</svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            role="img"
+          >
+            <!-- badan / bahu user utama -->
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <!-- kepala user utama -->
+            <circle cx="9" cy="7" r="4" />
+            <!-- badan / bahu user kedua (kanan) -->
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <!-- kepala user kedua (kanan) -->
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
 
           <div>
             <div class="stat-value">{{ groups.length }}</div>
@@ -42,23 +63,26 @@
           </div>
         </div>
         <div class="stat-card">
-          <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24"
-     fill="none"
-     stroke="currentColor"
-     stroke-width="2"
-     stroke-linecap="round"
-     stroke-linejoin="round"
-     aria-hidden="true" role="img">
-  <!-- badan / bahu user utama -->
-  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-  <!-- kepala user utama -->
-  <circle cx="9" cy="7" r="4"/>
-  <!-- badan / bahu user kedua (kanan) -->
-  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-  <!-- kepala user kedua (kanan) -->
-  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-</svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            role="img"
+          >
+            <!-- badan / bahu user utama -->
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <!-- kepala user utama -->
+            <circle cx="9" cy="7" r="4" />
+            <!-- badan / bahu user kedua (kanan) -->
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <!-- kepala user kedua (kanan) -->
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
 
           <div>
             <div class="stat-value">{{ totalMembers }}</div>
@@ -67,8 +91,8 @@
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
           </svg>
           <div>
             <div class="stat-value">{{ paginatedGroups.length }}</div>
@@ -83,8 +107,8 @@
       <div class="card-header-section">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-            <line x1="12" y1="18" x2="12.01" y2="18"/>
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
           </svg>
           Pilih Perangkat
         </h3>
@@ -93,8 +117,8 @@
         <div class="form-group device-dropdown">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-              <line x1="12" y1="18" x2="12.01" y2="18"/>
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+              <line x1="12" y1="18" x2="12.01" y2="18" />
             </svg>
             Perangkat
           </label>
@@ -107,25 +131,53 @@
         </div>
       </div>
       <div class="device-actions">
-        <button @click="showJoinModal = true" :disabled="!selectedDeviceId" class="btn-action btn-join">
+        <button
+          @click="showJoinModal = true"
+          :disabled="!selectedDeviceId"
+          class="btn-action btn-join"
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="16" />
+            <line x1="8" y1="12" x2="16" y2="12" />
           </svg>
           Join Grup
         </button>
-        <button @click="handleSync" :disabled="loadingGroups || !selectedDeviceId" class="btn-action btn-sync">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        <button
+          @click="handleSync"
+          :disabled="loadingGroups || !selectedDeviceId"
+          class="btn-action btn-sync"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            :class="{ spinning: loadingGroups }"
+          >
+            <path
+              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+            />
           </svg>
-          {{ loadingGroups ? 'Menyinkronkan...' : 'Sync Grup' }}
+          {{ loadingGroups ? "Menyinkronkan..." : "Sync Grup" }}
         </button>
-        <button @click="loadGroups({ force: true })" :disabled="loadingGroups || !selectedDeviceId" class="btn-action btn-reload">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        <button
+          @click="loadGroups({ force: true })"
+          :disabled="loadingGroups || !selectedDeviceId"
+          class="btn-action btn-reload"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            :class="{ spinning: loadingGroups }"
+          >
+            <path
+              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+            />
           </svg>
-          {{ loadingGroups ? 'Memuat...' : 'Muat Ulang' }}
+          {{ loadingGroups ? "Memuat..." : "Muat Ulang" }}
         </button>
       </div>
     </section>
@@ -134,28 +186,29 @@
     <section class="list-card" v-if="selectedDeviceId">
       <div class="card-header-section">
         <h3>
-          <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24"
-     fill="none"
-     stroke="currentColor"
-     stroke-width="2"
-     stroke-linecap="round"
-     stroke-linejoin="round"
-     aria-hidden="true" role="img">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            role="img"
+          >
+            <!-- badan user utama -->
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
 
-  <!-- badan user utama -->
-  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-  
-  <!-- kepala user utama -->
-  <circle cx="9" cy="7" r="4"/>
+            <!-- kepala user utama -->
+            <circle cx="9" cy="7" r="4" />
 
-  <!-- badan user kedua -->
-  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <!-- badan user kedua -->
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
 
-  <!-- kepala user kedua -->
-  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-
-</svg>
+            <!-- kepala user kedua -->
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
 
           Daftar Grup ({{ groups.length }})
         </h3>
@@ -165,8 +218,8 @@
       <div class="toolbar-section">
         <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
           </svg>
           <input v-model="searchQuery" placeholder="Cari nama grup atau ID..." />
         </div>
@@ -180,8 +233,16 @@
 
       <!-- Loading State -->
       <div v-if="loadingGroups" class="loading-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning">
-          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          class="spinning"
+        >
+          <path
+            d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+          />
         </svg>
         <p>Memuat grup...</p>
       </div>
@@ -189,14 +250,16 @@
       <!-- Error State -->
       <div v-else-if="errGroups" class="error-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
         <p>{{ errGroups }}</p>
         <button @click="loadGroups({ force: true })" class="btn-retry">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            <path
+              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+            />
           </svg>
           Coba Lagi
         </button>
@@ -205,11 +268,21 @@
       <!-- Empty State -->
       <div v-else-if="filteredGroups.length === 0" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="9" cy="7" r="4"/>
+          <path
+            d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <circle cx="9" cy="7" r="4" />
         </svg>
-        <h3>{{ searchQuery ? 'Grup tidak ditemukan' : 'Belum ada grup' }}</h3>
-        <p>{{ searchQuery ? 'Coba kata kunci lain' : 'Bergabung ke grup atau sync untuk memuat grup' }}</p>
+        <h3>{{ searchQuery ? "Grup tidak ditemukan" : "Belum ada grup" }}</h3>
+        <p>
+          {{
+            searchQuery
+              ? "Coba kata kunci lain"
+              : "Bergabung ke grup atau sync untuk memuat grup"
+          }}
+        </p>
       </div>
 
       <!-- Table View -->
@@ -218,52 +291,52 @@
           <thead>
             <tr>
               <th class="col-name">
-                <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24"
-     fill="none"
-     stroke="currentColor"
-     stroke-width="2"
-     stroke-linecap="round"
-     stroke-linejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <!-- badan user utama -->
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
 
-  <!-- badan user utama -->
-  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <!-- kepala user utama -->
+                  <circle cx="9" cy="7" r="4" />
 
-  <!-- kepala user utama -->
-  <circle cx="9" cy="7" r="4"/>
+                  <!-- badan user kedua -->
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
 
-  <!-- badan user kedua -->
-  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-
-  <!-- kepala user kedua -->
-  <path d="M16 3.13a4 4 0 1 1 0 7.75"/>
-
-</svg>
+                  <!-- kepala user kedua -->
+                  <path d="M16 3.13a4 4 0 1 1 0 7.75" />
+                </svg>
 
                 Nama Grup
               </th>
               <th class="col-members">
-                <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24"
-     fill="none"
-     stroke="currentColor"
-     stroke-width="2"
-     stroke-linecap="round"
-     stroke-linejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <!-- badan user utama -->
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
 
-  <!-- badan user utama -->
-  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <!-- kepala user utama -->
+                  <circle cx="9" cy="7" r="4" />
 
-  <!-- kepala user utama -->
-  <circle cx="9" cy="7" r="4"/>
+                  <!-- badan user kedua -->
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
 
-  <!-- badan user kedua -->
-  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-
-  <!-- kepala user kedua -->
-  <path d="M16 3.13a4 4 0 1 1 0 7.75"/>
-
-</svg>
+                  <!-- kepala user kedua -->
+                  <path d="M16 3.13a4 4 0 1 1 0 7.75" />
+                </svg>
 
                 Anggota
               </th>
@@ -275,30 +348,30 @@
               <td class="col-name">
                 <div class="group-name-cell">
                   <div class="group-avatar-small">
-                    <img 
-                      v-if="group.profilePicUrl" 
-                      :src="group.profilePicUrl" 
+                    <img
+                      v-if="group.profilePicUrl"
+                      :src="group.profilePicUrl"
                       :alt="group.label"
                       @error="handleImageError"
                     />
-                    <svg v-else
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round">
-                        
+                    <svg
+                      v-else
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <!-- User utama -->
-                      <circle cx="9" cy="7" r="4"/>
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
 
                       <!-- User kedua -->
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                      <path d="M16 3.13a4 4 0 1 1 0 7.75"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 1 1 0 7.75" />
                     </svg>
-
                   </div>
                   <div class="group-name-text">
                     <span class="name-full">{{ group.label }}</span>
@@ -307,38 +380,47 @@
               </td>
               <td class="col-members">
                 <div class="members-badge">
-                  <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24"
-     fill="none"
-     stroke="currentColor"
-     stroke-width="2"
-     stroke-linecap="round"
-     stroke-linejoin="round">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <!-- badan user utama -->
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
 
-  <!-- badan user utama -->
-  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <!-- kepala user utama -->
+                    <circle cx="9" cy="7" r="4" />
 
-  <!-- kepala user utama -->
-  <circle cx="9" cy="7" r="4"/>
+                    <!-- badan user kedua -->
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
 
-  <!-- badan user kedua -->
-  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-
-  <!-- kepala user kedua -->
-  <path d="M16 3.13a4 4 0 1 1 0 7.75"/>
-
-</svg>
+                    <!-- kepala user kedua -->
+                    <path d="M16 3.13a4 4 0 1 1 0 7.75" />
+                  </svg>
 
                   {{ group.meta?.participants || 0 }}
                 </div>
               </td>
               <td class="col-actions">
                 <div class="action-buttons">
-                  <button class="btn-leave-table" @click="confirmLeaveGroup(group)" title="Keluar dari Grup">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                      <polyline points="16 17 21 12 16 7"/>
-                      <line x1="21" y1="12" x2="9" y2="12"/>
+                  <button
+                    class="btn-leave-table"
+                    @click="confirmLeaveGroup(group)"
+                    title="Keluar dari Grup"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
                     </svg>
                   </button>
                 </div>
@@ -351,12 +433,14 @@
       <!-- Pagination -->
       <div v-if="filteredGroups.length > 0" class="pagination">
         <div class="pagination-info">
-          Menampilkan <strong>{{ startIndex + 1 }}</strong> - <strong>{{ endIndex }}</strong> dari <strong>{{ filteredGroups.length }}</strong> grup
+          Menampilkan <strong>{{ startIndex + 1 }}</strong> -
+          <strong>{{ endIndex }}</strong> dari
+          <strong>{{ filteredGroups.length }}</strong> grup
         </div>
         <div class="pagination-controls">
           <button class="btn-page" :disabled="currentPage <= 1" @click="prevPage">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 18 9 12 15 6"/>
+              <polyline points="15 18 9 12 15 6" />
             </svg>
             Sebelumnya
           </button>
@@ -365,10 +449,14 @@
             <span class="page-separator">/</span>
             <span class="total-pages">{{ totalPages }}</span>
           </div>
-          <button class="btn-page" :disabled="currentPage >= totalPages" @click="nextPage">
+          <button
+            class="btn-page"
+            :disabled="currentPage >= totalPages"
+            @click="nextPage"
+          >
             Berikutnya
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"/>
+              <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
         </div>
@@ -378,8 +466,8 @@
     <!-- Empty Selection Card -->
     <div v-else class="empty-selection-card">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-        <line x1="12" y1="18" x2="12.01" y2="18"/>
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+        <line x1="12" y1="18" x2="12.01" y2="18" />
       </svg>
       <h3>Pilih Perangkat</h3>
       <p>Pilih perangkat di atas untuk melihat dan mengelola grup</p>
@@ -391,16 +479,16 @@
         <div class="modal-header">
           <h3>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="16"/>
-              <line x1="8" y1="12" x2="16" y2="12"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
             Join Grup WhatsApp
           </h3>
           <button @click="closeJoinModal" class="close-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -408,22 +496,22 @@
           <div class="form-group">
             <label>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
               </svg>
               Link Invite Grup *
             </label>
-            <input 
-              v-model="inviteLink" 
-              type="text" 
-              placeholder="https://chat.whatsapp.com/xxxxx" 
+            <input
+              v-model="inviteLink"
+              type="text"
+              placeholder="https://chat.whatsapp.com/xxxxx"
               required
             />
             <small class="help-text">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
               Paste link invite grup WhatsApp (contoh: https://chat.whatsapp.com/xxxxx)
             </small>
@@ -431,9 +519,9 @@
 
           <div v-if="joinError" class="error-message">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             {{ joinError }}
           </div>
@@ -441,22 +529,41 @@
           <div class="modal-actions">
             <button type="button" @click="closeJoinModal" class="btn-cancel">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
               </svg>
               Batal
             </button>
-            <button type="submit" :disabled="!inviteLink || joiningGroup" class="btn-submit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-if="!joiningGroup">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="16"/>
-                <line x1="8" y1="12" x2="16" y2="12"/>
+            <button
+              type="submit"
+              :disabled="!inviteLink || joiningGroup"
+              class="btn-submit"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                v-if="!joiningGroup"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning" v-else>
-                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                class="spinning"
+                v-else
+              >
+                <path
+                  d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                />
               </svg>
-              {{ joiningGroup ? 'Joining...' : 'Join Grup' }}
+              {{ joiningGroup ? "Joining..." : "Join Grup" }}
             </button>
           </div>
         </form>
@@ -464,39 +571,71 @@
     </div>
 
     <!-- Leave Confirmation Modal -->
-    <div v-if="showLeaveModal" class="modal-overlay delete-modal-overlay" @click.self="showLeaveModal = false">
+    <div
+      v-if="showLeaveModal"
+      class="modal-overlay delete-modal-overlay"
+      @click.self="showLeaveModal = false"
+    >
       <div class="delete-modal">
         <div class="delete-modal-icon">
           <div class="icon-circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 Z"/>
+              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 Z" />
             </svg>
           </div>
         </div>
-        
+
         <div class="delete-modal-content">
           <h3>Keluar dari Grup?</h3>
-          <p class="delete-warning">Anda yakin ingin keluar dari grup <strong>{{ selectedGroup?.label }}</strong>?</p>
+          <p class="delete-warning">
+            Anda yakin ingin keluar dari grup <strong>{{ selectedGroup?.label }}</strong
+            >?
+          </p>
           <p class="delete-warning">Anda perlu link invite untuk bergabung kembali.</p>
         </div>
 
         <div class="delete-modal-actions">
-          <button type="button" @click="showLeaveModal = false" class="btn-keep" :disabled="loadingGroups">
+          <button
+            type="button"
+            @click="showLeaveModal = false"
+            class="btn-keep"
+            :disabled="loadingGroups"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Batal
           </button>
-          <button type="button" @click="handleLeaveGroup" :disabled="loadingGroups" class="btn-delete-confirm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" v-if="!loadingGroups">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
+          <button
+            type="button"
+            @click="handleLeaveGroup"
+            :disabled="loadingGroups"
+            class="btn-delete-confirm"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              v-if="!loadingGroups"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning" v-else>
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="spinning"
+              v-else
+            >
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
             </svg>
-            {{ loadingGroups ? 'Keluar...' : 'Ya, Keluar' }}
+            {{ loadingGroups ? "Keluar..." : "Ya, Keluar" }}
           </button>
         </div>
       </div>
@@ -505,9 +644,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { userApi } from '../api/http.js';
-import { useToast } from '../composables/useToast';
+import { ref, computed, onMounted, watch } from "vue";
+import { userApi } from "../api/http.js";
+import { useToast } from "../composables/useToast";
 
 // ✅ Destructure fungsi yang benar dari useToast
 const { success: showSuccess, error: showError } = useToast();
@@ -515,14 +654,14 @@ const { success: showSuccess, error: showError } = useToast();
 // State
 const devices = ref([]);
 const groups = ref([]);
-const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
+const selectedDeviceId = ref(localStorage.getItem("device_selected_id") || "");
 const loadingGroups = ref(false);
-const errGroups = ref('');
-const searchQuery = ref('');
+const errGroups = ref("");
+const searchQuery = ref("");
 const showJoinModal = ref(false);
 const showLeaveModal = ref(false);
-const inviteLink = ref('');
-const joinError = ref('');
+const inviteLink = ref("");
+const joinError = ref("");
 const joiningGroup = ref(false);
 const selectedGroup = ref(null);
 
@@ -533,11 +672,12 @@ const pageSize = ref(25);
 // Computed
 const filteredGroups = computed(() => {
   if (!searchQuery.value) return groups.value;
-  
+
   const query = searchQuery.value.toLowerCase();
-  return groups.value.filter(group => 
-    group.label.toLowerCase().includes(query) ||
-    group.value.toLowerCase().includes(query)
+  return groups.value.filter(
+    (group) =>
+      group.label.toLowerCase().includes(query) ||
+      group.value.toLowerCase().includes(query)
   );
 });
 
@@ -569,17 +709,21 @@ watch([searchQuery, pageSize], () => {
 // Methods
 const fetchDevices = async () => {
   try {
-    const { data } = await userApi.get('/devices');
+    const { data } = await userApi.get("/devices");
     devices.value = Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Error fetching devices:', error);
+    console.error("Error fetching devices:", error);
     devices.value = [];
   }
 };
 
 const onDeviceChange = () => {
-  localStorage.setItem('device_selected_id', selectedDeviceId.value);
+  localStorage.setItem("device_selected_id", selectedDeviceId.value);
   currentPage.value = 1;
+  
+  // ✅ Dispatch custom event untuk Dashboard.vue
+  window.dispatchEvent(new Event('deviceChanged'));
+  
   loadGroups();
 };
 
@@ -590,28 +734,38 @@ const loadGroups = async ({ force = false } = {}) => {
   }
 
   loadingGroups.value = true;
-  errGroups.value = '';
+  errGroups.value = "";
 
   try {
-    const { data } = await userApi.get(`/whatsapp-groups/device/${selectedDeviceId.value}/active`);
-    
-    console.log('Raw API Response:', data); // Debug log
-    
+    const { data } = await userApi.get(
+      `/whatsapp-groups/device/${selectedDeviceId.value}/active`
+    );
+
+    // console.log('Raw API Response:', data); // Debug log
+
     if (data && data.status && Array.isArray(data.data)) {
       // Transform data to ensure label and value exist
-      groups.value = data.data.map(group => {
-        console.log('Processing group:', group); // Debug individual group
-        
+      groups.value = data.data.map((group) => {
+        // console.log("Processing group:", group); // Debug individual group
+
         // Try different possible field names for group name
-        const groupName = group.name || group.subject || group.label || group.groupName || group.title || 'Unknown Group';
-        
+        const groupName =
+          group.name ||
+          group.subject ||
+          group.label ||
+          group.groupName ||
+          group.title ||
+          "Unknown Group";
+
         // Try different possible field names for group ID
-        const groupId = group.id || group.groupId || group.value || group._id || '';
-        
+        const groupId = group.id || group.groupId || group.value || group._id || "";
+
         // Try different possible field names for participants
         let participantCount = 0;
         if (group.participants) {
-          participantCount = Array.isArray(group.participants) ? group.participants.length : group.participants;
+          participantCount = Array.isArray(group.participants)
+            ? group.participants.length
+            : group.participants;
         } else if (group.participantCount !== undefined) {
           participantCount = group.participantCount;
         } else if (group.meta?.participants !== undefined) {
@@ -619,31 +773,37 @@ const loadGroups = async ({ force = false } = {}) => {
         } else if (group.size !== undefined) {
           participantCount = group.size;
         }
-        
+
         // Try different possible field names for profile picture
-        const profilePicUrl = group.profilePicUrl || group.pictureUrl || group.picture || group.avatar || group.imgUrl || null;
-        
+        const profilePicUrl =
+          group.profilePicUrl ||
+          group.pictureUrl ||
+          group.picture ||
+          group.avatar ||
+          group.imgUrl ||
+          null;
+
         return {
           label: groupName,
           value: groupId,
           profilePicUrl: profilePicUrl,
           meta: {
-            participants: participantCount
+            participants: participantCount,
           },
           // Keep original data for reference
-          _original: group
+          _original: group,
         };
       });
-      
-      console.log('Transformed groups:', groups.value); // Debug log
-      console.log('First group sample:', groups.value[0]); // Debug first group
+
+      // console.log("Transformed groups:", groups.value); // Debug log
+      // console.log("First group sample:", groups.value[0]); // Debug first group
     } else {
-      console.log('Invalid data structure:', data);
+      // console.log("Invalid data structure:", data);
       groups.value = [];
     }
   } catch (error) {
-    console.error('Error loading groups:', error);
-    errGroups.value = error?.response?.data?.message || 'Gagal memuat grup';
+    console.error("Error loading groups:", error);
+    errGroups.value = error?.response?.data?.message || "Gagal memuat grup";
     groups.value = [];
   } finally {
     loadingGroups.value = false;
@@ -652,24 +812,28 @@ const loadGroups = async ({ force = false } = {}) => {
 
 const handleSync = async () => {
   if (!selectedDeviceId.value) {
-    showError('Pilih perangkat terlebih dahulu');
+    showError("Pilih perangkat terlebih dahulu");
     return;
   }
 
   loadingGroups.value = true;
-  
+
   try {
-    const { data } = await userApi.post(`/whatsapp-groups/device/${selectedDeviceId.value}/sync`);
-    
+    const { data } = await userApi.post(
+      `/whatsapp-groups/device/${selectedDeviceId.value}/sync`
+    );
+
     if (data && data.status) {
-      showSuccess(data.message || 'Grup berhasil disinkronkan!');
+      showSuccess(data.message || "Grup berhasil disinkronkan!");
       await loadGroups({ force: true });
     } else {
-      throw new Error(data?.message || 'Gagal sinkronisasi grup');
+      throw new Error(data?.message || "Gagal sinkronisasi grup");
     }
   } catch (error) {
-    console.error('Error syncing groups:', error);
-    showError(error?.response?.data?.message || error.message || 'Gagal sinkronisasi grup');
+    console.error("Error syncing groups:", error);
+    showError(
+      error?.response?.data?.message || error.message || "Gagal sinkronisasi grup"
+    );
   } finally {
     loadingGroups.value = false;
   }
@@ -677,62 +841,67 @@ const handleSync = async () => {
 
 const closeJoinModal = () => {
   showJoinModal.value = false;
-  inviteLink.value = '';
-  joinError.value = '';
+  inviteLink.value = "";
+  joinError.value = "";
 };
 
 const handleJoinGroup = async () => {
   if (!inviteLink.value) {
-    joinError.value = 'Link invite harus diisi';
+    joinError.value = "Link invite harus diisi";
     return;
   }
 
   if (!selectedDeviceId.value) {
-    joinError.value = 'Pilih perangkat terlebih dahulu';
+    joinError.value = "Pilih perangkat terlebih dahulu";
     return;
   }
 
   // Validasi format link
   const inviteLinkPattern = /https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+/;
   if (!inviteLinkPattern.test(inviteLink.value)) {
-    joinError.value = 'Format link invite tidak valid. Gunakan link dari WhatsApp (contoh: https://chat.whatsapp.com/xxxxx)';
+    joinError.value =
+      "Format link invite tidak valid. Gunakan link dari WhatsApp (contoh: https://chat.whatsapp.com/xxxxx)";
     return;
   }
 
-  joinError.value = '';
+  joinError.value = "";
   joiningGroup.value = true;
 
   try {
     // Extract invite code from link
-    const inviteCode = inviteLink.value.split('chat.whatsapp.com/')[1];
-    
-    const { data } = await userApi.post(`/whatsapp-groups/device/${selectedDeviceId.value}/join`, {
-      inviteLink: inviteLink.value,
-      inviteCode: inviteCode
-    });
+    const inviteCode = inviteLink.value.split("chat.whatsapp.com/")[1];
+
+    const { data } = await userApi.post(
+      `/whatsapp-groups/device/${selectedDeviceId.value}/join`,
+      {
+        inviteLink: inviteLink.value,
+        inviteCode: inviteCode,
+      }
+    );
 
     if (data && data.status) {
-      showSuccess(data.message || 'Berhasil join grup!');
+      showSuccess(data.message || "Berhasil join grup!");
       closeJoinModal();
       // Reload groups after successful join
       await loadGroups({ force: true });
     } else {
-      throw new Error(data?.message || 'Gagal join grup');
+      throw new Error(data?.message || "Gagal join grup");
     }
   } catch (error) {
-    console.error('Error joining group:', error);
-    let errorMsg = 'Gagal join grup';
-    
+    console.error("Error joining group:", error);
+    let errorMsg = "Gagal join grup";
+
     if (error?.response?.data?.message) {
       errorMsg = error.response.data.message;
     } else if (error?.response?.status === 404) {
-      errorMsg = 'WhatsApp session tidak ditemukan. Silakan sambungkan WhatsApp terlebih dahulu.';
+      errorMsg =
+        "WhatsApp session tidak ditemukan. Silakan sambungkan WhatsApp terlebih dahulu.";
     } else if (error?.response?.status === 400) {
-      errorMsg = 'Link invite tidak valid atau grup tidak ditemukan.';
+      errorMsg = "Link invite tidak valid atau grup tidak ditemukan.";
     } else if (error?.message) {
       errorMsg = error.message;
     }
-    
+
     joinError.value = errorMsg;
     showError(errorMsg);
   } finally {
@@ -748,58 +917,67 @@ const confirmLeaveGroup = (group) => {
 const handleLeaveGroup = async () => {
   if (!selectedGroup.value || !selectedDeviceId.value) return;
 
-  console.log('=== ATTEMPTING TO LEAVE GROUP ===');
-  console.log('Selected Group:', selectedGroup.value);
-  console.log('Group JID:', selectedGroup.value.value);
-  console.log('Device ID:', selectedDeviceId.value);
+  // console.log("=== ATTEMPTING TO LEAVE GROUP ===");
+  // console.log("Selected Group:", selectedGroup.value);
+  // console.log("Group JID:", selectedGroup.value.value);
+  // console.log("Device ID:", selectedDeviceId.value);
 
   // Validate Group JID format
   const groupJid = selectedGroup.value.value;
-  if (!groupJid || !groupJid.includes('@g.us')) {
-    console.error('Invalid Group JID format:', groupJid);
-    showError('Format Group ID tidak valid. Pastikan ini adalah grup WhatsApp yang valid.');
+  if (!groupJid || !groupJid.includes("@g.us")) {
+    console.error("Invalid Group JID format:", groupJid);
+    showError(
+      "Format Group ID tidak valid. Pastikan ini adalah grup WhatsApp yang valid."
+    );
     return;
   }
 
   loadingGroups.value = true;
 
   try {
-    console.log('Sending leave request to:', `/whatsapp-groups/device/${selectedDeviceId.value}/leave/${groupJid}`);
-    
-    const { data } = await userApi.post(`/whatsapp-groups/device/${selectedDeviceId.value}/leave/${groupJid}`);
+    // console.log(
+    //   "Sending leave request to:",
+    //   `/whatsapp-groups/device/${selectedDeviceId.value}/leave/${groupJid}`
+    // );
 
-    console.log('Leave response:', data);
+    const { data } = await userApi.post(
+      `/whatsapp-groups/device/${selectedDeviceId.value}/leave/${groupJid}`
+    );
+
+    // console.log("Leave response:", data);
 
     if (data && data.status) {
-      showSuccess(data.message || `Berhasil keluar dari grup ${selectedGroup.value.label}`);
+      showSuccess(
+        data.message || `Berhasil keluar dari grup ${selectedGroup.value.label}`
+      );
       showLeaveModal.value = false;
       selectedGroup.value = null;
-      
-      console.log('Waiting 2 seconds before reloading groups...');
+
+      // console.log("Waiting 2 seconds before reloading groups...");
       // Wait a bit for WhatsApp to sync
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // Reload groups after leaving
-      console.log('Reloading groups...');
+      // console.log("Reloading groups...");
       await loadGroups({ force: true });
-      console.log('Groups reloaded successfully');
+      // console.log("Groups reloaded successfully");
     } else {
-      throw new Error(data?.message || 'Gagal keluar dari grup');
+      throw new Error(data?.message || "Gagal keluar dari grup");
     }
   } catch (error) {
-    console.error('=== ERROR LEAVING GROUP ===');
-    console.error('Error object:', error);
-    console.error('Error response:', error?.response);
-    console.error('Error data:', error?.response?.data);
-    
-    let errorMsg = 'Gagal keluar dari grup';
-    
+    console.error("=== ERROR LEAVING GROUP ===");
+    console.error("Error object:", error);
+    console.error("Error response:", error?.response);
+    console.error("Error data:", error?.response?.data);
+
+    let errorMsg = "Gagal keluar dari grup";
+
     if (error?.response?.data?.message) {
       errorMsg = error.response.data.message;
     } else if (error?.message) {
       errorMsg = error.message;
     }
-    
+
     showError(errorMsg);
   } finally {
     loadingGroups.value = false;
@@ -828,7 +1006,7 @@ onMounted(async () => {
 
 const handleImageError = (event) => {
   // Hide the image if it fails to load
-  event.target.style.display = 'none';
+  event.target.style.display = "none";
 };
 </script>
 
@@ -1221,8 +1399,12 @@ const handleImageError = (event) => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {
@@ -1744,8 +1926,12 @@ const handleImageError = (event) => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .delete-modal {
@@ -1802,7 +1988,7 @@ const handleImageError = (event) => {
 }
 
 .icon-circle::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 100%;
   height: 100%;

@@ -10,7 +10,7 @@ export function setToastInstance(instance) {
 export function useToast() {
   const show = (message, type = 'info', duration = 3000) => {
     if (!toastInstance) {
-      console.warn('Toast instance not found. Make sure ToastContainer is mounted in App.vue');
+      // console.warn('Toast instance not found. Make sure ToastContainer is mounted in App.vue');
       return;
     }
     return toastInstance.addToast({ message, type, duration });

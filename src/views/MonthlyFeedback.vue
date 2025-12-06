@@ -3,16 +3,26 @@
     <div class="page-header">
       <div class="header-content">
         <h2>
-          <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            class="header-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <!-- Clipboard dengan checklist untuk feedback -->
-            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-            <rect x="9" y="3" width="6" height="4" rx="1"/>
-            <path d="M9 12l2 2 4-4"/>
-            <line x1="9" y1="17" x2="15" y2="17"/>
+            <path
+              d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+            />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <path d="M9 12l2 2 4-4" />
+            <line x1="9" y1="17" x2="15" y2="17" />
           </svg>
           Feedback Bulanan (Algo)
         </h2>
-        <p class="subtitle">Buat dan kirim feedback bulanan dalam format PDF ke WhatsApp siswa</p>
+        <p class="subtitle">
+          Buat dan kirim feedback bulanan dalam format PDF ke WhatsApp siswa
+        </p>
       </div>
     </div>
 
@@ -25,9 +35,14 @@
           <div class="card card-compact">
             <div class="card-header card-header-compact">
               <h3 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                 </svg>
                 Device WhatsApp
               </h3>
@@ -35,19 +50,36 @@
             <div class="card-body card-body-compact">
               <!-- Device Info Card Compact -->
               <div v-if="selectedDevice && !showDeviceList" class="device-info-compact">
-                <div class="device-avatar-compact" :class="{ 'online': selectedDevice.isConnected }">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-                    <line x1="12" y1="18" x2="12.01" y2="18"/>
+                <div
+                  class="device-avatar-compact"
+                  :class="{ online: selectedDevice.isConnected }"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                    <line x1="12" y1="18" x2="12.01" y2="18" />
                   </svg>
                 </div>
                 <div class="device-info-text">
-                  <div class="device-name-compact">{{ selectedDevice.name || 'Unknown' }}</div>
-                  <div class="device-status-compact" :class="{ 'online': selectedDevice.isConnected }">
-                    {{ selectedDevice.isConnected ? '● Online' : '● Offline' }}
+                  <div class="device-name-compact">
+                    {{ selectedDevice.name || "Unknown" }}
+                  </div>
+                  <div
+                    class="device-status-compact"
+                    :class="{ online: selectedDevice.isConnected }"
+                  >
+                    {{ selectedDevice.isConnected ? "● Online" : "● Offline" }}
                   </div>
                 </div>
-                <button type="button" class="btn-change-compact" @click="showDeviceList = true">
+                <button
+                  type="button"
+                  class="btn-change-compact"
+                  @click="showDeviceList = true"
+                >
                   Ganti
                 </button>
               </div>
@@ -67,11 +99,11 @@
                   :key="device.id"
                   type="button"
                   class="device-item-compact"
-                  :class="{ 'online': device.isConnected }"
+                  :class="{ online: device.isConnected }"
                   @click="handleSelectDevice(device.id)"
                 >
                   <span>{{ device.name }}</span>
-                  <span class="status-dot" :class="{ 'online': device.isConnected }"></span>
+                  <span class="status-dot" :class="{ online: device.isConnected }"></span>
                 </button>
               </div>
             </div>
@@ -84,24 +116,47 @@
             </div>
             <div class="card-body card-body-compact">
               <div class="form-group form-group-compact">
-                <label class="form-label">Nama Siswa <span class="required">*</span></label>
-                <input v-model="form.studentName" placeholder="Nama siswa" required class="form-input form-input-compact" />
+                <label class="form-label"
+                  >Nama Siswa <span class="required">*</span></label
+                >
+                <input
+                  v-model="form.studentName"
+                  placeholder="Nama siswa"
+                  required
+                  class="form-input form-input-compact"
+                />
               </div>
 
               <div class="form-grid-2">
                 <div class="form-group form-group-compact">
                   <label class="form-label">Kursus <span class="required">*</span></label>
-                  <select v-model="form.courseName" required class="form-select form-input-compact" @change="onCourseChange">
+                  <select
+                    v-model="form.courseName"
+                    required
+                    class="form-select form-input-compact"
+                    @change="onCourseChange"
+                  >
                     <option value="" disabled>Pilih kursus...</option>
-                    <option v-for="course in courses" :key="course" :value="course">{{ course }}</option>
+                    <option v-for="course in courses" :key="course" :value="course">
+                      {{ course }}
+                    </option>
                   </select>
                 </div>
 
                 <div class="form-group form-group-compact">
-                  <label class="form-label">Bulan Ke <span class="required">*</span></label>
-                  <select v-model.number="form.month" required class="form-select form-input-compact" @change="onMonthChange">
+                  <label class="form-label"
+                    >Bulan Ke <span class="required">*</span></label
+                  >
+                  <select
+                    v-model.number="form.month"
+                    required
+                    class="form-select form-input-compact"
+                    @change="onMonthChange"
+                  >
                     <option value="" disabled>Pilih...</option>
-                    <option v-for="m in availableMonths" :key="m" :value="m">Bulan {{ m }}</option>
+                    <option v-for="m in availableMonths" :key="m" :value="m">
+                      Bulan {{ m }}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -127,13 +182,29 @@
             </div>
             <div class="card-body card-body-compact">
               <div class="form-group form-group-compact">
-                <label class="form-label">Link YouTube <span class="required">*</span></label>
-                <input v-model="form.youtubeLink" placeholder="https://youtu.be/..." type="url" required class="form-input form-input-compact" />
+                <label class="form-label"
+                  >Link YouTube <span class="required">*</span></label
+                >
+                <input
+                  v-model="form.youtubeLink"
+                  placeholder="https://youtu.be/..."
+                  type="url"
+                  required
+                  class="form-input form-input-compact"
+                />
               </div>
 
               <div class="form-group form-group-compact">
-                <label class="form-label">Link Referral <span class="required">*</span></label>
-                <input v-model="form.referralLink" placeholder="https://algonova.id/invite?..." type="url" required class="form-input form-input-compact" />
+                <label class="form-label"
+                  >Link Referral <span class="required">*</span></label
+                >
+                <input
+                  v-model="form.referralLink"
+                  placeholder="https://algonova.id/invite?..."
+                  type="url"
+                  required
+                  class="form-input form-input-compact"
+                />
               </div>
             </div>
           </div>
@@ -142,12 +213,24 @@
           <div class="card card-compact">
             <div class="card-header card-header-compact">
               <h3>Rating & Laporan</h3>
-              <button type="button" class="btn-clear-data" @click="clearSavedData" title="Hapus semua data tersimpan">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                  <line x1="10" y1="11" x2="10" y2="17"/>
-                  <line x1="14" y1="11" x2="14" y2="17"/>
+              <button
+                type="button"
+                class="btn-clear-data"
+                @click="clearSavedData"
+                title="Hapus semua data tersimpan"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
                 </svg>
                 Clear Data
               </button>
@@ -156,13 +239,27 @@
               <div class="form-group form-group-compact">
                 <label class="form-label">Rating <span class="required">*</span></label>
                 <div class="rating-stars">
-                  <span v-for="star in 5" :key="star" class="star" :class="{ 'filled': star <= form.rating }" @click="form.rating = star">★</span>
+                  <span
+                    v-for="star in 5"
+                    :key="star"
+                    class="star"
+                    :class="{ filled: star <= form.rating }"
+                    @click="form.rating = star"
+                    >★</span
+                  >
                 </div>
               </div>
 
               <div class="form-group form-group-compact">
-                <label class="form-label">Laporan Dibuat Oleh <span class="required">*</span></label>
-                <input v-model="form.reportBy" placeholder="Nama tutor" required class="form-input form-input-compact" />
+                <label class="form-label"
+                  >Laporan Dibuat Oleh <span class="required">*</span></label
+                >
+                <input
+                  v-model="form.reportBy"
+                  placeholder="Nama tutor"
+                  required
+                  class="form-input form-input-compact"
+                />
               </div>
             </div>
           </div>
@@ -174,7 +271,9 @@
           <div class="card card-compact card-full-height">
             <div class="card-header card-header-compact">
               <h3>Pilih Komentar</h3>
-              <span class="selected-count-badge">{{ form.selectedComments.length }} / 3</span>
+              <span class="selected-count-badge"
+                >{{ form.selectedComments.length }} / 3</span
+              >
             </div>
             <div class="card-body card-body-compact">
               <!-- 🆕 Checkbox Komentar -->
@@ -182,22 +281,32 @@
                 <!-- Kehadiran -->
                 <div class="comment-category">
                   <h4 class="category-title">Kehadiran</h4>
-                  <div 
-                    v-for="comment in commentCategories.kehadiran" 
-                    :key="comment.id" 
+                  <div
+                    v-for="comment in commentCategories.kehadiran"
+                    :key="comment.id"
                     class="comment-item"
-                    :class="{ 'selected': form.selectedComments.includes(comment.id) }"
+                    :class="{ selected: form.selectedComments.includes(comment.id) }"
                   >
                     <label class="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        :id="comment.id" 
-                        :value="comment.id" 
+                      <input
+                        type="checkbox"
+                        :id="comment.id"
+                        :value="comment.id"
                         :checked="form.selectedComments.includes(comment.id)"
-                        @change="toggleComment(comment.id)" 
-                        :disabled="!form.selectedComments.includes(comment.id) && form.selectedComments.length >= 3"
+                        @change="toggleComment(comment.id)"
+                        :disabled="
+                          !form.selectedComments.includes(comment.id) &&
+                          form.selectedComments.length >= 3
+                        "
                       />
-                      <span class="checkbox-text">{{ replaceNameInComment(comment.text, form.studentName || 'Siswa').substring(0, 100) }}...</span>
+                      <span class="checkbox-text"
+                        >{{
+                          replaceNameInComment(
+                            comment.text,
+                            form.studentName || "Siswa"
+                          ).substring(0, 100)
+                        }}...</span
+                      >
                     </label>
                   </div>
                 </div>
@@ -205,22 +314,32 @@
                 <!-- Keterlibatan & Kesulitan -->
                 <div class="comment-category">
                   <h4 class="category-title">Keterlibatan & Kesulitan</h4>
-                  <div 
-                    v-for="comment in commentCategories.keterlibatan" 
-                    :key="comment.id" 
+                  <div
+                    v-for="comment in commentCategories.keterlibatan"
+                    :key="comment.id"
                     class="comment-item"
-                    :class="{ 'selected': form.selectedComments.includes(comment.id) }"
+                    :class="{ selected: form.selectedComments.includes(comment.id) }"
                   >
                     <label class="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        :id="comment.id" 
-                        :value="comment.id" 
+                      <input
+                        type="checkbox"
+                        :id="comment.id"
+                        :value="comment.id"
                         :checked="form.selectedComments.includes(comment.id)"
-                        @change="toggleComment(comment.id)" 
-                        :disabled="!form.selectedComments.includes(comment.id) && form.selectedComments.length >= 3"
+                        @change="toggleComment(comment.id)"
+                        :disabled="
+                          !form.selectedComments.includes(comment.id) &&
+                          form.selectedComments.length >= 3
+                        "
                       />
-                      <span class="checkbox-text">{{ replaceNameInComment(comment.text, form.studentName || 'Siswa').substring(0, 100) }}...</span>
+                      <span class="checkbox-text"
+                        >{{
+                          replaceNameInComment(
+                            comment.text,
+                            form.studentName || "Siswa"
+                          ).substring(0, 100)
+                        }}...</span
+                      >
                     </label>
                   </div>
                 </div>
@@ -228,22 +347,32 @@
                 <!-- Penyelesaian Tugas -->
                 <div class="comment-category">
                   <h4 class="category-title">Penyelesaian Tugas</h4>
-                  <div 
-                    v-for="comment in commentCategories.penyelesaian" 
-                    :key="comment.id" 
+                  <div
+                    v-for="comment in commentCategories.penyelesaian"
+                    :key="comment.id"
                     class="comment-item"
-                    :class="{ 'selected': form.selectedComments.includes(comment.id) }"
+                    :class="{ selected: form.selectedComments.includes(comment.id) }"
                   >
                     <label class="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        :id="comment.id" 
-                        :value="comment.id" 
+                      <input
+                        type="checkbox"
+                        :id="comment.id"
+                        :value="comment.id"
                         :checked="form.selectedComments.includes(comment.id)"
-                        @change="toggleComment(comment.id)" 
-                        :disabled="!form.selectedComments.includes(comment.id) && form.selectedComments.length >= 3"
+                        @change="toggleComment(comment.id)"
+                        :disabled="
+                          !form.selectedComments.includes(comment.id) &&
+                          form.selectedComments.length >= 3
+                        "
                       />
-                      <span class="checkbox-text">{{ replaceNameInComment(comment.text, form.studentName || 'Siswa').substring(0, 100) }}...</span>
+                      <span class="checkbox-text"
+                        >{{
+                          replaceNameInComment(
+                            comment.text,
+                            form.studentName || "Siswa"
+                          ).substring(0, 100)
+                        }}...</span
+                      >
                     </label>
                   </div>
                 </div>
@@ -251,24 +380,27 @@
                 <!-- Custom -->
                 <div class="comment-category">
                   <h4 class="category-title">Custom</h4>
-                  <div 
-                    v-for="comment in commentCategories.custom" 
-                    :key="comment.id" 
+                  <div
+                    v-for="comment in commentCategories.custom"
+                    :key="comment.id"
                     class="comment-item"
-                    :class="{ 'selected': form.selectedComments.includes(comment.id) }"
+                    :class="{ selected: form.selectedComments.includes(comment.id) }"
                   >
                     <label class="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        :id="comment.id" 
-                        :value="comment.id" 
+                      <input
+                        type="checkbox"
+                        :id="comment.id"
+                        :value="comment.id"
                         :checked="form.selectedComments.includes(comment.id)"
-                        @change="toggleComment(comment.id)" 
-                        :disabled="!form.selectedComments.includes(comment.id) && form.selectedComments.length >= 3"
+                        @change="toggleComment(comment.id)"
+                        :disabled="
+                          !form.selectedComments.includes(comment.id) &&
+                          form.selectedComments.length >= 3
+                        "
                       />
                       <div class="custom-textarea-wrapper">
-                        <textarea 
-                          v-model="comment.text" 
+                        <textarea
+                          v-model="comment.text"
                           @input="updateCustomComment(comment.id, comment.text)"
                           placeholder="Tulis komentar custom..."
                           class="custom-textarea-inline"
@@ -276,7 +408,10 @@
                           maxlength="220"
                           :disabled="!form.selectedComments.includes(comment.id)"
                         ></textarea>
-                        <div class="custom-char-count" :class="{ 'limit-reached': comment.text.length >= 220 }">
+                        <div
+                          class="custom-char-count"
+                          :class="{ 'limit-reached': comment.text.length >= 220 }"
+                        >
                           {{ comment.text.length }}/220 karakter
                         </div>
                       </div>
@@ -295,14 +430,16 @@
           <div class="card-header card-header-compact">
             <h3 class="card-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               Penerima
             </h3>
-            <span v-if="recipients.length > 0" class="badge-count">{{ recipients.length }} dipilih</span>
+            <span v-if="recipients.length > 0" class="badge-count"
+              >{{ recipients.length }} dipilih</span
+            >
           </div>
           <div class="card-body card-body-compact">
             <!-- Selected Recipients -->
@@ -311,9 +448,14 @@
                 <span v-for="(r, i) in recipients" :key="r + i" class="recipient-chip">
                   <span class="chip-label">{{ chipLabel(r) }}</span>
                   <button type="button" class="chip-close" @click="removeRecipient(i)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
                   </button>
                 </span>
@@ -322,55 +464,79 @@
 
             <!-- Add Recipients Tabs -->
             <div class="recipient-tabs">
-              <button 
+              <button
                 type="button"
                 class="recipient-tab"
                 :class="{ active: activeTab === 'manual' }"
                 @click="activeTab = 'manual'"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0-2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0-2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
                 Manual
               </button>
-              <button 
+              <button
                 type="button"
                 class="recipient-tab"
                 :class="{ active: activeTab === 'contacts' }"
                 @click="activeTab = 'contacts'"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
                 </svg>
                 Kontak
               </button>
-              <button 
+              <button
                 type="button"
                 class="recipient-tab"
                 :class="{ active: activeTab === 'groups' }"
                 @click="activeTab = 'groups'"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-     stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-  <circle cx="9" cy="7" r="4"/>
-  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-</svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
 
                 Grup
               </button>
-              <button 
+              <button
                 type="button"
                 class="recipient-tab"
                 :class="{ active: activeTab === 'labels' }"
                 @click="activeTab = 'labels'"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+                  />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
                 </svg>
                 Label
               </button>
@@ -387,10 +553,19 @@
                     placeholder="628123456789 (pisahkan dengan koma untuk banyak nomor)"
                     class="form-input"
                   />
-                  <button type="button" class="btn-primary" @click="addRecipientsFromInput">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    @click="addRecipientsFromInput"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                     Tambah
                   </button>
@@ -406,16 +581,39 @@
                       {{ contactDisplay(c) }}
                     </option>
                   </select>
-                  <button type="button" class="btn-primary" @click="addSelectedContact" :disabled="!selectedContactId">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    @click="addSelectedContact"
+                    :disabled="!selectedContactId"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                     Tambah
                   </button>
-                  <button type="button" class="btn-secondary" @click="loadContacts" :disabled="loadingContacts">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingContacts }">
-                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    @click="loadContacts"
+                    :disabled="loadingContacts"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      :class="{ spinning: loadingContacts }"
+                    >
+                      <path
+                        d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -426,18 +624,43 @@
                 <div class="input-with-button">
                   <select v-model="selectedGroupId" class="form-select">
                     <option value="" disabled>Pilih grup...</option>
-                    <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
+                    <option v-for="g in groups" :key="g.value" :value="g.value">
+                      {{ g.label }}
+                    </option>
                   </select>
-                  <button type="button" class="btn-primary" @click="addSelectedGroup" :disabled="!selectedGroupId">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    @click="addSelectedGroup"
+                    :disabled="!selectedGroupId"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                     Tambah
                   </button>
-                  <button type="button" class="btn-secondary" @click="loadGroups" :disabled="loadingGroups">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingGroups }">
-                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    @click="loadGroups"
+                    :disabled="loadingGroups"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      :class="{ spinning: loadingGroups }"
+                    >
+                      <path
+                        d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -448,18 +671,43 @@
                 <div class="input-with-button">
                   <select v-model="selectedLabelValue" class="form-select">
                     <option value="" disabled>Pilih label...</option>
-                    <option v-for="l in labels" :key="l.value" :value="l.value">{{ l.label }}</option>
+                    <option v-for="l in labels" :key="l.value" :value="l.value">
+                      {{ l.label }}
+                    </option>
                   </select>
-                  <button type="button" class="btn-primary" @click="addSelectedLabel" :disabled="!selectedLabelValue">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    @click="addSelectedLabel"
+                    :disabled="!selectedLabelValue"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                     Tambah
                   </button>
-                  <button type="button" class="btn-secondary" @click="loadLabels" :disabled="loadingLabels">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loadingLabels }">
-                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    @click="loadLabels"
+                    :disabled="loadingLabels"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      :class="{ spinning: loadingLabels }"
+                    >
+                      <path
+                        d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -471,29 +719,29 @@
 
       <!-- Action Buttons -->
       <div class="action-buttons-compact">
-        <button 
-          type="button" 
-          class="btn-preview-compact" 
+        <button
+          type="button"
+          class="btn-preview-compact"
           @click="showPreview = true"
           :disabled="!isFormValid || generating"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
           </svg>
           Preview
         </button>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           class="btn-submit-compact"
           :disabled="!isFormValid || sending"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 2L11 13"/>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+            <path d="M22 2L11 13" />
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
           </svg>
-          {{ sending ? 'Mengirim...' : 'Kirim PDF' }}
+          {{ sending ? "Mengirim..." : "Kirim PDF" }}
         </button>
       </div>
 
@@ -509,18 +757,18 @@
           <h3>Preview Feedback Bulanan</h3>
           <button class="btn-close" @click="showPreview = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-        
+
         <div class="modal-body">
           <div v-if="generating" class="preview-loading">
             <div class="spinner"></div>
             <p>Generating PDF preview...</p>
           </div>
-          
+
           <!-- PDF Preview -->
           <div v-else-if="previewData" class="pdf-preview-container">
             <MonthlyFeedbackPDFTemplate :data="previewData" ref="pdfTemplate" />
@@ -528,8 +776,8 @@
 
           <div v-else class="preview-empty">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
             </svg>
             <p>Isi form untuk melihat preview</p>
           </div>
@@ -537,20 +785,28 @@
 
         <div class="modal-footer">
           <button class="btn-secondary" @click="showPreview = false">Tutup</button>
-          <button class="btn-download" @click="handleDownloadPDF" :disabled="!previewData || generating">
+          <button
+            class="btn-download"
+            @click="handleDownloadPDF"
+            :disabled="!previewData || generating"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {{ generating ? 'Generating...' : 'Download PDF' }}
+            {{ generating ? "Generating..." : "Download PDF" }}
           </button>
-          <button class="btn-primary" @click="handleGenerateAndSend" :disabled="!previewData || sending">
+          <button
+            class="btn-primary"
+            @click="handleGenerateAndSend"
+            :disabled="!previewData || sending"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 2L11 13"/>
-              <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+              <path d="M22 2L11 13" />
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" />
             </svg>
-            {{ sending ? 'Mengirim...' : 'Kirim Sekarang' }}
+            {{ sending ? "Mengirim..." : "Kirim Sekarang" }}
           </button>
         </div>
       </div>
@@ -559,64 +815,64 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { userApi } from '../api/http.js';
-import { useToast } from '../composables/useToast.js';
-import { useDevices } from '../composables/useDevices.js';
-import { useGroups } from '../composables/useGroups.js';
-import MonthlyFeedbackPDFTemplate from '../components/MonthlyFeedbackPDFTemplate.vue';
-import { getImagesAsBase64 } from '../utils/images.js';
-import html2pdf from 'html2pdf.js';
+import { ref, computed, onMounted, watch } from "vue";
+import { userApi } from "../api/http.js";
+import { useToast } from "../composables/useToast.js";
+import { useDevices } from "../composables/useDevices.js";
+import { useGroups } from "../composables/useGroups.js";
+import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
+import { getImagesAsBase64 } from "../utils/images.js";
+import html2pdf from "html2pdf.js";
 
 const toast = useToast();
 
 // 🆕 Fungsi helper untuk mengubah string menjadi Title Case
 const toTitleCase = (str) => {
-  if (!str) return '';
+  if (!str) return "";
   return str
     .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 };
 
 // 🆕 Use device composable
-const { 
-  selectedDeviceId, 
-  selectedDevice, 
-  availableDevices, 
-  loading: loadingDevices, 
-  loadDevices, 
-  selectDevice 
+const {
+  selectedDeviceId,
+  selectedDevice,
+  availableDevices,
+  loading: loadingDevices,
+  loadDevices,
+  selectDevice,
 } = useDevices();
 
 const form = ref({
-  studentName: '',
-  courseName: '',
+  studentName: "",
+  courseName: "",
   month: null,
-  duration: '',
-  youtubeLink: '',
-  referralLink: '',
-  tutorComment: '',
-  recipientPhone: '',
-  deviceId: '',
+  duration: "",
+  youtubeLink: "",
+  referralLink: "",
+  tutorComment: "",
+  recipientPhone: "",
+  deviceId: "",
   // 🆕 New fields
   rating: 5, // Default 5 bintang
-  reportBy: '', // Laporan dibuat oleh
-  selectedComments: [] // Array untuk menyimpan checkbox yang dipilih
+  reportBy: "", // Laporan dibuat oleh
+  selectedComments: [], // Array untuk menyimpan checkbox yang dipilih
 });
 
 // 🆕 LocalStorage keys (PINDAH KE SINI - setelah form didefinisikan)
 const STORAGE_KEYS = {
-  STUDENT_NAME: 'monthlyFeedback_studentName',
-  COURSE_NAME: 'monthlyFeedback_courseName',
-  MONTH: 'monthlyFeedback_month',
-  YOUTUBE_LINK: 'monthlyFeedback_youtubeLink',
-  REFERRAL_LINK: 'monthlyFeedback_referralLink',
-  REPORT_BY: 'monthlyFeedback_reportBy',
-  RATING: 'monthlyFeedback_rating',
-  SELECTED_COMMENTS: 'monthlyFeedback_selectedComments',
-  CUSTOM_COMMENTS: 'monthlyFeedback_customComments' // 🔥 TAMBAH: Key untuk menyimpan teks custom comments
+  STUDENT_NAME: "monthlyFeedback_studentName",
+  COURSE_NAME: "monthlyFeedback_courseName",
+  MONTH: "monthlyFeedback_month",
+  YOUTUBE_LINK: "monthlyFeedback_youtubeLink",
+  REFERRAL_LINK: "monthlyFeedback_referralLink",
+  REPORT_BY: "monthlyFeedback_reportBy",
+  RATING: "monthlyFeedback_rating",
+  SELECTED_COMMENTS: "monthlyFeedback_selectedComments",
+  CUSTOM_COMMENTS: "monthlyFeedback_customComments", // 🔥 TAMBAH: Key untuk menyimpan teks custom comments
 };
 
 // 🆕 Fungsi untuk load data dari localStorage
@@ -631,7 +887,7 @@ const loadSavedData = () => {
     const savedRating = localStorage.getItem(STORAGE_KEYS.RATING);
     const savedSelectedComments = localStorage.getItem(STORAGE_KEYS.SELECTED_COMMENTS);
     const savedCustomComments = localStorage.getItem(STORAGE_KEYS.CUSTOM_COMMENTS); // 🔥 TAMBAH: Load custom comments
-    
+
     if (savedStudentName) form.value.studentName = savedStudentName;
     if (savedCourseName) form.value.courseName = savedCourseName;
     if (savedMonth) form.value.month = parseInt(savedMonth);
@@ -639,33 +895,33 @@ const loadSavedData = () => {
     if (savedReferralLink) form.value.referralLink = savedReferralLink;
     if (savedReportBy) form.value.reportBy = savedReportBy;
     if (savedRating) form.value.rating = parseInt(savedRating);
-    
+
     // Load selected comments
     if (savedSelectedComments) {
       try {
         form.value.selectedComments = JSON.parse(savedSelectedComments);
       } catch (e) {
-        console.error('Error parsing saved selected comments:', e);
+        // console.error("Error parsing saved selected comments:", e);
       }
     }
-    
+
     // 🔥 TAMBAH: Load custom comments text
     if (savedCustomComments) {
       try {
         const customCommentsData = JSON.parse(savedCustomComments);
         // Restore teks custom comments ke commentCategories
-        commentCategories.value.custom.forEach(comment => {
-          const savedComment = customCommentsData.find(c => c.id === comment.id);
+        commentCategories.value.custom.forEach((comment) => {
+          const savedComment = customCommentsData.find((c) => c.id === comment.id);
           if (savedComment && savedComment.text) {
             comment.text = savedComment.text;
           }
         });
       } catch (e) {
-        console.error('Error parsing saved custom comments:', e);
+        // console.error("Error parsing saved custom comments:", e);
       }
     }
   } catch (e) {
-    console.error('Error loading saved data:', e);
+    // console.error("Error loading saved data:", e);
   }
 };
 
@@ -693,17 +949,20 @@ const saveDataToStorage = () => {
     if (form.value.rating) {
       localStorage.setItem(STORAGE_KEYS.RATING, form.value.rating.toString());
     }
-    
+
     // Save selected comments
     if (form.value.selectedComments && form.value.selectedComments.length > 0) {
-      localStorage.setItem(STORAGE_KEYS.SELECTED_COMMENTS, JSON.stringify(form.value.selectedComments));
+      localStorage.setItem(
+        STORAGE_KEYS.SELECTED_COMMENTS,
+        JSON.stringify(form.value.selectedComments)
+      );
     }
-    
+
     // 🔥 TAMBAH: Save custom comments text ke localStorage
     const customComments = commentCategories.value.custom
-      .filter(comment => comment.text && comment.text.trim()) // Hanya simpan yang ada isinya
-      .map(comment => ({ id: comment.id, text: comment.text }));
-    
+      .filter((comment) => comment.text && comment.text.trim()) // Hanya simpan yang ada isinya
+      .map((comment) => ({ id: comment.id, text: comment.text }));
+
     if (customComments.length > 0) {
       localStorage.setItem(STORAGE_KEYS.CUSTOM_COMMENTS, JSON.stringify(customComments));
     } else {
@@ -711,31 +970,31 @@ const saveDataToStorage = () => {
       localStorage.removeItem(STORAGE_KEYS.CUSTOM_COMMENTS);
     }
   } catch (e) {
-    console.error('Error saving data:', e);
+    // console.error("Error saving data:", e);
   }
 };
 
 // 🆕 Fungsi untuk clear saved data
 const clearSavedData = () => {
   try {
-    Object.values(STORAGE_KEYS).forEach(key => {
+    Object.values(STORAGE_KEYS).forEach((key) => {
       localStorage.removeItem(key);
     });
-    form.value.studentName = '';
-    form.value.courseName = '';
+    form.value.studentName = "";
+    form.value.courseName = "";
     form.value.month = null;
-    form.value.youtubeLink = '';
-    form.value.referralLink = '';
-    form.value.reportBy = '';
+    form.value.youtubeLink = "";
+    form.value.referralLink = "";
+    form.value.reportBy = "";
     form.value.rating = 5;
     form.value.selectedComments = [];
     // Reset custom comments text
-    commentCategories.value.custom.forEach(comment => {
-      comment.text = '';
+    commentCategories.value.custom.forEach((comment) => {
+      comment.text = "";
     });
-    toast.success('Data tersimpan berhasil dihapus');
+    toast.success("Data tersimpan berhasil dihapus");
   } catch (e) {
-    console.error('Error clearing saved data:', e);
+    // console.error("Error clearing saved data:", e);
   }
 };
 
@@ -759,7 +1018,7 @@ const otherDevices = computed(() => {
     return [];
   }
   // Tampilkan devices lain yang tidak dipilih
-  return availableDevices.value.filter(d => d.id !== selectedDeviceId.value);
+  return availableDevices.value.filter((d) => d.id !== selectedDeviceId.value);
 });
 
 // 🆕 Fungsi untuk handle select device
@@ -772,7 +1031,7 @@ const handleSelectDevice = (deviceId) => {
 // 🆕 Fungsi untuk handle change device
 const handleChangeDevice = () => {
   selectDevice(null);
-  form.value.deviceId = '';
+  form.value.deviceId = "";
   showDeviceList.value = true; // Show device list when changing device
 };
 
@@ -780,70 +1039,82 @@ const handleChangeDevice = () => {
 const commentCategories = ref({
   kehadiran: [
     {
-      id: 'kehadiran_1',
-      text: 'M. Alghifari Setyawan selalu hadir di setiap sesi pelajaran dan menunjukkan antusiasme yang tinggi. Kami sangat menghargai kehadirannya yang konsisten, ini adalah langkah penting dalam proses belajarnya. Terus semangat, ya!'
+      id: "kehadiran_1",
+      text:
+        "M. Alghifari Setyawan selalu hadir di setiap sesi pelajaran dan menunjukkan antusiasme yang tinggi. Kami sangat menghargai kehadirannya yang konsisten, ini adalah langkah penting dalam proses belajarnya. Terus semangat, ya!",
     },
     {
-      id: 'kehadiran_2',
-      text: 'M. Alghifari Setyawan mengikuti 3 dari 4 sesi pelajaran bulan ini. Kehadirannya cukup baik, dan meskipun ada satu sesi yang terlewat, M. Alghifari Setyawan tetap mengikuti materi dengan baik. Kami yakin kehadiran yang lebih konsisten akan membuat belajarnya lebih maksimal!'
+      id: "kehadiran_2",
+      text:
+        "M. Alghifari Setyawan mengikuti 3 dari 4 sesi pelajaran bulan ini. Kehadirannya cukup baik, dan meskipun ada satu sesi yang terlewat, M. Alghifari Setyawan tetap mengikuti materi dengan baik. Kami yakin kehadiran yang lebih konsisten akan membuat belajarnya lebih maksimal!",
     },
     {
-      id: 'kehadiran_3',
-      text: 'M. Alghifari Setyawan hanya hadir di 2 dari 4 sesi bulan ini. Kami melihat kehadiran yang tidak konsisten mulai mempengaruhi kemajuan belajar. Akan lebih baik jika M. Alghifari Setyawan bisa hadir lebih teratur agar tidak tertinggal materi.'
+      id: "kehadiran_3",
+      text:
+        "M. Alghifari Setyawan hanya hadir di 2 dari 4 sesi bulan ini. Kami melihat kehadiran yang tidak konsisten mulai mempengaruhi kemajuan belajar. Akan lebih baik jika M. Alghifari Setyawan bisa hadir lebih teratur agar tidak tertinggal materi.",
     },
     {
-      id: 'kehadiran_4',
-      text: 'M. Alghifari Setyawan hadir hanya di 1 dari 4 sesi pelajaran bulan ini. Kami khawatir ini bisa mempengaruhi pemahaman materi yang diajarkan. Jika memungkinkan, mari kita diskusikan bagaimana agar M. Alghifari Setyawan bisa lebih rutin mengikuti pelajaran.'
+      id: "kehadiran_4",
+      text:
+        "M. Alghifari Setyawan hadir hanya di 1 dari 4 sesi pelajaran bulan ini. Kami khawatir ini bisa mempengaruhi pemahaman materi yang diajarkan. Jika memungkinkan, mari kita diskusikan bagaimana agar M. Alghifari Setyawan bisa lebih rutin mengikuti pelajaran.",
     },
     {
-      id: 'kehadiran_5',
-      text: 'M. Alghifari Setyawan tidak hadir di seluruh sesi pelajaran bulan ini. Kami ingin membantu agar M. Alghifari Setyawan bisa kembali mengikuti pelajaran dengan lebih baik. Kami akan menghubungi Anda untuk membahas solusi yang tepat.'
-    }
+      id: "kehadiran_5",
+      text:
+        "M. Alghifari Setyawan tidak hadir di seluruh sesi pelajaran bulan ini. Kami ingin membantu agar M. Alghifari Setyawan bisa kembali mengikuti pelajaran dengan lebih baik. Kami akan menghubungi Anda untuk membahas solusi yang tepat.",
+    },
   ],
   keterlibatan: [
     {
-      id: 'keterlibatan_1',
-      text: 'M. Alghifari Setyawan sangat terlibat dalam setiap sesi, aktif berpartisipasi dalam diskusi, dan tidak ragu mengajukan pertanyaan yang mendalam. M. Alghifari Setyawan selalu menunjukkan kemajuan yang baik dan memahami materi dengan cepat. Saya sering memberikan tantangan tambahan untuk membantu M. Alghifari Setyawan terus berkembang dan belajar lebih jauh.'
+      id: "keterlibatan_1",
+      text:
+        "M. Alghifari Setyawan sangat terlibat dalam setiap sesi, aktif berpartisipasi dalam diskusi, dan tidak ragu mengajukan pertanyaan yang mendalam. M. Alghifari Setyawan selalu menunjukkan kemajuan yang baik dan memahami materi dengan cepat. Saya sering memberikan tantangan tambahan untuk membantu M. Alghifari Setyawan terus berkembang dan belajar lebih jauh.",
     },
     {
-      id: 'keterlibatan_2',
-      text: 'M. Alghifari Setyawan cukup fokus di kelas meskipun jarang bertanya. Namun, M. Alghifari Setyawan selalu memperhatikan dengan baik dan mengikuti instruksi dengan seksama. Mungkin dengan lebih banyak berpartisipasi dalam diskusi, M. Alghifari Setyawan bisa meningkatkan pemahaman materi. Secara keseluruhan, M. Alghifari Setyawan sudah menunjukkan perkembangan yang positif.'
+      id: "keterlibatan_2",
+      text:
+        "M. Alghifari Setyawan cukup fokus di kelas meskipun jarang bertanya. Namun, M. Alghifari Setyawan selalu memperhatikan dengan baik dan mengikuti instruksi dengan seksama. Mungkin dengan lebih banyak berpartisipasi dalam diskusi, M. Alghifari Setyawan bisa meningkatkan pemahaman materi. Secara keseluruhan, M. Alghifari Setyawan sudah menunjukkan perkembangan yang positif.",
     },
     {
-      id: 'keterlibatan_3',
-      text: 'M. Alghifari Setyawan cenderung lebih diam di kelas dan jarang terlibat dalam diskusi. Kami menyarankan agar M. Alghifari Setyawan lebih terbuka untuk bertanya atau berinteraksi sehingga bisa lebih mudah memahami materi. Jika ada kendala tertentu, kami siap membantu agar suasana kelas lebih nyaman untuk belajar.'
+      id: "keterlibatan_3",
+      text:
+        "M. Alghifari Setyawan cenderung lebih diam di kelas dan jarang terlibat dalam diskusi. Kami menyarankan agar M. Alghifari Setyawan lebih terbuka untuk bertanya atau berinteraksi sehingga bisa lebih mudah memahami materi. Jika ada kendala tertentu, kami siap membantu agar suasana kelas lebih nyaman untuk belajar.",
     },
     {
-      id: 'keterlibatan_4',
-      text: 'M. Alghifari Setyawan tampak mengalami kesulitan dalam mengikuti pelajaran terakhir. Kurangnya fokus menyebabkan M. Alghifari Setyawan tidak sepenuhnya menangkap materi. Kami menyarankan agar M. Alghifari Setyawan lebih terlibat aktif dalam kelas agar pemahaman terhadap pelajaran meningkat. Jika Anda memerlukan bantuan atau rekaman kelas, kami siap memberikan dukungan tambahan.'
-    }
+      id: "keterlibatan_4",
+      text:
+        "M. Alghifari Setyawan tampak mengalami kesulitan dalam mengikuti pelajaran terakhir. Kurangnya fokus menyebabkan M. Alghifari Setyawan tidak sepenuhnya menangkap materi. Kami menyarankan agar M. Alghifari Setyawan lebih terlibat aktif dalam kelas agar pemahaman terhadap pelajaran meningkat. Jika Anda memerlukan bantuan atau rekaman kelas, kami siap memberikan dukungan tambahan.",
+    },
   ],
   penyelesaian: [
     {
-      id: 'penyelesaian_1',
-      text: 'M. Alghifari Setyawan telah berhasil menyelesaikan semua tugas dengan sangat baik. Pemahamannya terhadap materi sangat jelas, dan M. Alghifari Setyawan mampu menyelesaikan setiap tugas tepat waktu. Senang sekali melihat kemajuannya yang terus meningkat. Terus lanjutkan usaha ini, ya!'
+      id: "penyelesaian_1",
+      text:
+        "M. Alghifari Setyawan telah berhasil menyelesaikan semua tugas dengan sangat baik. Pemahamannya terhadap materi sangat jelas, dan M. Alghifari Setyawan mampu menyelesaikan setiap tugas tepat waktu. Senang sekali melihat kemajuannya yang terus meningkat. Terus lanjutkan usaha ini, ya!",
     },
     {
-      id: 'penyelesaian_2',
-      text: 'M. Alghifari Setyawan berhasil menyelesaikan sebagian besar tugas dengan baik, namun ada beberapa area yang memerlukan sedikit perbaikan. Dengan latihan tambahan dan perhatian lebih, M. Alghifari Setyawan pasti akan bisa meningkatkan kualitas tugas-tugasnya dan mencapai hasil yang lebih baik lagi.'
+      id: "penyelesaian_2",
+      text:
+        "M. Alghifari Setyawan berhasil menyelesaikan sebagian besar tugas dengan baik, namun ada beberapa area yang memerlukan sedikit perbaikan. Dengan latihan tambahan dan perhatian lebih, M. Alghifari Setyawan pasti akan bisa meningkatkan kualitas tugas-tugasnya dan mencapai hasil yang lebih baik lagi.",
     },
     {
-      id: 'penyelesaian_3',
-      text: 'M. Alghifari Setyawan tampaknya menghadapi beberapa tantangan dalam menyelesaikan tugas kali ini. Sangat penting bagi M. Alghifari Setyawan untuk meluangkan lebih banyak waktu dalam berlatih agar pemahamannya terhadap materi semakin kuat. Kami berharap M. Alghifari Setyawan bisa mengejar ketinggalan. Jika ada kesulitan, jangan ragu untuk menghubungi saya, saya siap membantu.'
-    }
+      id: "penyelesaian_3",
+      text:
+        "M. Alghifari Setyawan tampaknya menghadapi beberapa tantangan dalam menyelesaikan tugas kali ini. Sangat penting bagi M. Alghifari Setyawan untuk meluangkan lebih banyak waktu dalam berlatih agar pemahamannya terhadap materi semakin kuat. Kami berharap M. Alghifari Setyawan bisa mengejar ketinggalan. Jika ada kesulitan, jangan ragu untuk menghubungi saya, saya siap membantu.",
+    },
   ],
   custom: [
     {
-      id: 'custom_1',
-      text: '',
-      isCustom: true
+      id: "custom_1",
+      text: "",
+      isCustom: true,
     },
     {
-      id: 'custom_2',
-      text: '',
-      isCustom: true
-    }
-  ]
+      id: "custom_2",
+      text: "",
+      isCustom: true,
+    },
+  ],
 });
 
 // 🆕 Helper untuk replace nama di komentar
@@ -866,7 +1137,7 @@ const formattedReportBy = computed(() => {
 // 🆕 Computed untuk mendapatkan komentar yang dipilih dengan nama yang sudah diganti
 const selectedCommentsText = computed(() => {
   if (!form.value.selectedComments || form.value.selectedComments.length === 0) {
-    return '';
+    return "";
   }
 
   // Ambil maksimal 3 komentar pertama
@@ -874,12 +1145,12 @@ const selectedCommentsText = computed(() => {
   const comments = [];
 
   // Loop semua kategori untuk mencari komentar yang dipilih
-  Object.values(commentCategories.value).forEach(category => {
-    category.forEach(comment => {
+  Object.values(commentCategories.value).forEach((category) => {
+    category.forEach((comment) => {
       if (selectedIds.includes(comment.id)) {
-        const text = comment.isCustom 
-          ? comment.text 
-          : replaceNameInComment(comment.text, formattedStudentName.value || 'Siswa');
+        const text = comment.isCustom
+          ? comment.text
+          : replaceNameInComment(comment.text, formattedStudentName.value || "Siswa");
         if (text) {
           comments.push(text);
         }
@@ -887,7 +1158,7 @@ const selectedCommentsText = computed(() => {
     });
   });
 
-  return comments.join('\n\n');
+  return comments.join("\n\n");
 });
 
 // 🆕 Toggle checkbox
@@ -901,7 +1172,7 @@ const toggleComment = (commentId) => {
     if (form.value.selectedComments.length < 3) {
       form.value.selectedComments.push(commentId);
     } else {
-      toast.warning('Maksimal 3 komentar yang bisa dipilih');
+      toast.warning("Maksimal 3 komentar yang bisa dipilih");
     }
   }
 };
@@ -909,7 +1180,7 @@ const toggleComment = (commentId) => {
 // 🆕 Update custom comment text
 const updateCustomComment = (commentId, text) => {
   const category = commentCategories.value.custom;
-  const comment = category.find(c => c.id === commentId);
+  const comment = category.find((c) => c.id === commentId);
   if (comment) {
     comment.text = text;
     // 🔥 TAMBAH: Panggil saveDataToStorage() agar teks tersimpan ke localStorage
@@ -922,42 +1193,43 @@ const courses = ref([]);
 const showPreview = ref(false);
 const generating = ref(false);
 const sending = ref(false);
-const error = ref('');
-const success = ref('');
+const error = ref("");
+const success = ref("");
 
 // 🆕 Recipient management
 const recipients = ref([]);
-const activeTab = ref('manual');
-const recipientInput = ref('');
+const activeTab = ref("manual");
+const recipientInput = ref("");
 const recipientLabels = ref({});
 
 // 🆕 Contacts
 const contacts = ref([]);
-const selectedContactId = ref('');
+const selectedContactId = ref("");
 const loadingContacts = ref(false);
 
 // 🆕 Groups
 const { groups, loadingGroups, loadGroups, ensureFullGroupJid } = useGroups();
-const selectedGroupId = ref('');
+const selectedGroupId = ref("");
 
 // 🆕 Labels
 const labels = ref([]);
-const selectedLabelValue = ref('');
+const selectedLabelValue = ref("");
 const loadingLabels = ref(false);
 
 const selectedTemplate = computed(() => {
   if (!form.value.courseName || !form.value.month) return null;
-  return templates.value.find(t => 
-    t.courseName === form.value.courseName && 
-    Number(t.month) === Number(form.value.month) // 🔥 FIX: gunakan form.value.month bukan t.month
+  return templates.value.find(
+    (t) =>
+      t.courseName === form.value.courseName &&
+      Number(t.month) === Number(form.value.month) // 🔥 FIX: gunakan form.value.month bukan t.month
   );
 });
 
 const availableMonths = computed(() => {
   if (!form.value.courseName) return [];
   return templates.value
-    .filter(t => t.courseName === form.value.courseName)
-    .map(t => Number(t.month))
+    .filter((t) => t.courseName === form.value.courseName)
+    .map((t) => Number(t.month))
     .sort((a, b) => a - b);
 });
 
@@ -965,23 +1237,23 @@ const availableMonths = computed(() => {
 const chipLabel = (r) => recipientLabels.value[r] || r;
 
 const isValidPhoneNumber = (phone) => {
-  const cleaned = String(phone).replace(/\D/g, '');
-  if (!cleaned.startsWith('62')) return false;
+  const cleaned = String(phone).replace(/\D/g, "");
+  if (!cleaned.startsWith("62")) return false;
   if (cleaned.length < 10 || cleaned.length > 15) return false;
   return true;
 };
 
 const addRecipientsFromInput = () => {
   if (!recipientInput.value) return;
-  
+
   const items = recipientInput.value
     .split(/[\s,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  
+
   const validNumbers = [];
   const invalidNumbers = [];
-  
+
   items.forEach((item) => {
     if (isValidPhoneNumber(item)) {
       validNumbers.push(item);
@@ -989,22 +1261,28 @@ const addRecipientsFromInput = () => {
       invalidNumbers.push(item);
     }
   });
-  
+
   if (validNumbers.length > 0) {
     const set = new Set([...recipients.value, ...validNumbers]);
     recipients.value = Array.from(set);
   }
-  
+
   if (validNumbers.length > 0 && invalidNumbers.length > 0) {
     toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-    toast.error(`${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(', ')}`);
+    toast.error(
+      `${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(", ")}`
+    );
   } else if (validNumbers.length > 0) {
     toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
   } else if (invalidNumbers.length > 0) {
-    toast.error(`Nomor tidak valid: ${invalidNumbers.join(', ')}. Format harus: 62xxx (minimal 10 digit)`);
+    toast.error(
+      `Nomor tidak valid: ${invalidNumbers.join(
+        ", "
+      )}. Format harus: 62xxx (minimal 10 digit)`
+    );
   }
-  
-  recipientInput.value = '';
+
+  recipientInput.value = "";
 };
 
 const removeRecipient = (index) => {
@@ -1013,13 +1291,17 @@ const removeRecipient = (index) => {
 
 const contactLabelNames = (c) => {
   try {
-    const arr = (c?.ContactLabel || []).map((x) => x?.label?.name).filter((n) => n && !String(n).startsWith('device_'));
-    return arr.join(', ');
-  } catch { return ''; }
+    const arr = (c?.ContactLabel || [])
+      .map((x) => x?.label?.name)
+      .filter((n) => n && !String(n).startsWith("device_"));
+    return arr.join(", ");
+  } catch {
+    return "";
+  }
 };
 
 const contactDisplay = (c) => {
-  const name = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.phone || '-';
+  const name = `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.phone || "-";
   const labelNames = contactLabelNames(c);
   return labelNames ? `${name} (${c.phone}) - [${labelNames}]` : `${name} (${c.phone})`;
 };
@@ -1027,11 +1309,11 @@ const contactDisplay = (c) => {
 const loadContacts = async () => {
   try {
     loadingContacts.value = true;
-    const deviceId = selectedDeviceId.value || localStorage.getItem('device_selected_id');
-    const res = await userApi.get('/contacts', { params: deviceId ? { deviceId } : {} });
+    const deviceId = selectedDeviceId.value || localStorage.getItem("device_selected_id");
+    const res = await userApi.get("/contacts", { params: deviceId ? { deviceId } : {} });
     contacts.value = Array.isArray(res?.data) ? res.data : [];
   } catch (e) {
-    toast.error(e?.response?.data?.message || e?.message || 'Gagal memuat kontak');
+    toast.error(e?.response?.data?.message || e?.message || "Gagal memuat kontak");
   } finally {
     loadingContacts.value = false;
   }
@@ -1044,41 +1326,43 @@ const addSelectedContact = () => {
     const found = contacts.value.find((c) => c.phone === selectedContactId.value);
     if (found) {
       const labelNames = contactLabelNames(found);
-      const firstName = found.firstName || '';
-      const lastName = found.lastName || '';
-      const labelPart = labelNames ? ` [${labelNames}]` : '';
-      recipientLabels.value[selectedContactId.value] = `Kontak: ${firstName} ${lastName}${labelPart}`;
+      const firstName = found.firstName || "";
+      const lastName = found.lastName || "";
+      const labelPart = labelNames ? ` [${labelNames}]` : "";
+      recipientLabels.value[
+        selectedContactId.value
+      ] = `Kontak: ${firstName} ${lastName}${labelPart}`;
     }
   }
-  selectedContactId.value = '';
+  selectedContactId.value = "";
 };
 
 const addSelectedGroup = async () => {
   if (!selectedGroupId.value) return;
-  
+
   const groupValue = selectedGroupId.value;
-  
+
   if (!recipients.value.includes(groupValue)) {
     recipients.value.push(groupValue);
     const found = groups.value.find((g) => g.value === groupValue);
     if (found) {
-      recipientLabels.value[groupValue] = 'Group: ' + found.label;
+      recipientLabels.value[groupValue] = "Group: " + found.label;
     }
   }
-  selectedGroupId.value = '';
+  selectedGroupId.value = "";
 };
 
 const mapLabels = (items) => {
   const arr = Array.isArray(items) ? items : [];
   return arr
     .map((it) => {
-      if (typeof it === 'string') {
+      if (typeof it === "string") {
         const name = it;
-        return { value: 'label_' + name, label: name };
+        return { value: "label_" + name, label: name };
       }
-      const name = it.name || it.label || it.title || '';
-      const slug = it.slug || '';
-      const value = 'label_' + (slug || name);
+      const name = it.name || it.label || it.title || "";
+      const slug = it.slug || "";
+      const value = "label_" + (slug || name);
       return name ? { value, label: name } : null;
     })
     .filter(Boolean);
@@ -1089,7 +1373,7 @@ const deriveLabelsFromContacts = () => {
   (contacts.value || []).forEach((c) => {
     (c.ContactLabel || []).forEach((cl) => {
       const n = cl?.label?.name;
-      if (n && !String(n).startsWith('device_')) names.add(n);
+      if (n && !String(n).startsWith("device_")) names.add(n);
     });
   });
   return Array.from(names);
@@ -1098,10 +1382,16 @@ const deriveLabelsFromContacts = () => {
 const loadLabels = async () => {
   try {
     loadingLabels.value = true;
-    const deviceId = selectedDeviceId.value || localStorage.getItem('device_selected_id');
-    const res = await userApi.get('/contacts/labels', { params: deviceId ? { deviceId } : {} });
+    const deviceId = selectedDeviceId.value || localStorage.getItem("device_selected_id");
+    const res = await userApi.get("/contacts/labels", {
+      params: deviceId ? { deviceId } : {},
+    });
     const data = res?.data;
-    let list = Array.isArray(data?.labels) ? data.labels : Array.isArray(data) ? data : [];
+    let list = Array.isArray(data?.labels)
+      ? data.labels
+      : Array.isArray(data)
+      ? data
+      : [];
     if (!Array.isArray(list) || list.length === 0) {
       if (!contacts.value || contacts.value.length === 0) {
         await loadContacts();
@@ -1127,14 +1417,15 @@ const addSelectedLabel = () => {
     recipients.value.push(val);
     const found = labels.value.find((l) => l.value === val);
     if (found) {
-      recipientLabels.value[val] = 'Label: ' + found.label;
+      recipientLabels.value[val] = "Label: " + found.label;
     }
   }
-  selectedLabelValue.value = '';
+  selectedLabelValue.value = "";
 };
 
 const isFormValid = computed(() => {
-  return form.value.studentName &&
+  return (
+    form.value.studentName &&
     form.value.courseName &&
     form.value.month &&
     form.value.youtubeLink &&
@@ -1144,14 +1435,15 @@ const isFormValid = computed(() => {
     form.value.selectedComments.length > 0 && // 🔥 Ganti validasi dari tutorComment ke selectedComments
     recipients.value.length > 0 &&
     selectedDeviceId.value &&
-    selectedTemplate.value;
+    selectedTemplate.value
+  );
 });
 
 const previewData = computed(() => {
   if (!isFormValid.value || !selectedTemplate.value) return null;
-  
-  const durationText = form.value.duration || ('Bulan ke-' + form.value.month);
-  
+
+  const durationText = form.value.duration || "Bulan ke-" + form.value.month;
+
   return {
     studentName: formattedStudentName.value, // 🔥 Gunakan nama yang sudah diformat
     courseName: form.value.courseName,
@@ -1168,20 +1460,20 @@ const previewData = computed(() => {
     recipients: recipients.value,
     rating: form.value.rating,
     reportBy: formattedReportBy.value, // 🔥 UPDATE: Gunakan reportBy yang sudah diformat (Title Case)
-    selectedComments: selectedCommentsText.value
+    selectedComments: selectedCommentsText.value,
   };
 });
 
 const loadTemplates = async () => {
   try {
-    const { data } = await userApi.get('/algorithmics/monthly-templates');
+    const { data } = await userApi.get("/algorithmics/monthly-templates");
     templates.value = data.templates || [];
-    
+
     // Extract unique courses
-    const uniqueCourses = [...new Set(templates.value.map(t => t.courseName))].sort();
+    const uniqueCourses = [...new Set(templates.value.map((t) => t.courseName))].sort();
     courses.value = uniqueCourses;
   } catch (e) {
-    toast.error('Gagal memuat templates');
+    toast.error("Gagal memuat templates");
   }
 };
 
@@ -1192,13 +1484,13 @@ const onCourseChange = () => {
 const onMonthChange = () => {
   // Auto-fill duration jika kosong
   if (!form.value.duration && form.value.month) {
-    form.value.duration = 'Bulan ke-' + form.value.month;
+    form.value.duration = "Bulan ke-" + form.value.month;
   }
 };
 
 const handleSubmit = async () => {
   if (!isFormValid.value) {
-    toast.error('Mohon lengkapi semua field yang diperlukan');
+    toast.error("Mohon lengkapi semua field yang diperlukan");
     return;
   }
 
@@ -1211,20 +1503,20 @@ const handleGenerateAndSend = async () => {
 
   // Validasi device
   if (!form.value.deviceId) {
-    error.value = 'Silakan pilih device WhatsApp terlebih dahulu';
-    toast.error('Silakan pilih device WhatsApp terlebih dahulu');
+    error.value = "Silakan pilih device WhatsApp terlebih dahulu";
+    toast.error("Silakan pilih device WhatsApp terlebih dahulu");
     return;
   }
 
   // 🆕 Validasi recipients
   if (recipients.value.length === 0) {
-    error.value = 'Silakan tambahkan minimal satu penerima';
-    toast.error('Silakan tambahkan minimal satu penerima');
+    error.value = "Silakan tambahkan minimal satu penerima";
+    toast.error("Silakan tambahkan minimal satu penerima");
     return;
   }
 
-  error.value = '';
-  success.value = '';
+  error.value = "";
+  success.value = "";
   sending.value = true;
 
   try {
@@ -1245,37 +1537,41 @@ const handleGenerateAndSend = async () => {
       recipients: recipients.value,
       deviceId: form.value.deviceId,
       rating: previewData.value.rating,
-      reportBy: previewData.value.reportBy
+      reportBy: previewData.value.reportBy,
     };
 
-    console.log('Sending payload:', payload);
+    // console.log('Sending payload:', payload);
 
-    const { data } = await userApi.post('/algorithmics/monthly-feedback/send', payload);
-    
+    const { data } = await userApi.post("/algorithmics/monthly-feedback/send", payload);
+
     const recipientCount = recipients.value.length;
-    success.value = 'Feedback bulanan berhasil dikirim ke ' + recipientCount + ' penerima!';
-    toast.success('Feedback bulanan berhasil dikirim ke ' + recipientCount + ' penerima!');
-    
+    success.value =
+      "Feedback bulanan berhasil dikirim ke " + recipientCount + " penerima!";
+    toast.success(
+      "Feedback bulanan berhasil dikirim ke " + recipientCount + " penerima!"
+    );
+
     // 🔥 PERBAIKAN: Reset HANYA data yang perlu di-reset (nama siswa, bulan, komentar)
     // Data tersimpan (courseName, youtubeLink, referralLink, reportBy, rating) TETAP ADA
     // form.value.studentName = '';
-    form.value.duration = '';
+    form.value.duration = "";
     // form.value.selectedComments = []; // 🆕 Uncommenting to reset selected comments
     // form.value.tutorComment = '';
-    
+
     // Reset custom comment text
     // commentCategories.value.custom.forEach(comment => {
     //   comment.text = '';
     // }); // 🆕 Uncommenting to reset custom comments
-    
+
     // 🆕 Reset recipients
     recipients.value = [];
     recipientLabels.value = {};
-    
+
     showPreview.value = false;
   } catch (e) {
-    console.error('Error sending feedback:', e);
-    const errorMsg = e?.response?.data?.message || e?.message || 'Gagal mengirim feedback';
+    // console.error("Error sending feedback:", e);
+    const errorMsg =
+      e?.response?.data?.message || e?.message || "Gagal mengirim feedback";
     error.value = errorMsg;
     toast.error(errorMsg);
   } finally {
@@ -1292,121 +1588,123 @@ const handleDownloadPDF = async () => {
   try {
     // Clone the template element
     const element = pdfTemplate.value.$el.cloneNode(true);
-    
+
     // Wait for images to load
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Replace all images with base64 (using PNG for transparency support)
-    const images = element.querySelectorAll('img');
+    const images = element.querySelectorAll("img");
     const imagePromises = Array.from(images).map(async (img) => {
       try {
-        const src = img.src || img.getAttribute('src');
+        const src = img.src || img.getAttribute("src");
         if (!src) return;
-        
+
         return new Promise((resolve) => {
           const tempImg = new Image();
-          tempImg.crossOrigin = 'Anonymous';
-          
+          tempImg.crossOrigin = "Anonymous";
+
           tempImg.onload = () => {
             try {
-              const canvas = document.createElement('canvas');
+              const canvas = document.createElement("canvas");
               canvas.width = tempImg.naturalWidth || tempImg.width;
               canvas.height = tempImg.naturalHeight || tempImg.height;
-              
+
               if (canvas.width === 0 || canvas.height === 0) {
-                console.warn('Invalid image dimensions:', src);
+                // console.warn("Invalid image dimensions:", src);
                 resolve();
                 return;
               }
-              
-              const ctx = canvas.getContext('2d');
-              
+
+              const ctx = canvas.getContext("2d");
+
               // Set transparent background instead of white/black
               ctx.clearRect(0, 0, canvas.width, canvas.height);
-              
+
               // Draw image
               ctx.drawImage(tempImg, 0, 0);
-              
+
               // Use PNG for icons (supports transparency), JPEG for photos
-              const isIcon = img.classList.contains('icon-img') || img.classList.contains('icon-img-small');
-              const base64 = isIcon 
-                ? canvas.toDataURL('image/png', 1.0)
-                : canvas.toDataURL('image/jpeg', 0.95);
-              
+              const isIcon =
+                img.classList.contains("icon-img") ||
+                img.classList.contains("icon-img-small");
+              const base64 = isIcon
+                ? canvas.toDataURL("image/png", 1.0)
+                : canvas.toDataURL("image/jpeg", 0.95);
+
               img.src = base64;
-              img.setAttribute('src', base64);
-              img.style.display = 'block';
-              img.style.visibility = 'visible';
-              img.style.background = 'transparent';
+              img.setAttribute("src", base64);
+              img.style.display = "block";
+              img.style.visibility = "visible";
+              img.style.background = "transparent";
               resolve();
             } catch (error) {
-              console.error('Error converting image:', error);
+              // console.error("Error converting image:", error);
               resolve();
             }
           };
-          
+
           tempImg.onerror = () => {
-            console.warn('Failed to load image:', src);
+            // console.warn("Failed to load image:", src);
             resolve();
           };
-          
+
           tempImg.src = src;
         });
       } catch (error) {
-        console.error('Error processing image:', error);
+        // console.error("Error processing image:", error);
       }
     });
-    
+
     await Promise.all(imagePromises);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const studentNameClean = formattedStudentName.value.replace(/\s+/g, '_'); // 🔥 Gunakan nama yang sudah diformat
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const studentNameClean = formattedStudentName.value.replace(/\s+/g, "_"); // 🔥 Gunakan nama yang sudah diformat
     const monthNum = previewData.value.month;
-    const fileName = 'Feedback_' + studentNameClean + '_Bulan' + monthNum + '.pdf';
-    
+    const fileName = "Feedback_" + studentNameClean + "_Bulan" + monthNum + ".pdf";
+
     const opt = {
       margin: 0,
       filename: fileName,
-      image: { 
-        type: 'jpeg', 
-        quality: 0.95 
+      image: {
+        type: "jpeg",
+        quality: 0.95,
       },
-      html2canvas: { 
+      html2canvas: {
         scale: 2,
         useCORS: true,
         allowTaint: false,
         logging: false,
-        backgroundColor: '#ffffff',
+        backgroundColor: "#ffffff",
         scrollY: 0,
         scrollX: 0,
         windowWidth: 794,
         windowHeight: 1123,
         onclone: (clonedDoc) => {
-          const clonedImages = clonedDoc.querySelectorAll('img');
-          clonedImages.forEach(img => {
-            img.style.display = 'block';
-            img.style.visibility = 'visible';
-            img.style.background = 'transparent';
+          const clonedImages = clonedDoc.querySelectorAll("img");
+          clonedImages.forEach((img) => {
+            img.style.display = "block";
+            img.style.visibility = "visible";
+            img.style.background = "transparent";
           });
-        }
+        },
       },
-      jsPDF: { 
-        unit: 'px',
+      jsPDF: {
+        unit: "px",
         format: [794, 1123],
-        orientation: 'portrait',
+        orientation: "portrait",
         compress: true,
-        hotfixes: ['px_scaling']
+        hotfixes: ["px_scaling"],
       },
-      pagebreak: { 
-        mode: 'avoid-all'
-      }
+      pagebreak: {
+        mode: "avoid-all",
+      },
     };
 
     await html2pdf().set(opt).from(element).save();
-    toast.success('PDF berhasil didownload!');
+    toast.success("PDF berhasil didownload!");
   } catch (e) {
-    console.error('Error generating PDF:', e);
-    toast.error('Gagal generate PDF: ' + (e.message || 'Unknown error'));
+    // console.error("Error generating PDF:", e);
+    toast.error("Gagal generate PDF: " + (e.message || "Unknown error"));
   } finally {
     generating.value = false;
   }
@@ -1420,12 +1718,12 @@ onMounted(async () => {
     loadDevices(),
     loadGroups(),
     loadContacts(),
-    loadLabels()
+    loadLabels(),
   ]);
-  
+
   // 🆕 Load saved data from localStorage
   loadSavedData();
-  
+
   // Auto-select device if available
   if (selectedDeviceId.value) {
     form.value.deviceId = selectedDeviceId.value;
@@ -1442,24 +1740,26 @@ watch(selectedDeviceId, (newDeviceId) => {
 // 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
-    console.log('[MonthlyFeedback] Device berubah dari', oldDeviceId, 'ke', newDeviceId);
-    console.log('[MonthlyFeedback] Auto-refresh data: Grup, Kontak, dan Label...');
-    
+    // ✅ Dispatch custom event untuk Dashboard.vue
+    window.dispatchEvent(new Event("deviceChanged"));
+
     // Clear recipients ketika ganti device
     recipients.value = [];
     recipientLabels.value = {};
-    selectedContactId.value = '';
-    selectedGroupId.value = '';
-    selectedLabelValue.value = '';
-    
+    selectedContactId.value = "";
+    selectedGroupId.value = "";
+    selectedLabelValue.value = "";
+
     // Auto-refresh semua data (termasuk GROUPS!)
     await Promise.allSettled([
       loadGroups({ force: true }), // 🔥 Tambahkan force: true untuk memaksa reload
       loadContacts(),
-      loadLabels()
+      loadLabels(),
     ]);
-    
-    toast.success('Device berhasil diganti. Data grup, kontak, dan label telah di-refresh.');
+
+    toast.success(
+      "Device berhasil diganti. Data grup, kontak, dan label telah di-refresh."
+    );
   }
 });
 </script>
@@ -1663,8 +1963,13 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .device-details {
@@ -2150,8 +2455,12 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .preview-modal {
@@ -2243,7 +2552,9 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* PDF Preview Container */
@@ -2483,12 +2794,12 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
     width: 100%;
     justify-content: center;
   }
-  
+
   /* 🆕 Rating stars responsive */
   .rating-stars .star {
     font-size: 28px;
   }
-  
+
   /* 🆕 Comment checkboxes responsive */
   .comment-checkboxes {
     max-height: 300px;
@@ -3107,7 +3418,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 }
 
 .recipients-list:empty::after {
-  content: 'Belum ada penerima yang dipilih';
+  content: "Belum ada penerima yang dipilih";
   display: block;
   text-align: center;
   color: #94a3b8;

@@ -14,16 +14,34 @@
     <aside :class="{ open: sidebarOpen }">
       <div class="sidebar-header">
         <div class="brand">
-          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            class="logo-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <!-- Messages Square Icon - Multiple Chat Bubbles -->
-            <path d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-            <path d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1"/>
+            <path
+              d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+            />
+            <path
+              d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1"
+            />
           </svg>
           <h3>Autosender</h3>
         </div>
         <button class="close-btn" @click="closeSidebar">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
       </div>
@@ -33,72 +51,168 @@
           <span class="nav-label">MENU UTAMA</span>
           <router-link to="/add-device" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 18H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <rect
+                x="5"
+                y="2"
+                width="14"
+                height="20"
+                rx="2"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M12 18H12.01"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
             <span>Device</span>
           </router-link>
           <router-link to="/contacts" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+              <path
+                d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
             </svg>
             <span>Kontak</span>
           </router-link>
           <router-link to="/groups" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-              <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+              <path
+                d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
             <span>Grup</span>
           </router-link>
           <router-link to="/broadcasts" @click="closeSidebar">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/>
-              <path d="m21.854 2.147-10.94 10.939"/>
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+              />
+              <path d="m21.854 2.147-10.94 10.939" />
             </svg>
             <span>Broadcast</span>
           </router-link>
           <router-link to="/schedule-reminder" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M3.05 11H5M3.05 13H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+              <path
+                d="M12 8V12L15 15"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M3.05 11H5M3.05 13H5"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
             </svg>
             <span>Broadcast Berulang</span>
           </router-link>
           <router-link to="/schedule-feedback" @click="closeSidebar">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              <circle cx="9" cy="10" r="1"/>
-              <circle cx="12" cy="10" r="1"/>
-              <circle cx="15" cy="10" r="1"/>
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              <circle cx="9" cy="10" r="1" />
+              <circle cx="12" cy="10" r="1" />
+              <circle cx="15" cy="10" r="1" />
             </svg>
             <span>Feedback (Algo)</span>
           </router-link>
           <router-link to="/reminder-algo" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
             <span>Reminder (Algo)</span>
           </router-link>
           <router-link to="/monthly-feedback" @click="closeSidebar">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              class="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <!-- Clipboard dengan checklist untuk feedback -->
-              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-              <rect x="9" y="3" width="6" height="4" rx="1"/>
-              <path d="M9 12l2 2 4-4"/>
-              <line x1="9" y1="17" x2="15" y2="17"/>
+              <path
+                d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+              />
+              <rect x="9" y="3" width="6" height="4" rx="1" />
+              <path d="M9 12l2 2 4-4" />
+              <line x1="9" y1="17" x2="15" y2="17" />
             </svg>
             <span>Feedback Bulanan (Algo)</span>
           </router-link>
           <router-link to="/schedules" @click="closeSidebar">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M16 2V6M8 2V6M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <rect
+                x="3"
+                y="4"
+                width="18"
+                height="18"
+                rx="2"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M16 2V6M8 2V6M3 10H21"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
             <span>Jadwal Saya</span>
           </router-link>
@@ -111,32 +225,66 @@
             <span class="nav-label">ADMIN</span>
             <router-link to="/templates" @click="closeSidebar">
               <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M14 2V8H20M16 13H8M16 17H8M10 9H8"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
               <span>Templates</span>
             </router-link>
             <router-link to="/admin/monthly-templates" @click="closeSidebar">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                class="nav-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <!-- File document dengan checklist untuk template -->
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <path d="M9 13l2 2 4-4"/>
-                <line x1="9" y1="17" x2="15" y2="17"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="M9 13l2 2 4-4" />
+                <line x1="9" y1="17" x2="15" y2="17" />
               </svg>
               <span>Templates Bulanan</span>
             </router-link>
             <router-link to="/admin/tutors" @click="closeSidebar">
               <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                <path
+                  d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
               </svg>
               <span>Kelola Tutor</span>
             </router-link>
             <router-link to="/admin/sent-history" @click="closeSidebar">
               <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M17 8L12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M17 8L12 3L7 8M12 3V15"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
               <span>Semua Pesan Terkirim</span>
             </router-link>
@@ -147,7 +295,12 @@
       <div class="sidebar-footer">
         <div class="user-info" v-if="me">
           <div class="avatar">
-            <img v-if="profilePictureUrl" :src="profilePictureUrl" alt="Profile" class="avatar-img" />
+            <img
+              v-if="profilePictureUrl"
+              :src="profilePictureUrl"
+              alt="Profile"
+              class="avatar-img"
+            />
             <span v-else>{{ getInitials(me.firstName) }}</span>
           </div>
           <div class="user-details">
@@ -161,8 +314,20 @@
         </div>
         <button class="logout-btn" @click="logout">
           <svg viewBox="0 0 24 24" fill="none">
-            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M16 17L21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M16 17L21 12L16 7M21 12H9"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
           <span>Logout</span>
         </button>
@@ -176,11 +341,11 @@
 </template>
 
 <script setup>
-import { onMounted, computed, ref, watch, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth.js';
-import { useGroups } from '../composables/useGroups.js';
-import { deviceApi } from '../api/http.js';
+import { onMounted, computed, ref, watch, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth.js";
+import { useGroups } from "../composables/useGroups.js";
+import { deviceApi } from "../api/http.js";
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -188,13 +353,18 @@ const { clearGroups } = useGroups();
 
 const sidebarOpen = ref(false);
 const profilePictureUrl = ref(null);
-
-// 🆕 Watch untuk device_selected_id dari localStorage
-const selectedDeviceId = ref(localStorage.getItem('device_selected_id'));
+const selectedDeviceId = ref(localStorage.getItem("device_selected_id"));
+const isFetchingProfile = ref(false);
 
 onMounted(async () => {
   await auth.fetchMe();
   await fetchProfilePicture();
+  
+  // Listen to storage events for cross-tab changes
+  window.addEventListener('storage', handleStorageChange);
+  
+  // Listen to custom event for same-tab changes
+  window.addEventListener('deviceChanged', handleDeviceChange);
 });
 
 const me = computed(() => auth.me);
@@ -202,49 +372,57 @@ const isAdmin = computed(() => auth.isAdmin);
 
 // Fungsi untuk mengambil foto profil WhatsApp
 const fetchProfilePicture = async () => {
+  // Prevent multiple simultaneous requests
+  if (isFetchingProfile.value) return;
+  
+  const deviceId = localStorage.getItem("device_selected_id");
+  if (!deviceId) {
+    profilePictureUrl.value = null;
+    return;
+  }
+  
+  isFetchingProfile.value = true;
+  
   try {
-    const { data } = await deviceApi.get('/messages/get-profile', {
-      params: { recipient: 'me', resolution: 'high' }
+    const { data } = await deviceApi.get("/messages/get-profile", {
+      params: { recipient: "me", resolution: "high" },
     });
     if (data && data.profilePictureUrl) {
       profilePictureUrl.value = data.profilePictureUrl;
     } else {
-      // Reset ke null jika tidak ada foto profil
       profilePictureUrl.value = null;
     }
   } catch (error) {
-    console.warn('Failed to fetch profile picture:', error);
-    // Reset ke null jika gagal
     profilePictureUrl.value = null;
+  } finally {
+    isFetchingProfile.value = false;
   }
 };
 
-// 🆕 Watch perubahan device dari localStorage
-// Menggunakan setInterval untuk polling localStorage changes
-let storageWatcher = null;
-onMounted(() => {
-  storageWatcher = setInterval(() => {
-    const currentDeviceId = localStorage.getItem('device_selected_id');
-    if (currentDeviceId !== selectedDeviceId.value) {
-      selectedDeviceId.value = currentDeviceId;
-      
-      // Auto-refresh foto profil
-      if (currentDeviceId) {
-        fetchProfilePicture();
-      } else {
-        // Jika tidak ada device, reset foto profil
-        profilePictureUrl.value = null;
-      }
+// Handler untuk storage event (cross-tab communication)
+const handleStorageChange = (event) => {
+  if (event.key === 'device_selected_id') {
+    const newDeviceId = event.newValue;
+    if (newDeviceId !== selectedDeviceId.value) {
+      selectedDeviceId.value = newDeviceId;
+      fetchProfilePicture();
     }
-  }, 500); // Check every 500ms
-});
+  }
+};
+
+// Handler untuk custom event (same-tab communication)
+const handleDeviceChange = () => {
+  const currentDeviceId = localStorage.getItem("device_selected_id");
+  if (currentDeviceId !== selectedDeviceId.value) {
+    selectedDeviceId.value = currentDeviceId;
+    fetchProfilePicture();
+  }
+};
 
 // Cleanup saat component unmount
 onUnmounted(() => {
-  if (storageWatcher) {
-    clearInterval(storageWatcher);
-    storageWatcher = null;
-  }
+  window.removeEventListener('storage', handleStorageChange);
+  window.removeEventListener('deviceChanged', handleDeviceChange);
 });
 
 const toggleSidebar = () => {
@@ -256,26 +434,26 @@ const closeSidebar = () => {
 };
 
 const getInitials = (name) => {
-  if (!name) return 'U';
+  if (!name) return "U";
   return name.charAt(0).toUpperCase();
 };
 
 const logout = () => {
   clearGroups();
-  localStorage.removeItem('token');
-  localStorage.removeItem('device_api_key');
-  localStorage.removeItem('device_selected_id');
-  localStorage.removeItem('device_selected_name');
+  localStorage.removeItem("token");
+  localStorage.removeItem("device_api_key");
+  localStorage.removeItem("device_selected_id");
+  localStorage.removeItem("device_selected_name");
   closeSidebar();
-  router.push('/login');
+  router.push("/login");
 };
 </script>
 
 <style scoped>
 /* Layout */
-.layout { 
-  display: grid; 
-  grid-template-columns: 280px 1fr; 
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
   height: 100vh;
   background: #f8fafc;
 }
@@ -297,7 +475,7 @@ const logout = () => {
   justify-content: center;
   align-items: center;
   gap: 5px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
@@ -345,19 +523,23 @@ const logout = () => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Sidebar */
-aside { 
+aside {
   background: #ffffff;
   border-right: 1px solid #e2e8f0;
-  display: flex; 
+  display: flex;
   flex-direction: column;
   overflow-y: auto;
   transition: transform 0.3s ease;
-  box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
 }
 
 .sidebar-header {
@@ -380,7 +562,7 @@ aside {
   color: #3b82f6;
 }
 
-.sidebar-header h3 { 
+.sidebar-header h3 {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
@@ -412,11 +594,11 @@ aside {
 }
 
 /* Navigation */
-nav { 
+nav {
   flex: 1;
   padding: 16px 12px;
-  display: flex; 
-  flex-direction: column; 
+  display: flex;
+  flex-direction: column;
   gap: 4px;
   overflow-y: auto;
 }
@@ -442,12 +624,12 @@ nav {
   margin: 12px 16px;
 }
 
-nav a { 
+nav a {
   display: flex;
   align-items: center;
   gap: 12px;
-  text-decoration: none; 
-  color: #475569; 
+  text-decoration: none;
+  color: #475569;
   padding: 12px 16px;
   border-radius: 10px;
   font-size: 14px;
@@ -461,14 +643,14 @@ nav a:hover {
   color: #1e293b;
 }
 
-nav a.router-link-active { 
+nav a.router-link-active {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 nav a.router-link-active::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
@@ -580,7 +762,7 @@ nav a.router-link-active .nav-icon {
 }
 
 /* Main Content */
-main { 
+main {
   padding: 32px;
   overflow: auto;
   background: #f8fafc;
@@ -613,15 +795,15 @@ nav::-webkit-scrollbar-thumb:hover {
   .layout {
     grid-template-columns: 1fr;
   }
-  
+
   .hamburger {
     display: flex;
   }
-  
+
   .overlay {
     display: block;
   }
-  
+
   aside {
     position: fixed;
     top: 0;
@@ -630,17 +812,17 @@ nav::-webkit-scrollbar-thumb:hover {
     width: 280px;
     z-index: 1000;
     transform: translateX(-100%);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
   }
-  
+
   aside.open {
     transform: translateX(0);
   }
-  
+
   .close-btn {
     display: flex;
   }
-  
+
   main {
     padding: 80px 16px 16px 16px;
   }
@@ -650,30 +832,30 @@ nav::-webkit-scrollbar-thumb:hover {
   aside {
     width: 260px;
   }
-  
+
   .sidebar-header {
     padding: 16px;
   }
-  
+
   .logo-icon {
     width: 28px;
     height: 28px;
   }
-  
+
   .sidebar-header h3 {
     font-size: 18px;
   }
-  
+
   nav a {
     padding: 10px 14px;
     font-size: 13px;
   }
-  
+
   .nav-icon {
     width: 18px;
     height: 18px;
   }
-  
+
   main {
     padding: 72px 12px 12px 12px;
   }

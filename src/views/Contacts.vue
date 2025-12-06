@@ -4,10 +4,14 @@
       <div class="header-content">
         <h2>
           <svg class="header-icon" viewBox="0 0 24 24" fill="none">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
-            <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="2"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2"/>
+            <path
+              d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="2" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" />
           </svg>
           Kelola Kontak
         </h2>
@@ -16,10 +20,10 @@
       <div class="stats-row">
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           <div>
             <div class="stat-value">{{ meta.totalContacts || contacts.length }}</div>
@@ -28,8 +32,8 @@
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-            <line x1="12" y1="18" x2="12.01" y2="18"/>
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
           </svg>
           <div>
             <div class="stat-value">{{ devices.length }}</div>
@@ -38,8 +42,8 @@
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
           </svg>
           <div>
             <div class="stat-value">{{ visibleContacts.length }}</div>
@@ -53,8 +57,8 @@
       <div class="card-header-section">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-            <line x1="12" y1="18" x2="12.01" y2="18"/>
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
           </svg>
           Pilih Perangkat
         </h3>
@@ -63,8 +67,8 @@
         <div class="form-group">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-              <line x1="12" y1="18" x2="12.01" y2="18"/>
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+              <line x1="12" y1="18" x2="12.01" y2="18" />
             </svg>
             Perangkat
           </label>
@@ -76,37 +80,67 @@
           </select>
         </div>
         <div class="device-actions">
-          <button @click="showAddForm = true" class="btn-add" :disabled="!selectedDeviceId">
+          <button
+            @click="showAddForm = true"
+            class="btn-add"
+            :disabled="!selectedDeviceId"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="16"/>
-              <line x1="8" y1="12" x2="16" y2="12"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
             Tambah Kontak
           </button>
-          <button @click="loadContacts" :disabled="loading || !selectedDeviceId" class="btn-reload">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loading }">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          <button
+            @click="loadContacts"
+            :disabled="loading || !selectedDeviceId"
+            class="btn-reload"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              :class="{ spinning: loading }"
+            >
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
             </svg>
-            {{ loading ? 'Memuat...' : 'Muat Ulang' }}
+            {{ loading ? "Memuat..." : "Muat Ulang" }}
           </button>
-          <button @click="triggerImport" :disabled="!selectedDeviceId || importBusy" class="btn-import">
+          <button
+            @click="triggerImport"
+            :disabled="!selectedDeviceId || importBusy"
+            class="btn-import"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            {{ importBusy ? 'Mengimpor...' : 'Import XLSX' }}
+            {{ importBusy ? "Mengimpor..." : "Import XLSX" }}
           </button>
-          <button @click="exportContactsFile" :disabled="!selectedDeviceId || exportBusy" class="btn-export">
+          <button
+            @click="exportContactsFile"
+            :disabled="!selectedDeviceId || exportBusy"
+            class="btn-export"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {{ exportBusy ? 'Mengekspor...' : 'Export XLSX' }}
+            {{ exportBusy ? "Mengekspor..." : "Export XLSX" }}
           </button>
-          <input ref="fileInput" type="file" accept=".xlsx,.xls" style="display:none" @change="onImportFileChange" />
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".xlsx,.xls"
+            style="display: none"
+            @change="onImportFileChange"
+          />
         </div>
       </div>
     </section>
@@ -115,10 +149,10 @@
       <div class="card-header-section">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           Daftar Kontak ({{ meta.totalContacts || contacts.length }})
         </h3>
@@ -127,8 +161,8 @@
       <div class="toolbar-section">
         <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
           </svg>
           <input v-model="q" placeholder="Cari nama, nomor, atau label..." />
         </div>
@@ -164,22 +198,41 @@
           <thead>
             <tr>
               <th class="col-name">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
                 </svg>
                 Nama
               </th>
               <th class="col-phone">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                  />
                 </svg>
                 Nomor WhatsApp
               </th>
               <th class="col-labels">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+                  />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
                 </svg>
                 Label Kelas
               </th>
@@ -191,13 +244,20 @@
               <td class="col-name">
                 <div class="contact-name-cell">
                   <div class="contact-avatar-small">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                      <circle cx="12" cy="7" r="4"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
                     </svg>
                   </div>
                   <div class="contact-name-text">
-                    <span class="name-full">{{ contact.firstName }} {{ contact.lastName || '' }}</span>
+                    <span class="name-full"
+                      >{{ contact.firstName }} {{ contact.lastName || "" }}</span
+                    >
                   </div>
                 </div>
               </td>
@@ -205,8 +265,15 @@
                 <div class="phone-text">{{ contact.phone }}</div>
               </td>
               <td class="col-labels">
-                <div class="labels-list-table" v-if="contact.ContactLabel && filteredContactLabels(contact).length">
-                  <div v-for="label in filteredContactLabels(contact)" :key="label" class="label-chip-table">
+                <div
+                  class="labels-list-table"
+                  v-if="contact.ContactLabel && filteredContactLabels(contact).length"
+                >
+                  <div
+                    v-for="label in filteredContactLabels(contact)"
+                    :key="label"
+                    class="label-chip-table"
+                  >
                     <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
                       <line x1="7" y1="7" x2="7.01" y2="7"/>
@@ -218,16 +285,38 @@
               </td>
               <td class="col-actions">
                 <div class="action-buttons">
-                  <button class="btn-edit-table" @click="editContact(contact)" title="Edit kontak">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  <button
+                    class="btn-edit-table"
+                    @click="editContact(contact)"
+                    title="Edit kontak"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                      />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                   </button>
-                  <button class="btn-delete-table" @click="deleteContact(contact.id)" title="Hapus kontak">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <button
+                    class="btn-delete-table"
+                    @click="deleteContact(contact.id)"
+                    title="Hapus kontak"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -239,23 +328,30 @@
 
       <div v-else-if="!loading" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          <path d="M17 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
-        <h3>{{ q ? 'Tidak Ada Hasil' : 'Belum Ada Kontak' }}</h3>
-        <p>{{ q ? 'Tidak ada kontak yang cocok dengan pencarian Anda' : 'Mulai dengan menambahkan kontak baru' }}</p>
+        <h3>{{ q ? "Tidak Ada Hasil" : "Belum Ada Kontak" }}</h3>
+        <p>
+          {{
+            q
+              ? "Tidak ada kontak yang cocok dengan pencarian Anda"
+              : "Mulai dengan menambahkan kontak baru"
+          }}
+        </p>
       </div>
 
       <div v-if="meta.totalContacts > 0 || contacts.length > 0" class="pagination">
         <div class="pagination-info">
-          Menampilkan <strong>{{ visibleContacts.length }}</strong> dari <strong>{{ meta.totalContacts || contacts.length }}</strong> kontak
+          Menampilkan <strong>{{ visibleContacts.length }}</strong> dari
+          <strong>{{ meta.totalContacts || contacts.length }}</strong> kontak
         </div>
         <div class="pagination-controls">
           <button class="btn-page" :disabled="page <= 1 || loading" @click="goPrev">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 18 9 12 15 6"/>
+              <polyline points="15 18 9 12 15 6" />
             </svg>
             Sebelumnya
           </button>
@@ -267,7 +363,7 @@
           <button class="btn-page" :disabled="!meta.hasMore || loading" @click="goNext">
             Berikutnya
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"/>
+              <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
         </div>
@@ -276,8 +372,8 @@
 
     <div v-else class="empty-selection-card">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-        <line x1="12" y1="18" x2="12.01" y2="18"/>
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+        <line x1="12" y1="18" x2="12.01" y2="18" />
       </svg>
       <h3>Pilih Perangkat</h3>
       <p>Pilih perangkat di atas untuk melihat dan mengelola kontak</p>
@@ -289,15 +385,15 @@
         <div class="modal-header">
           <h3>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
-            {{ editingContact ? 'Edit Kontak' : 'Tambah Kontak Baru' }}
+            {{ editingContact ? "Edit Kontak" : "Tambah Kontak Baru" }}
           </h3>
           <button class="close-btn" @click="cancelForm">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -305,9 +401,14 @@
           <div class="form-grid">
             <div class="form-group">
               <label>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
                 </svg>
                 Nama Depan *
               </label>
@@ -315,9 +416,14 @@
             </div>
             <div class="form-group">
               <label>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
                 </svg>
                 Nama Belakang
               </label>
@@ -325,42 +431,69 @@
             </div>
             <div class="form-group span-2">
               <label>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                  />
                 </svg>
                 Nomor WhatsApp *
               </label>
-              <input 
-                v-model="form.phone" 
+              <input
+                v-model="form.phone"
                 type="tel"
-                placeholder="628123456789" 
+                placeholder="628123456789"
                 pattern="628[0-9]{8,12}"
                 title="Format: 628xxxxxxxxx (dimulai dengan 628, panjang 11-15 digit)"
-                required 
+                required
               />
               <small class="help-text">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 Format WhatsApp Indonesia: 628xxxxxxxxx (tanpa +, dimulai dengan 628)
               </small>
             </div>
             <div class="form-group span-2">
               <label>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+                  />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
                 </svg>
                 Label Kelas (Nama Kelas)
               </label>
-              <input v-model="labelInput" placeholder="Contoh: IND-PP-01-MON-19.00 (pisahkan dengan koma jika lebih dari satu)" />
+              <input
+                v-model="labelInput"
+                placeholder="Contoh: IND-PP-01-MON-19.00 (pisahkan dengan koma jika lebih dari satu)"
+              />
               <small class="help-text">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 Pisahkan dengan koma (,) untuk menambahkan beberapa label
               </small>
@@ -369,19 +502,21 @@
           <div class="modal-actions">
             <button type="button" class="btn-cancel" @click="cancelForm">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
               </svg>
               Batal
             </button>
             <button type="submit" class="btn-submit" :disabled="saving">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/>
-                <polyline points="7 3 7 8 15 8"/>
+                <path
+                  d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
               </svg>
-              {{ saving ? 'Menyimpan...' : 'Simpan Kontak' }}
+              {{ saving ? "Menyimpan..." : "Simpan Kontak" }}
             </button>
           </div>
         </form>
@@ -389,74 +524,100 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay delete-modal-overlay" @click="cancelDelete">
+    <div
+      v-if="showDeleteModal"
+      class="modal-overlay delete-modal-overlay"
+      @click="cancelDelete"
+    >
       <div class="delete-modal" @click.stop>
         <div class="delete-modal-icon">
           <div class="icon-circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           </div>
         </div>
-        
+
         <div class="delete-modal-content">
           <h3>Hapus Kontak Ini?</h3>
-          <p class="delete-warning">Tindakan ini tidak dapat dibatalkan. Kontak akan dihapus secara permanen.</p>
-          
+          <p class="delete-warning">
+            Tindakan ini tidak dapat dibatalkan. Kontak akan dihapus secara permanen.
+          </p>
+
           <div class="contact-preview" v-if="contactToDelete">
             <div class="preview-avatar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
             <div class="preview-info">
-              <div class="preview-name">{{ contactToDelete.firstName }} {{ contactToDelete.lastName || '' }}</div>
+              <div class="preview-name">
+                {{ contactToDelete.firstName }} {{ contactToDelete.lastName || "" }}
+              </div>
               <div class="preview-phone">{{ contactToDelete.phone }}</div>
             </div>
           </div>
         </div>
 
         <div class="delete-modal-actions">
-          <button type="button" class="btn-keep" @click="cancelDelete" :disabled="deleting">
+          <button
+            type="button"
+            class="btn-keep"
+            @click="cancelDelete"
+            :disabled="deleting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Batal
           </button>
-          <button type="button" class="btn-delete-confirm" @click="confirmDelete" :disabled="deleting">
+          <button
+            type="button"
+            class="btn-delete-confirm"
+            @click="confirmDelete"
+            :disabled="deleting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              <path d="M10 11v6M14 11v6"/>
+              <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
+              <path d="M10 11v6M14 11v6" />
             </svg>
-            {{ deleting ? 'Menghapus...' : 'Ya, Hapus' }}
+            {{ deleting ? "Menghapus..." : "Ya, Hapus" }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- Import Modal -->
-    <div v-if="showImportModal" class="modal-overlay import-modal-overlay" @click="cancelImport">
+    <div
+      v-if="showImportModal"
+      class="modal-overlay import-modal-overlay"
+      @click="cancelImport"
+    >
       <div class="import-modal" @click.stop>
         <div class="import-modal-icon">
           <div class="icon-circle-import">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
           </div>
         </div>
-        
+
         <div class="import-modal-content">
           <h3>Import Kontak dari XLSX</h3>
-          <p class="import-description">Impor data kontak dari file Excel ke perangkat yang dipilih</p>
-          
+          <p class="import-description">
+            Impor data kontak dari file Excel ke perangkat yang dipilih
+          </p>
+
           <div class="file-preview" v-if="selectedFile">
             <div class="preview-icon-file">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
               </svg>
             </div>
             <div class="file-info">
@@ -468,24 +629,24 @@
           <div class="form-group-import">
             <label>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               Nama Grup (Opsional)
             </label>
-            <input 
-              v-model="importGroupName" 
+            <input
+              v-model="importGroupName"
               type="text"
               placeholder="Contoh: IMPORT_2025-11-30"
               class="input-group-name"
             />
             <small class="help-text-import">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
               Nama grup akan digunakan untuk mengelompokkan kontak yang diimpor
             </small>
@@ -493,19 +654,29 @@
         </div>
 
         <div class="import-modal-actions">
-          <button type="button" class="btn-cancel-import" @click="cancelImport" :disabled="importBusy">
+          <button
+            type="button"
+            class="btn-cancel-import"
+            @click="cancelImport"
+            :disabled="importBusy"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Batal
           </button>
-          <button type="button" class="btn-import-confirm" @click="confirmImport" :disabled="importBusy">
+          <button
+            type="button"
+            class="btn-import-confirm"
+            @click="confirmImport"
+            :disabled="importBusy"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            {{ importBusy ? 'Mengimpor...' : 'Mulai Import' }}
+            {{ importBusy ? "Mengimpor..." : "Mulai Import" }}
           </button>
         </div>
       </div>
@@ -517,21 +688,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import { userApi } from '../api/http.js';
-import { useToast } from '../composables/useToast.js';
+import { ref, onMounted, computed, watch } from "vue";
+import { userApi } from "../api/http.js";
+import { useToast } from "../composables/useToast.js";
 
 const toast = useToast();
 
 const contacts = ref([]);
 const devices = ref([]);
-const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
+const selectedDeviceId = ref(localStorage.getItem("device_selected_id") || "");
 const loading = ref(false);
 const saving = ref(false);
 const showAddForm = ref(false);
 const editingContact = ref(null);
-const msg = ref('');
-const err = ref('');
+const msg = ref("");
+const err = ref("");
 
 // New: Delete confirmation modal state
 const showDeleteModal = ref(false);
@@ -540,7 +711,7 @@ const deleting = ref(false);
 
 // New: Import modal state
 const showImportModal = ref(false);
-const importGroupName = ref('');
+const importGroupName = ref("");
 const selectedFile = ref(null);
 
 // New: Import/Export state
@@ -549,26 +720,26 @@ const importBusy = ref(false);
 const exportBusy = ref(false);
 
 const form = ref({
-  firstName: '',
-  lastName: '',
-  phone: '',
-  email: '',
-  gender: '',
-  dob: '',
+  firstName: "",
+  lastName: "",
+  phone: "",
+  email: "",
+  gender: "",
+  dob: "",
 });
-const labelInput = ref('');
-const q = ref('');
+const labelInput = ref("");
+const q = ref("");
 let searchTimer;
 
 // paging/sorting state
 const page = ref(1);
 const pageSize = ref(25);
-const sortBy = ref('createdAt');
-const sortDir = ref('desc');
+const sortBy = ref("createdAt");
+const sortDir = ref("desc");
 const meta = ref({ totalContacts: 0, currentPage: 1, totalPages: 1, hasMore: false });
 
 // New: Label filter state
-const selectedLabelFilter = ref('');
+const selectedLabelFilter = ref("");
 
 // New: Get all available labels from contacts
 const availableLabels = computed(() => {
@@ -582,13 +753,19 @@ const availableLabels = computed(() => {
 
 const fetchDevices = async () => {
   try {
-    const { data } = await userApi.get('/devices');
+    const { data } = await userApi.get("/devices");
     devices.value = Array.isArray(data) ? data : [];
-  } catch { devices.value = []; }
+  } catch {
+    devices.value = [];
+  }
 };
 
 const onDeviceChange = () => {
-  localStorage.setItem('device_selected_id', selectedDeviceId.value);
+  localStorage.setItem("device_selected_id", selectedDeviceId.value);
+  
+  // Dispatch custom event untuk same-tab communication
+  window.dispatchEvent(new Event('deviceChanged'));
+  
   page.value = 1; // reset
   loadContacts();
 };
@@ -597,12 +774,12 @@ const loadContacts = async () => {
   if (!selectedDeviceId.value) {
     return;
   }
-  
+
   loading.value = true;
-  err.value = '';
-  
+  err.value = "";
+
   try {
-    const { data } = await userApi.get('/contacts', {
+    const { data } = await userApi.get("/contacts", {
       params: {
         deviceId: selectedDeviceId.value,
         ...(q.value ? { q: q.value } : {}),
@@ -612,20 +789,21 @@ const loadContacts = async () => {
         sortDir: sortDir.value,
       },
     });
-    
+
     const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
     contacts.value = list;
-    meta.value = Array.isArray(data) ? {
-      totalContacts: list.length,
-      currentPage: 1,
-      totalPages: 1,
-      hasMore: false,
-    } : (data?.metadata || meta.value);
-    
+    meta.value = Array.isArray(data)
+      ? {
+          totalContacts: list.length,
+          currentPage: 1,
+          totalPages: 1,
+          hasMore: false,
+        }
+      : data?.metadata || meta.value;
   } catch (e) {
-    console.error('❌ Error loading contacts:', e);
-    console.error('❌ Error response:', e?.response);
-    err.value = e?.response?.data?.message || 'Gagal memuat kontak';
+    // console.error('❌ Error loading contacts:', e);
+    // console.error('❌ Error response:', e?.response);
+    err.value = e?.response?.data?.message || "Gagal memuat kontak";
     contacts.value = []; // Reset contacts on error
     meta.value = { totalContacts: 0, currentPage: 1, totalPages: 1, hasMore: false };
   } finally {
@@ -635,13 +813,13 @@ const loadContacts = async () => {
 
 const filteredContactLabels = (contact) => {
   const names = (contact.ContactLabel || []).map((l) => l.label?.name).filter(Boolean);
-  return names.filter((n) => !String(n).startsWith('device_'));
+  return names.filter((n) => !String(n).startsWith("device_"));
 };
 
 // Updated: visibleContacts filtered by query AND label
 const visibleContacts = computed(() => {
   let filtered = contacts.value;
-  
+
   // Filter by selected label first
   if (selectedLabelFilter.value) {
     filtered = filtered.filter((c) => {
@@ -649,18 +827,20 @@ const visibleContacts = computed(() => {
       return labels.includes(selectedLabelFilter.value);
     });
   }
-  
+
   // Then filter by search term
-  const term = String(q.value || '').trim().toLowerCase();
+  const term = String(q.value || "")
+    .trim()
+    .toLowerCase();
   if (term) {
     filtered = filtered.filter((c) => {
-      const name = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
-      const phone = String(c.phone || '').toLowerCase();
-      const labels = filteredContactLabels(c).join(' ').toLowerCase();
+      const name = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
+      const phone = String(c.phone || "").toLowerCase();
+      const labels = filteredContactLabels(c).join(" ").toLowerCase();
       return name.includes(term) || phone.includes(term) || labels.includes(term);
     });
   }
-  
+
   return filtered;
 });
 
@@ -673,106 +853,111 @@ watch([q, sortBy, sortDir, pageSize], () => {
 
 const resetForm = () => {
   form.value = {
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    gender: '',
-    dob: '',
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    gender: "",
+    dob: "",
   };
-  labelInput.value = '';
+  labelInput.value = "";
   editingContact.value = null;
   showAddForm.value = false;
 };
 
 const cancelForm = () => {
   resetForm();
-  msg.value = '';
-  err.value = '';
+  msg.value = "";
+  err.value = "";
 };
 
 const editContact = (contact) => {
   editingContact.value = contact;
   form.value = {
-    firstName: contact.firstName || '',
-    lastName: contact.lastName || '',
-    phone: contact.phone || '',
-    email: '', // kosongkan email untuk tutor
-    gender: '', // kosongkan gender untuk tutor
-    dob: '', // kosongkan dob untuk tutor
+    firstName: contact.firstName || "",
+    lastName: contact.lastName || "",
+    phone: contact.phone || "",
+    email: "", // kosongkan email untuk tutor
+    gender: "", // kosongkan gender untuk tutor
+    dob: "", // kosongkan dob untuk tutor
   };
   // Pre-fill only non-device labels
-  labelInput.value = filteredContactLabels(contact).join(', ');
+  labelInput.value = filteredContactLabels(contact).join(", ");
 };
 
 // New: Phone number validation function
 const validatePhoneNumber = (phone) => {
   // Remove all spaces, dashes, and other non-digit characters
-  const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
-  
+  const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, "");
+
   // Check if number starts with 628 and has proper length (11-15 digits total)
   // 628 + 8-12 digits = 11-15 total digits
   const whatsappPattern = /^628\d{8,12}$/;
-  
+
   return whatsappPattern.test(cleanPhone);
 };
 
 // New: Format phone number for display
 const formatPhoneNumber = (phone) => {
-  return phone.replace(/[\s\-\(\)\+]/g, '');
+  return phone.replace(/[\s\-\(\)\+]/g, "");
 };
 
 const saveContact = async () => {
   if (!selectedDeviceId.value) {
-    toast.error('Pilih perangkat terlebih dahulu');
+    toast.error("Pilih perangkat terlebih dahulu");
     return;
   }
 
   // Validate phone number format
   if (!validatePhoneNumber(form.value.phone)) {
-    toast.error('Format nomor tidak valid. Gunakan format WhatsApp Indonesia yang dimulai dengan 628 (contoh: 628123456789)');
+    toast.error(
+      "Format nomor tidak valid. Gunakan format WhatsApp Indonesia yang dimulai dengan 628 (contoh: 628123456789)"
+    );
     return;
   }
-  
+
   saving.value = true;
-  err.value = '';
-  msg.value = '';
-  
+  err.value = "";
+  msg.value = "";
+
   try {
-    const labels = labelInput.value.split(',').map(s => s.trim()).filter(Boolean);
+    const labels = labelInput.value
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const payload = {
       ...form.value,
       phone: formatPhoneNumber(form.value.phone), // Clean the phone number
       // pastikan field opsional tetap kosong seperti permintaan
-      email: '',
-      gender: '',
-      dob: '',
+      email: "",
+      gender: "",
+      dob: "",
       labels,
       deviceId: selectedDeviceId.value,
     };
-    
+
     let response;
     if (editingContact.value) {
       response = await userApi.put(`/contacts/${editingContact.value.id}`, payload);
-      toast.success('Kontak berhasil diperbarui');
+      toast.success("Kontak berhasil diperbarui");
     } else {
-      response = await userApi.post('/contacts/create', payload);
-      toast.success('Kontak berhasil ditambahkan');
+      response = await userApi.post("/contacts/create", payload);
+      toast.success("Kontak berhasil ditambahkan");
     }
-    
+
     // Reset form immediately
     resetForm();
-    
+
     // Force reload contacts with better timing and error handling
-    
+
     // Try immediate reload first
     await loadContacts();
-    
+
     // If no contacts found, try again after a short delay
     if (contacts.value.length === 0) {
       setTimeout(async () => {
         await loadContacts();
-        
+
         // If still no contacts, try one more time
         if (contacts.value.length === 0) {
           setTimeout(async () => {
@@ -781,22 +966,21 @@ const saveContact = async () => {
         }
       }, 500);
     }
-    
   } catch (e) {
-    console.error('❌ Contact save error:', e);
-    console.error('❌ Error response data:', e?.response?.data);
-    console.error('❌ Error status:', e?.response?.status);
-    
-    const errorMsg = e?.response?.data?.message || e?.message || 'Gagal menyimpan kontak';
-    
+    // console.error("❌ Contact save error:", e);
+    // console.error("❌ Error response data:", e?.response?.data);
+    // console.error("❌ Error status:", e?.response?.status);
+
+    const errorMsg = e?.response?.data?.message || e?.message || "Gagal menyimpan kontak";
+
     if (e?.response?.status === 401) {
-      toast.error('Session expired. Silakan login ulang.');
+      toast.error("Session expired. Silakan login ulang.");
     } else if (e?.response?.status === 403) {
-      toast.error('Tidak memiliki izin untuk mengelola kontak. Hubungi admin.');
-    } else if (e?.response?.status === 404 && errorMsg.includes('Device')) {
-      toast.error('Perangkat tidak ditemukan. Pilih perangkat yang valid.');
-    } else if (errorMsg.includes('already exists')) {
-      toast.error('Nomor HP sudah terdaftar di perangkat ini.');
+      toast.error("Tidak memiliki izin untuk mengelola kontak. Hubungi admin.");
+    } else if (e?.response?.status === 404 && errorMsg.includes("Device")) {
+      toast.error("Perangkat tidak ditemukan. Pilih perangkat yang valid.");
+    } else if (errorMsg.includes("already exists")) {
+      toast.error("Nomor HP sudah terdaftar di perangkat ini.");
     } else {
       toast.error(`Error: ${errorMsg}`);
     }
@@ -807,7 +991,7 @@ const saveContact = async () => {
 
 const deleteContact = async (contactId) => {
   // Show custom delete modal instead of browser confirm
-  const contact = contacts.value.find(c => c.id === contactId);
+  const contact = contacts.value.find((c) => c.id === contactId);
   if (contact) {
     contactToDelete.value = contact;
     showDeleteModal.value = true;
@@ -817,21 +1001,23 @@ const deleteContact = async (contactId) => {
 // New: Confirm delete action
 const confirmDelete = async () => {
   if (!contactToDelete.value) return;
-  
+
   deleting.value = true;
-  
+
   try {
-    await userApi.delete('/contacts', { data: { contactIds: [contactToDelete.value.id] } });
-    toast.success('Kontak berhasil dihapus');
-    
+    await userApi.delete("/contacts", {
+      data: { contactIds: [contactToDelete.value.id] },
+    });
+    toast.success("Kontak berhasil dihapus");
+
     // Close modal
     showDeleteModal.value = false;
     contactToDelete.value = null;
-    
+
     // Reload contacts
     await loadContacts();
   } catch (e) {
-    toast.error(e?.response?.data?.message || 'Gagal menghapus kontak');
+    toast.error(e?.response?.data?.message || "Gagal menghapus kontak");
   } finally {
     deleting.value = false;
   }
@@ -846,11 +1032,11 @@ const cancelDelete = () => {
 // New: Import handlers
 const triggerImport = () => {
   if (!selectedDeviceId.value) {
-    toast.error('Pilih perangkat terlebih dahulu');
+    toast.error("Pilih perangkat terlebih dahulu");
     return;
   }
-  err.value = '';
-  msg.value = '';
+  err.value = "";
+  msg.value = "";
   fileInput.value && fileInput.value.click();
 };
 
@@ -860,7 +1046,7 @@ const onImportFileChange = async (e) => {
   const MAX_SIZE_MB = 5; // simple guard
   if (file.size > MAX_SIZE_MB * 1024 * 1024) {
     toast.error(`Ukuran file melebihi ${MAX_SIZE_MB}MB`);
-    e.target.value = '';
+    e.target.value = "";
     return;
   }
 
@@ -873,27 +1059,31 @@ const confirmImport = async () => {
   if (!selectedFile.value) return;
 
   importBusy.value = true;
-  err.value = '';
-  msg.value = '';
+  err.value = "";
+  msg.value = "";
 
   try {
     const formData = new FormData();
-    formData.append('file', selectedFile.value);
-    formData.append('deviceId', selectedDeviceId.value);
-    if (importGroupName.value) formData.append('groupName', importGroupName.value);
+    formData.append("file", selectedFile.value);
+    formData.append("deviceId", selectedDeviceId.value);
+    if (importGroupName.value) formData.append("groupName", importGroupName.value);
 
-    const { data } = await userApi.post('/contacts/import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    const { data } = await userApi.post("/contacts/import", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
     const createdCount = Array.isArray(data?.results) ? data.results.length : 0;
     const errorCount = Array.isArray(data?.errors) ? data.errors.length : 0;
-    toast.success(`Import selesai. Berhasil: ${createdCount}${errorCount ? `, Gagal: ${errorCount}` : ''}`);
+    toast.success(
+      `Import selesai. Berhasil: ${createdCount}${
+        errorCount ? `, Gagal: ${errorCount}` : ""
+      }`
+    );
 
     // reload contacts after import
     await loadContacts();
   } catch (e) {
-    toast.error(e?.response?.data?.message || 'Gagal mengimpor kontak');
+    toast.error(e?.response?.data?.message || "Gagal mengimpor kontak");
   } finally {
     importBusy.value = false;
     showImportModal.value = false;
@@ -910,38 +1100,45 @@ const cancelImport = () => {
 // New: Export handler
 const exportContactsFile = async () => {
   if (!selectedDeviceId.value) {
-    toast.error('Pilih perangkat terlebih dahulu');
+    toast.error("Pilih perangkat terlebih dahulu");
     return;
   }
   exportBusy.value = true;
-  err.value = '';
+  err.value = "";
   try {
-    const apiBase = (import.meta.env && import.meta.env.VITE_API_BASE_URL)
-      || ((window.location.port === '5173') ? 'http://localhost:3000' : window.location.origin);
+    const apiBase =
+      (import.meta.env && import.meta.env.VITE_API_BASE_URL) ||
+      (window.location.port === "5173"
+        ? "http://localhost:3000"
+        : window.location.origin);
     const url = `${apiBase}/contacts/export-contacts`;
 
     const response = await userApi.get(url, {
       params: { deviceId: selectedDeviceId.value },
-      responseType: 'blob',
+      responseType: "blob",
     });
 
-    const ct = response.headers?.['content-type'] || '';
-    if (typeof ct === 'string' && ct.includes('text/html')) {
+    const ct = response.headers?.["content-type"] || "";
+    if (typeof ct === "string" && ct.includes("text/html")) {
       try {
         const txt = await response.data.text();
       } catch (_) {}
-      throw new Error('Server mengembalikan HTML. Cek konfigurasi URL API.');
+      throw new Error("Server mengembalikan HTML. Cek konfigurasi URL API.");
     }
 
-    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
-    const cd = response.headers?.['content-disposition'] || '';
+    const cd = response.headers?.["content-disposition"] || "";
     const match = /filename\s*=\s*([^;]+)/i.exec(cd);
-    const fallback = `Contacts_${new Date().toISOString().slice(0,10)}.xlsx`;
-    const filename = match ? decodeURIComponent(match[1].replace(/\"/g, '').trim()) : fallback;
+    const fallback = `Contacts_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const filename = match
+      ? decodeURIComponent(match[1].replace(/\"/g, "").trim())
+      : fallback;
 
     const urlObj = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = urlObj;
     a.download = filename;
     document.body.appendChild(a);
@@ -949,16 +1146,26 @@ const exportContactsFile = async () => {
     a.remove();
     window.URL.revokeObjectURL(urlObj);
 
-    toast.success('Export berhasil. File sedang diunduh.');
+    toast.success("Export berhasil. File sedang diunduh.");
   } catch (e) {
-    toast.error(e?.message || e?.response?.data?.message || 'Gagal mengekspor kontak');
+    toast.error(e?.message || e?.response?.data?.message || "Gagal mengekspor kontak");
   } finally {
     exportBusy.value = false;
   }
 };
 
-const goPrev = () => { if (page.value > 1) { page.value -= 1; loadContacts(); } };
-const goNext = () => { if (meta.value.hasMore) { page.value += 1; loadContacts(); } };
+const goPrev = () => {
+  if (page.value > 1) {
+    page.value -= 1;
+    loadContacts();
+  }
+};
+const goNext = () => {
+  if (meta.value.hasMore) {
+    page.value += 1;
+    loadContacts();
+  }
+};
 
 onMounted(async () => {
   await fetchDevices();
@@ -1221,8 +1428,12 @@ onMounted(async () => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {
@@ -1898,7 +2109,7 @@ onMounted(async () => {
 }
 
 .icon-circle::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 100%;
   height: 100%;
@@ -2092,7 +2303,7 @@ onMounted(async () => {
 }
 
 .icon-circle-import::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 100%;
   height: 100%;

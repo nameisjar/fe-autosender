@@ -4,8 +4,17 @@
       <div class="header-content">
         <h2>
           <svg class="header-icon" viewBox="0 0 24 24" fill="none">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2"/>
-            <path d="M8 10h.01M12 10h.01M16 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="M8 10h.01M12 10h.01M16 10h.01"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
           </svg>
           Semua Pesan Terkirim (Admin)
         </h2>
@@ -14,7 +23,7 @@
       <div class="stats-row">
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <div>
             <div class="stat-value">{{ meta.totalMessages || 0 }}</div>
@@ -23,31 +32,52 @@
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <div>
-            <div class="stat-value">{{ displayedRows.filter(r => String(r.status).toLowerCase().includes('delivery') || String(r.status).toLowerCase().includes('read')).length }}</div>
+            <div class="stat-value">
+              {{
+                displayedRows.filter(
+                  (r) =>
+                    String(r.status).toLowerCase().includes("delivery") ||
+                    String(r.status).toLowerCase().includes("read")
+                ).length
+              }}
+            </div>
             <div class="stat-label">Terkirim</div>
           </div>
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
           <div>
-            <div class="stat-value">{{ displayedRows.filter(r => String(r.status).toLowerCase().includes('fail') || String(r.status).toLowerCase().includes('error')).length }}</div>
+            <div class="stat-value">
+              {{
+                displayedRows.filter(
+                  (r) =>
+                    String(r.status).toLowerCase().includes("fail") ||
+                    String(r.status).toLowerCase().includes("error")
+                ).length
+              }}
+            </div>
             <div class="stat-label">Gagal</div>
           </div>
         </div>
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
           </svg>
           <div>
-            <div class="stat-value">{{ displayedRows.filter(r => String(r.status).toLowerCase() === 'pending').length }}</div>
+            <div class="stat-value">
+              {{
+                displayedRows.filter((r) => String(r.status).toLowerCase() === "pending")
+                  .length
+              }}
+            </div>
             <div class="stat-label">Pending</div>
           </div>
         </div>
@@ -58,33 +88,43 @@
       <div class="toolbar-header">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="4" y1="21" x2="4" y2="14"/>
-            <line x1="4" y1="10" x2="4" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12" y2="3"/>
-            <line x1="20" y1="21" x2="20" y2="16"/>
-            <line x1="20" y1="12" x2="20" y2="3"/>
-            <line x1="1" y1="14" x2="7" y2="14"/>
-            <line x1="9" y1="8" x2="15" y2="8"/>
-            <line x1="17" y1="16" x2="23" y2="16"/>
+            <line x1="4" y1="21" x2="4" y2="14" />
+            <line x1="4" y1="10" x2="4" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12" y2="3" />
+            <line x1="20" y1="21" x2="20" y2="16" />
+            <line x1="20" y1="12" x2="20" y2="3" />
+            <line x1="1" y1="14" x2="7" y2="14" />
+            <line x1="9" y1="8" x2="15" y2="8" />
+            <line x1="17" y1="16" x2="23" y2="16" />
           </svg>
           Filter & Pencarian
         </h3>
         <div class="action-buttons">
-          <button class="btn-action export" @click="exportCsv" :disabled="loading || exporting">
+          <button
+            class="btn-action export"
+            @click="exportCsv"
+            :disabled="loading || exporting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {{ exporting ? 'Mengekspor...' : 'Export CSV' }}
+            {{ exporting ? "Mengekspor..." : "Export CSV" }}
           </button>
-          <button class="btn-action danger" @click="deleteAllSent" :disabled="loading || deleting">
+          <button
+            class="btn-action danger"
+            @click="deleteAllSent"
+            :disabled="loading || deleting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <polyline points="3 6 5 6 21 6" />
+              <path
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
             </svg>
-            {{ deleting ? 'Menghapus...' : 'Hapus Semua' }}
+            {{ deleting ? "Menghapus..." : "Hapus Semua" }}
           </button>
         </div>
       </div>
@@ -93,7 +133,9 @@
         <div class="filter-item">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              <path
+                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+              />
             </svg>
             Nomor Telepon
           </label>
@@ -103,8 +145,8 @@
         <div class="filter-item">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
             Tutor
           </label>
@@ -114,8 +156,8 @@
         <div class="filter-item span-2">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/>
-              <path d="m21 21-4.35-4.35"/>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
             </svg>
             Cari Pesan
           </label>
@@ -125,9 +167,9 @@
         <div class="filter-item">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="4" y1="6" x2="20" y2="6"/>
-              <line x1="8" y1="12" x2="20" y2="12"/>
-              <line x1="12" y1="18" x2="20" y2="18"/>
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="8" y1="12" x2="20" y2="12" />
+              <line x1="12" y1="18" x2="20" y2="18" />
             </svg>
             Urutkan
           </label>
@@ -142,7 +184,7 @@
         <div class="filter-item compact">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="18 15 12 9 6 15"/>
+              <polyline points="18 15 12 9 6 15" />
             </svg>
             Arah
           </label>
@@ -155,10 +197,10 @@
         <div class="filter-item compact">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
             </svg>
             Tampil
           </label>
@@ -173,10 +215,18 @@
         <div class="filter-item">
           <label>&nbsp;</label>
           <button class="btn-load" @click="load(1)" :disabled="loading">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: loading }">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              :class="{ spinning: loading }"
+            >
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
             </svg>
-            {{ loading ? 'Memuat...' : 'Muat Data' }}
+            {{ loading ? "Memuat..." : "Muat Data" }}
           </button>
         </div>
       </div>
@@ -199,15 +249,20 @@
           <tbody>
             <tr v-for="r in displayedRows" :key="r.id" class="message-row">
               <td class="col-expand">
-                <button 
-                  class="btn-expand" 
+                <button
+                  class="btn-expand"
                   @click="openDetailModal(r)"
                   title="Lihat detail"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="16" x2="12" y2="12"/>
-                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
                   </svg>
                 </button>
               </td>
@@ -218,7 +273,9 @@
                 </div>
               </td>
               <td class="col-message">
-                <div class="message-preview-cell">{{ truncateMessage(r.message, 50) }}</div>
+                <div class="message-preview-cell">
+                  {{ truncateMessage(r.message, 50) }}
+                </div>
               </td>
               <td class="col-status">
                 <span class="status-badge" :class="badgeClass(r.status)">
@@ -230,29 +287,59 @@
               </td>
               <td class="col-source">
                 <span v-if="sourceSimple(r) === 'reminder'" class="source-chip reminder">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
                   </svg>
                   Reminder
                 </span>
-                <span v-else-if="sourceSimple(r) === 'feedback'" class="source-chip feedback">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                <span
+                  v-else-if="sourceSimple(r) === 'feedback'"
+                  class="source-chip feedback"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                    />
                   </svg>
                   Feedback
                 </span>
-                <span v-else-if="sourceSimple(r) === 'recurrence'" class="source-chip recurrence">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="23 4 23 10 17 10"/>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                <span
+                  v-else-if="sourceSimple(r) === 'recurrence'"
+                  class="source-chip recurrence"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                   </svg>
                   Recurrence
                 </span>
                 <span v-else-if="sourceSimple(r)" class="source-chip broadcast">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="2"/>
-                    <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="2" />
+                    <path
+                      d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"
+                    />
                   </svg>
                   Broadcast
                 </span>
@@ -264,8 +351,8 @@
 
         <div v-else-if="!loading && displayedRows.length === 0" class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <path d="M8 10h.01M12 10h.01M16 10h.01"/>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <path d="M8 10h.01M12 10h.01M16 10h.01" />
           </svg>
           <h3>Tidak Ada Pesan</h3>
           <p>Belum ada pesan terkirim yang ditemukan</p>
@@ -274,9 +361,9 @@
     </div>
 
     <div class="pagination" v-if="meta.totalPages > 1">
-      <button class="btn-page" :disabled="page<=1 || loading" @click="load(page-1)">
+      <button class="btn-page" :disabled="page <= 1 || loading" @click="load(page - 1)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
+          <polyline points="15 18 9 12 15 6" />
         </svg>
         Sebelumnya
       </button>
@@ -285,10 +372,14 @@
         <span class="page-separator">/</span>
         <span class="total-pages">{{ meta.totalPages }}</span>
       </div>
-      <button class="btn-page" :disabled="!meta.hasMore || loading" @click="load(page+1)">
+      <button
+        class="btn-page"
+        :disabled="!meta.hasMore || loading"
+        @click="load(page + 1)"
+      >
         Selanjutnya
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"/>
+          <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
     </div>
@@ -296,12 +387,16 @@
     <p v-if="err" class="error">{{ err }}</p>
 
     <!-- Detail Modal Popup -->
-    <div v-if="showDetailModal" class="modal-overlay detail-modal-overlay" @click="closeDetailModal">
+    <div
+      v-if="showDetailModal"
+      class="modal-overlay detail-modal-overlay"
+      @click="closeDetailModal"
+    >
       <div class="detail-modal" @click.stop>
         <div class="detail-modal-header">
           <div class="detail-modal-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
             <div>
               <h3>Detail Pesan Terkirim</h3>
@@ -310,8 +405,8 @@
           </div>
           <button class="btn-close-modal" @click="closeDetailModal" title="Tutup">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -321,17 +416,22 @@
           <div class="detail-section">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
               Informasi Kontak
             </label>
             <div class="info-grid">
               <div class="info-item">
                 <label class="info-label">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
                   </svg>
                   Nama
                 </label>
@@ -340,12 +440,21 @@
 
               <div class="info-item">
                 <label class="info-label">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                    />
                   </svg>
                   Nomor Telepon
                 </label>
-                <div class="info-value phone-value">{{ getPhoneNumber(selectedMessage) }}</div>
+                <div class="info-value phone-value">
+                  {{ getPhoneNumber(selectedMessage) }}
+                </div>
               </div>
             </div>
           </div>
@@ -354,7 +463,7 @@
           <div class="detail-section">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               Pesan
             </label>
@@ -365,16 +474,21 @@
           <div class="detail-section">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
               </svg>
               Informasi Status
             </label>
             <div class="info-grid">
               <div class="info-item">
                 <label class="info-label">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                   Status
                 </label>
@@ -385,9 +499,14 @@
 
               <div class="info-item">
                 <label class="info-label">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
                   </svg>
                   Waktu Terkirim
                 </label>
@@ -400,10 +519,10 @@
           <div class="detail-section" v-if="tutorName(selectedMessage) !== '-'">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               Tutor
             </label>
@@ -414,36 +533,71 @@
           <div class="detail-section" v-if="sourceSimple(selectedMessage)">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="2"/>
-                <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
+                <circle cx="12" cy="12" r="2" />
+                <path
+                  d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"
+                />
               </svg>
               Sumber Pesan
             </label>
             <div class="source-detail">
-              <span v-if="sourceSimple(selectedMessage) === 'reminder'" class="source-chip reminder large">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
+              <span
+                v-if="sourceSimple(selectedMessage) === 'reminder'"
+                class="source-chip reminder large"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
                 </svg>
                 Reminder
               </span>
-              <span v-else-if="sourceSimple(selectedMessage) === 'feedback'" class="source-chip feedback large">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              <span
+                v-else-if="sourceSimple(selectedMessage) === 'feedback'"
+                class="source-chip feedback large"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                  />
                 </svg>
                 Feedback
               </span>
-              <span v-else-if="sourceSimple(selectedMessage) === 'recurrence'" class="source-chip recurrence large">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              <span
+                v-else-if="sourceSimple(selectedMessage) === 'recurrence'"
+                class="source-chip recurrence large"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                 </svg>
                 Recurrence
               </span>
               <span v-else class="source-chip broadcast large">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="2"/>
-                  <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="2" />
+                  <path
+                    d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"
+                  />
                 </svg>
                 Broadcast
               </span>
@@ -454,18 +608,28 @@
           <div class="detail-section" v-if="selectedMessage.mediaPath">
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <path d="m21 15-5-5L5 21"/>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="m21 15-5-5L5 21" />
               </svg>
               Media
             </label>
             <div class="media-content">
-              <a :href="mediaUrl(selectedMessage.mediaPath)" target="_blank" rel="noopener" class="media-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                  <polyline points="15 3 21 3 21 9"/>
-                  <line x1="10" y1="14" x2="21" y2="3"/>
+              <a
+                :href="mediaUrl(selectedMessage.mediaPath)"
+                target="_blank"
+                rel="noopener"
+                class="media-link"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
                 Lihat Media
               </a>
@@ -482,7 +646,7 @@
         <div class="detail-modal-footer">
           <button class="btn-close-footer" @click="closeDetailModal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Tutup
           </button>
@@ -491,37 +655,56 @@
     </div>
 
     <!-- Confirmation Dialog -->
-    <div v-if="showConfirm" class="modal-overlay delete-modal-overlay" @click.self="cancelConfirm">
+    <div
+      v-if="showConfirm"
+      class="modal-overlay delete-modal-overlay"
+      @click.self="cancelConfirm"
+    >
       <div class="delete-modal" @click.stop>
         <div class="delete-modal-icon">
           <div class="icon-circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
         </div>
-        
+
         <div class="delete-modal-content">
           <h3>Hapus Semua Pesan?</h3>
-          <p class="delete-warning">Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini tidak dapat dibatalkan.</p>
+          <p class="delete-warning">
+            Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini tidak dapat
+            dibatalkan.
+          </p>
         </div>
 
         <div class="delete-modal-actions">
-          <button type="button" class="btn-keep" @click="cancelConfirm" :disabled="deleting">
+          <button
+            type="button"
+            class="btn-keep"
+            @click="cancelConfirm"
+            :disabled="deleting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
             Batal
           </button>
-          <button type="button" class="btn-delete-confirm" @click="executeConfirm" :disabled="deleting">
+          <button
+            type="button"
+            class="btn-delete-confirm"
+            @click="executeConfirm"
+            :disabled="deleting"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="M3 6h18" />
+              <path
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
             </svg>
-            {{ deleting ? 'Menghapus...' : 'Ya, Hapus Semua' }}
+            {{ deleting ? "Menghapus..." : "Ya, Hapus Semua" }}
           </button>
         </div>
       </div>
@@ -530,9 +713,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import { userApi, deviceApi } from '../api/http.js';
-import { useToast } from '../composables/useToast.js';
+import { ref, onMounted, computed, watch } from "vue";
+import { userApi, deviceApi } from "../api/http.js";
+import { useToast } from "../composables/useToast.js";
 
 const toast = useToast();
 
@@ -540,21 +723,21 @@ const rows = ref([]);
 const meta = ref({ totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: false });
 const page = ref(1);
 const pageSize = ref(25);
-const sortBy = ref('createdAt');
-const sortDir = ref('desc');
-const phoneNumber = ref('');
-const tutorQuery = ref('');
-const messageQuery = ref('');
+const sortBy = ref("createdAt");
+const sortDir = ref("desc");
+const phoneNumber = ref("");
+const tutorQuery = ref("");
+const messageQuery = ref("");
 const loading = ref(false);
-const err = ref('');
+const err = ref("");
 
 const exporting = ref(false);
 const deleting = ref(false);
 
 // Confirmation dialog state
 const showConfirm = ref(false);
-const confirmTitle = ref('');
-const confirmMessage = ref('');
+const confirmTitle = ref("");
+const confirmMessage = ref("");
 const confirmAction = ref(() => {});
 
 const cancelConfirm = () => {
@@ -568,7 +751,7 @@ const executeConfirm = async () => {
   }
 };
 
-const isBroadcast = (r) => String(r?.id || '').startsWith('BC_');
+const isBroadcast = (r) => String(r?.id || "").startsWith("BC_");
 
 const displayedRows = computed(() => {
   const list = rows.value || [];
@@ -586,50 +769,60 @@ const groupNameMap = ref({});
 
 const broadcastNameMap = ref({});
 const getBroadcastPkId = (id) => {
-  const m = String(id || '').match(/^BC_(\d+)_/);
+  const m = String(id || "").match(/^BC_(\d+)_/);
   return m ? Number(m[1]) : null;
 };
 const loadBroadcasts = async () => {
   try {
-    const { data } = await deviceApi.get('/messages/broadcasts');
+    const { data } = await deviceApi.get("/messages/broadcasts");
     const arr = Array.isArray(data) ? data : [];
     const map = {};
     for (const b of arr) {
       const key = Number(b?.pkId ?? b?.id);
-      if (Number.isFinite(key)) map[key] = String(b?.name || '');
+      if (Number.isFinite(key)) map[key] = String(b?.name || "");
     }
     broadcastNameMap.value = map;
-  } catch (_) { /* ignore */ }
+  } catch (_) {
+    /* ignore */
+  }
 };
 
 // Load group names from all devices
 const loadGroupNames = async () => {
   try {
     // Get all devices first
-    const { data: devicesData } = await userApi.get('/devices');
+    const { data: devicesData } = await userApi.get("/devices");
     const devices = Array.isArray(devicesData) ? devicesData : [];
-    
+
     const map = {};
-    
+
     // Load groups from each device
     for (const device of devices) {
       if (device && device.id) {
         try {
-          const { data: groupsData } = await userApi.get(`/whatsapp-groups/device/${device.id}/active`);
-          
+          const { data: groupsData } = await userApi.get(
+            `/whatsapp-groups/device/${device.id}/active`
+          );
+
           if (groupsData && groupsData.status && Array.isArray(groupsData.data)) {
-            groupsData.data.forEach(group => {
+            groupsData.data.forEach((group) => {
               // Get group ID and name from various possible fields
-              const groupId = group.id || group.groupId || group.value || group._id || '';
-              const groupName = group.name || group.subject || group.label || group.groupName || group.title || '';
-              
+              const groupId = group.id || group.groupId || group.value || group._id || "";
+              const groupName =
+                group.name ||
+                group.subject ||
+                group.label ||
+                group.groupName ||
+                group.title ||
+                "";
+
               if (groupId && groupName) {
                 // Store with full ID format (@g.us)
-                const fullId = groupId.includes('@g.us') ? groupId : `${groupId}@g.us`;
+                const fullId = groupId.includes("@g.us") ? groupId : `${groupId}@g.us`;
                 map[fullId] = groupName;
-                
+
                 // Also store without @g.us for flexibility
-                const shortId = groupId.replace('@g.us', '');
+                const shortId = groupId.replace("@g.us", "");
                 map[shortId] = groupName;
               }
             });
@@ -639,45 +832,45 @@ const loadGroupNames = async () => {
         }
       }
     }
-    
+
     groupNameMap.value = map;
-    console.log('Loaded group names:', groupNameMap.value);
+    // console.log("Loaded group names:", groupNameMap.value);
   } catch (error) {
-    console.error('Error loading group names:', error);
+    console.error("Error loading group names:", error);
   }
 };
 
 // Check if recipient is a group
 const isGroup = (to) => {
-  const recipient = String(to || '');
-  return recipient.includes('@g.us') || recipient.includes('-');
+  const recipient = String(to || "");
+  return recipient.includes("@g.us") || recipient.includes("-");
 };
 
 // Get group name from mapping or return cleaned ID
 const getGroupName = (to) => {
-  const recipient = String(to || '');
-  
+  const recipient = String(to || "");
+
   // Check if it's a group
   if (!isGroup(recipient)) {
     return null; // Not a group
   }
-  
+
   // Try to find group name in mapping
   let groupName = groupNameMap.value[recipient];
-  
+
   // If not found with full format, try without @g.us
   if (!groupName) {
-    const shortId = recipient.replace('@g.us', '');
+    const shortId = recipient.replace("@g.us", "");
     groupName = groupNameMap.value[shortId];
   }
-  
+
   return groupName || null;
 };
 
 // Get display name for contact or group
 const getDisplayName = (r) => {
-  const recipient = String(r.to || '');
-  
+  const recipient = String(r.to || "");
+
   // Check if it's a group
   if (isGroup(recipient)) {
     const groupName = getGroupName(recipient);
@@ -685,37 +878,42 @@ const getDisplayName = (r) => {
       return groupName; // Return group name
     }
     // If no group name found, return cleaned ID
-    return recipient.replace('@g.us', '').replace('@s.whatsapp.net', '');
+    return recipient.replace("@g.us", "").replace("@s.whatsapp.net", "");
   }
-  
+
   // For regular contacts, return contact name
   if (r.contact) {
-    return (r.contact.firstName + ' ' + (r.contact.lastName || '')).trim();
+    return (r.contact.firstName + " " + (r.contact.lastName || "")).trim();
   }
-  
-  return 'Tidak Ada Nama';
+
+  return "Tidak Ada Nama";
 };
 
 // Get phone number - return empty string for groups
 const getPhoneNumber = (r) => {
-  const recipient = String(r.to || '');
-  
+  const recipient = String(r.to || "");
+
   // If it's a group, return empty string
   if (isGroup(recipient)) {
-    return '';
+    return "";
   }
-  
+
   // For regular contacts, return cleaned phone number
-  return recipient.replace('@s.whatsapp.net', '');
+  return recipient.replace("@s.whatsapp.net", "");
 };
 
 const fmt = (d) => {
-  try { const dd = new Date(d); return isNaN(dd.getTime()) ? '-' : dd.toLocaleString(); } catch { return '-'; }
+  try {
+    const dd = new Date(d);
+    return isNaN(dd.getTime()) ? "-" : dd.toLocaleString();
+  } catch {
+    return "-";
+  }
 };
 
 const normalizeNumber = (to) => {
-  const recipient = String(to || '');
-  
+  const recipient = String(to || "");
+
   // If it's a group, try to get the group name
   if (isGroup(recipient)) {
     const groupName = getGroupName(recipient);
@@ -723,74 +921,82 @@ const normalizeNumber = (to) => {
       return groupName; // Return group name instead of ID
     }
     // If no group name found, return a cleaned version without @g.us
-    return recipient.replace('@g.us', '').replace('@s.whatsapp.net', '');
+    return recipient.replace("@g.us", "").replace("@s.whatsapp.net", "");
   }
-  
+
   // For regular contacts, just remove @s.whatsapp.net
-  return recipient.replace('@s.whatsapp.net', '');
+  return recipient.replace("@s.whatsapp.net", "");
 };
 
 const badgeClass = (status) => {
-  const s = String(status || '').toLowerCase();
-  if (s.includes('fail') || s.includes('error')) return 'warn';
-  if (s === 'read' || s === 'played' || s === 'delivery_ack') return 'ok';
-  if (s === 'server_ack') return 'info';
-  if (s === 'pending') return 'info';
-  return 'info';
+  const s = String(status || "").toLowerCase();
+  if (s.includes("fail") || s.includes("error")) return "warn";
+  if (s === "read" || s === "played" || s === "delivery_ack") return "ok";
+  if (s === "server_ack") return "info";
+  if (s === "pending") return "info";
+  return "info";
 };
 
 const statusLabel = (status) => {
-  const s = String(status || '').toLowerCase();
+  const s = String(status || "").toLowerCase();
   switch (s) {
-    case 'pending': return '🕐'; // jam
-    case 'server_ack': return '✔️'; // centang satu
-    case 'delivery_ack': return '✔️✔️'; // centang dua
-    case 'read': return 'Dibaca'; // centang dua biru
-    case 'played': return 'Diputar'; // audio played
-    case 'error': return 'Gagal'; // error occurred
-    default: return status || 'Pending'; // default status
+    case "pending":
+      return "🕐"; // jam
+    case "server_ack":
+      return "✔️"; // centang satu
+    case "delivery_ack":
+      return "✔️✔️"; // centang dua
+    case "read":
+      return "Dibaca"; // centang dua biru
+    case "played":
+      return "Diputar"; // audio played
+    case "error":
+      return "Gagal"; // error occurred
+    default:
+      return status || "Pending"; // default status
   }
 };
 
 const tutorName = (r) => {
   const f = r.tutor?.firstName || r.user?.firstName;
   const l = r.tutor?.lastName || r.user?.lastName;
-  if (f) return [f, l].filter(Boolean).join(' ');
+  if (f) return [f, l].filter(Boolean).join(" ");
   const did = r.deviceId || r.device?.id || r.device_id;
   const byDevice = did && deviceTutorMap.value[did];
   if (byDevice) return byDevice;
   const sid = r.sessionId || r.session_id;
   const bySession = sid && sessionTutorMap.value[sid];
-  return bySession || '-';
+  return bySession || "-";
 };
 
 const sourceLabel = (r) => {
-  const t = (r && r.broadcastType) ? String(r.broadcastType).toLowerCase() : '';
-  if (t === 'feedback') return 'Feedback';
-  if (t === 'reminder') return 'Reminder';
+  const t = r && r.broadcastType ? String(r.broadcastType).toLowerCase() : "";
+  if (t === "feedback") return "Feedback";
+  if (t === "reminder") return "Reminder";
 
-  const name = typeof r?.broadcastName === 'string' ? r.broadcastName : '';
+  const name = typeof r?.broadcastName === "string" ? r.broadcastName : "";
   if (name) {
     const isReminderByName = /\bRecipients\b/i.test(name);
-    return isReminderByName ? 'Reminder' : 'Feedback';
+    return isReminderByName ? "Reminder" : "Feedback";
   }
 
   const id = r?.id;
-  if (!id || typeof id !== 'string' || !id.startsWith('BC_')) return '';
+  if (!id || typeof id !== "string" || !id.startsWith("BC_")) return "";
   const pk = getBroadcastPkId(id);
-  const nm = pk != null ? (broadcastNameMap.value[pk] || '') : '';
-  if (!nm) return '';
+  const nm = pk != null ? broadcastNameMap.value[pk] || "" : "";
+  if (!nm) return "";
   const isReminder = /\bRecipients\b/i.test(nm);
-  return isReminder ? 'Reminder' : 'Feedback';
+  return isReminder ? "Reminder" : "Feedback";
 };
 
 const loadTutorDeviceMap = async () => {
   try {
-    const { data } = await userApi.get('/tutors');
+    const { data } = await userApi.get("/tutors");
     const map = {};
     const list = Array.isArray(data) ? data : [];
     for (const t of list) {
-      const name = [t?.firstName, t?.lastName].filter(Boolean).join(' ') || t?.email || 'Tutor';
+      const name =
+        [t?.firstName, t?.lastName].filter(Boolean).join(" ") || t?.email || "Tutor";
       const devices = Array.isArray(t?.devices) ? t.devices : [];
       for (const d of devices) {
         if (d && d.id) map[d.id] = name;
@@ -804,11 +1010,12 @@ const loadTutorDeviceMap = async () => {
 
 const loadSessionTutorMap = async () => {
   try {
-    const { data } = await userApi.get('/tutors');
+    const { data } = await userApi.get("/tutors");
     const list = Array.isArray(data) ? data : [];
     const entries = [];
     for (const t of list) {
-      const name = [t?.firstName, t?.lastName].filter(Boolean).join(' ') || t?.email || 'Tutor';
+      const name =
+        [t?.firstName, t?.lastName].filter(Boolean).join(" ") || t?.email || "Tutor";
       const devices = Array.isArray(t?.devices) ? t.devices : [];
       for (const d of devices) {
         if (d && d.id) {
@@ -816,12 +1023,16 @@ const loadSessionTutorMap = async () => {
         }
       }
     }
-    const results = await Promise.allSettled(entries.map((e) => userApi.get(`/devices/${encodeURIComponent(e.deviceId)}`)));
+    const results = await Promise.allSettled(
+      entries.map((e) => userApi.get(`/devices/${encodeURIComponent(e.deviceId)}`))
+    );
     const map = {};
     results.forEach((res, idx) => {
-      if (res.status === 'fulfilled') {
+      if (res.status === "fulfilled") {
         const tutorName = entries[idx].name;
-        const sessions = Array.isArray(res.value?.data?.sessions) ? res.value.data.sessions : [];
+        const sessions = Array.isArray(res.value?.data?.sessions)
+          ? res.value.data.sessions
+          : [];
         sessions.forEach((s) => {
           if (s && s.sessionId) map[s.sessionId] = tutorName;
         });
@@ -837,17 +1048,22 @@ const loadSessionTutorMap = async () => {
 
 const load = async (p = page.value) => {
   loading.value = true;
-  err.value = '';
+  err.value = "";
   try {
     page.value = p;
-    const params = { page: page.value, pageSize: pageSize.value, sortBy: sortBy.value, sortDir: sortDir.value };
+    const params = {
+      page: page.value,
+      pageSize: pageSize.value,
+      sortBy: sortBy.value,
+      sortDir: sortDir.value,
+    };
     if (phoneNumber.value) params.phoneNumber = phoneNumber.value;
     if (messageQuery.value) params.message = messageQuery.value;
-    const { data } = await userApi.get('/tutors/messages/all', { params });
+    const { data } = await userApi.get("/tutors/messages/all", { params });
     rows.value = data.data || [];
     meta.value = data.metadata || meta.value;
   } catch (e) {
-    err.value = e?.response?.data?.message || e?.message || 'Gagal memuat data';
+    err.value = e?.response?.data?.message || e?.message || "Gagal memuat data";
   } finally {
     loading.value = false;
   }
@@ -855,14 +1071,19 @@ const load = async (p = page.value) => {
 
 const fbNameMap = ref({});
 const fbNameMapNorm = ref({});
-const normalizeCourseKey = (s) => String(s || '').trim().toLowerCase();
+const normalizeCourseKey = (s) =>
+  String(s || "")
+    .trim()
+    .toLowerCase();
 const loadFbNameMap = () => {
   try {
-    const raw = localStorage.getItem('feedback_broadcast_names');
+    const raw = localStorage.getItem("feedback_broadcast_names");
     const map = raw ? JSON.parse(raw) : {};
     fbNameMap.value = map;
     const norm = {};
-    Object.keys(map).forEach((k) => { norm[normalizeCourseKey(k)] = map[k]; });
+    Object.keys(map).forEach((k) => {
+      norm[normalizeCourseKey(k)] = map[k];
+    });
     fbNameMapNorm.value = norm;
   } catch {
     fbNameMap.value = {};
@@ -871,14 +1092,14 @@ const loadFbNameMap = () => {
 };
 
 const getBroadcastName = (r) => {
-  if (typeof r?.broadcastName === 'string' && r.broadcastName) return r.broadcastName;
+  if (typeof r?.broadcastName === "string" && r.broadcastName) return r.broadcastName;
   const id = r?.id;
-  if (!id || typeof id !== 'string' || !id.startsWith('BC_')) return '';
+  if (!id || typeof id !== "string" || !id.startsWith("BC_")) return "";
   const pk = getBroadcastPkId(id);
-  return pk != null ? (broadcastNameMap.value[pk] || '') : '';
+  return pk != null ? broadcastNameMap.value[pk] || "" : "";
 };
 
-const isReminderName = (name) => /\b(Recipients|Reminder)\b/i.test(String(name || ''));
+const isReminderName = (name) => /\b(Recipients|Reminder)\b/i.test(String(name || ""));
 const isFeedbackName = (name) => {
   if (!name) return false;
   const key = normalizeCourseKey(name);
@@ -887,72 +1108,77 @@ const isFeedbackName = (name) => {
 
 const isRecurrenceName = (name) => {
   if (!name) return false;
-  const nameStr = String(name || '').toLowerCase();
+  const nameStr = String(name || "").toLowerCase();
   // Check for patterns that indicate recurring broadcasts
-  return /\b(reminder|recurrence|recurring|berulang)\b/i.test(nameStr) && 
-         (/\[(reminder|recurrence)\]/i.test(nameStr) || 
-          /- reminder ke \d+/i.test(nameStr));
+  return (
+    /\b(reminder|recurrence|recurring|berulang)\b/i.test(nameStr) &&
+    (/\[(reminder|recurrence)\]/i.test(nameStr) || /- reminder ke \d+/i.test(nameStr))
+  );
 };
 
 const sourceSimple = (r) => {
-  if (!isBroadcast(r)) return '';
-  const t = (r && r.broadcastType) ? String(r.broadcastType).toLowerCase() : '';
+  if (!isBroadcast(r)) return "";
+  const t = r && r.broadcastType ? String(r.broadcastType).toLowerCase() : "";
   const name = getBroadcastName(r);
-  
-  if (t === 'reminder' || isReminderName(name)) return 'reminder';
-  if (t === 'feedback' || isFeedbackName(name)) return 'feedback';
-  if (t === 'recurrence' || isRecurrenceName(name)) return 'recurrence';
-  return 'broadcast';
+
+  if (t === "reminder" || isReminderName(name)) return "reminder";
+  if (t === "feedback" || isFeedbackName(name)) return "feedback";
+  if (t === "recurrence" || isRecurrenceName(name)) return "recurrence";
+  return "broadcast";
 };
 
 const exportCsv = async () => {
   try {
     exporting.value = true;
     const params = {
-      export: 'csv',
+      export: "csv",
       sortBy: sortBy.value,
       sortDir: sortDir.value,
     };
     if (phoneNumber.value) params.phoneNumber = phoneNumber.value;
     if (messageQuery.value) params.message = messageQuery.value;
-    const resp = await userApi.get('/tutors/messages/all', { params, responseType: 'blob' });
-    const blob = new Blob([resp.data], { type: 'text/csv;charset=utf-8;' });
+    const resp = await userApi.get("/tutors/messages/all", {
+      params,
+      responseType: "blob",
+    });
+    const blob = new Blob([resp.data], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    setAttribute('download', 'sent-messages.csv');
+    setAttribute("download", "sent-messages.csv");
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    toast.success('Export CSV berhasil. File sedang diunduh.');
+    toast.success("Export CSV berhasil. File sedang diunduh.");
   } catch (e) {
-    toast.error(e?.response?.data?.message || e?.message || 'Gagal mengekspor CSV');
+    toast.error(e?.response?.data?.message || e?.message || "Gagal mengekspor CSV");
   } finally {
     exporting.value = false;
   }
 };
 
 const deleteAllSent = async () => {
-  confirmTitle.value = 'localhost:5173 says';
-  confirmMessage.value = 'Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini permanen.';
+  confirmTitle.value = "localhost:5173 says";
+  confirmMessage.value =
+    "Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini permanen.";
   confirmAction.value = async () => {
     showConfirm.value = false;
     try {
       deleting.value = true;
 
       // 1) Hapus semua status di outgoingMessage
-      const msgParams = { status: 'all' };
+      const msgParams = { status: "all" };
       if (phoneNumber.value) msgParams.phoneNumber = phoneNumber.value;
-      await userApi.delete('/tutors/messages/all', { params: msgParams });
+      await userApi.delete("/tutors/messages/all", { params: msgParams });
 
       // 2) Sinkron: hapus broadcast yang sudah terkirim (cascade akan bersih-kan BC_*)
-      await userApi.delete('/broadcasts/bulk', { params: { isSent: true } });
+      await userApi.delete("/broadcasts/bulk", { params: { isSent: true } });
 
-      toast.success('Semua pesan terkirim berhasil dihapus');
+      toast.success("Semua pesan terkirim berhasil dihapus");
       await load(1);
     } catch (e) {
-      toast.error(e?.response?.data?.message || e?.message || 'Gagal menghapus pesan');
+      toast.error(e?.response?.data?.message || e?.message || "Gagal menghapus pesan");
     } finally {
       deleting.value = false;
     }
@@ -961,19 +1187,19 @@ const deleteAllSent = async () => {
 };
 
 const mediaUrl = (p) => {
-  if (!p) return '';
-  
+  if (!p) return "";
+
   // Get API base URL from environment
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-  
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
   // Remove leading slash if present to avoid double slashes
-  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
-  
+  const cleanPath = p.startsWith("/") ? p.slice(1) : p;
+
   // Construct full URL with API base
   return `${API_BASE}/${cleanPath}`;
 };
 
-const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || '');
+const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || "");
 
 watch([sortBy, sortDir, pageSize], () => {
   page.value = 1;
@@ -982,12 +1208,12 @@ watch([sortBy, sortDir, pageSize], () => {
 
 onMounted(async () => {
   await Promise.allSettled([
-    loadTutorDeviceMap(), 
-    loadSessionTutorMap(), 
-    loadBroadcasts(), 
-    loadFbNameMap(), 
+    loadTutorDeviceMap(),
+    loadSessionTutorMap(),
+    loadBroadcasts(),
+    loadFbNameMap(),
     loadGroupNames(), // Load group names
-    load(1)
+    load(1),
   ]);
 });
 
@@ -1006,7 +1232,7 @@ const closeDetailModal = () => {
 
 const truncateMessage = (message, length) => {
   if (message.length <= length) return message;
-  return message.substring(0, length) + '...';
+  return message.substring(0, length) + "...";
 };
 </script>
 
@@ -1270,8 +1496,12 @@ const truncateMessage = (message, length) => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {
@@ -1671,7 +1901,7 @@ const truncateMessage = (message, length) => {
 }
 
 .icon-circle::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 100%;
   height: 100%;

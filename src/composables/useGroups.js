@@ -44,15 +44,15 @@ const fetchGroupsFromDatabase = async () => {
     throw new Error('Device ID tidak ditemukan. Silakan pilih device terlebih dahulu.');
   }
 
-  console.log('Fetching groups for device ID:', deviceId);
-  console.log('API endpoint will be:', `/whatsapp-groups/device/${deviceId}/active`);
+  // console.log('Fetching groups for device ID:', deviceId);
+  // console.log('API endpoint will be:', `/whatsapp-groups/device/${deviceId}/active`);
 
   try {
     // Fetch active groups from database
     const res = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
-    console.log('Groups API response:', res.data);
-    console.log('Full API response status:', res.status);
-    console.log('API response headers:', res.headers);
+    // console.log('Groups API response:', res.data);
+    // console.log('Full API response status:', res.status);
+    // console.log('API response headers:', res.headers);
     
     const payload = res?.data;
     
@@ -64,15 +64,15 @@ const fetchGroupsFromDatabase = async () => {
     }
     
     const list = Array.isArray(payload?.data) ? payload.data : [];
-    console.log('Raw groups data:', list);
-    console.log('Number of groups found:', list.length);
+    // console.log('Raw groups data:', list);
+    // console.log('Number of groups found:', list.length);
     
     if (list.length === 0) {
-      console.warn('⚠️ No groups returned from API. Checking if device ID exists and has groups...');
+      // console.warn('⚠️ No groups returned from API. Checking if device ID exists and has groups...');
     }
     
     const mappedGroups = mapGroups(list);
-    console.log('Mapped groups:', mappedGroups);
+    // console.log('Mapped groups:', mappedGroups);
     
     return mappedGroups;
   } catch (error) {
@@ -87,26 +87,26 @@ const loadGroupsInternal = async ({ force = false } = {}) => {
   errorState.value = '';
   
   if (!force && groupsState.value && groupsState.value.length > 0) {
-    console.log('Using cached groups:', groupsState.value.length, 'groups');
+    // console.log('Using cached groups:', groupsState.value.length, 'groups');
     return groupsState.value;
   }
 
   if (inFlight && !force) {
-    console.log('Groups already loading, waiting for existing request...');
+    // console.log('Groups already loading, waiting for existing request...');
     return inFlight;
   }
   
   loadingState.value = true;
-  console.log('Starting to load groups from database...');
+  // console.log('Starting to load groups from database...');
   
   inFlight = (async () => {
     try {
       const data = await fetchGroupsFromDatabase();
       groupsState.value = data;
-      console.log('Successfully loaded', data.length, 'groups');
+      // console.log('Successfully loaded', data.length, 'groups');
       
       if (data.length === 0) {
-        console.warn('No groups found. Make sure WhatsApp is connected and groups exist.');
+        // console.warn('No groups found. Make sure WhatsApp is connected and groups exist.');
       }
       
       // Setup socket listeners setelah load groups
@@ -154,17 +154,17 @@ const setupGroupSocketListeners = (deviceId) => {
   
   if (!deviceId) return;
   
-  console.log(`[Groups Socket] Setting up listeners for device ${deviceId}`);
+  // console.log(`[Groups Socket] Setting up listeners for device ${deviceId}`);
   
   // Listen untuk group updates (bulk update)
   const cleanup1 = listenToGroupUpdates(deviceId, async (data) => {
-    console.log('[Groups Socket] Groups updated, refreshing...', data);
+    // console.log('[Groups Socket] Groups updated, refreshing...', data);
     
     // Jika action adalah group-left, hapus grup dari list secara langsung
     if (data.action === 'group-left' && data.groupId) {
       const groupIdNormalized = normalizeGroupValue({ groupId: data.groupId });
       groupsState.value = groupsState.value.filter(g => g.value !== groupIdNormalized);
-      console.log('[Groups Socket] ✅ Group removed from list:', data.groupId);
+      // console.log('[Groups Socket] ✅ Group removed from list:', data.groupId);
     } else {
       // Untuk update lainnya, lakukan full refresh
       await loadGroupsInternal({ force: true });
@@ -173,7 +173,7 @@ const setupGroupSocketListeners = (deviceId) => {
   
   // Listen untuk new group joined (single group)
   const cleanup2 = listenToNewGroup(deviceId, async (groupData) => {
-    console.log('[Groups Socket] New group joined:', groupData);
+    // console.log('[Groups Socket] New group joined:', groupData);
     
     // Add new group to existing list tanpa full reload
     if (groupData && groupData.groupId) {
@@ -193,7 +193,7 @@ const setupGroupSocketListeners = (deviceId) => {
       const exists = groupsState.value.some(g => g.value === newGroup.value);
       if (!exists) {
         groupsState.value = [...groupsState.value, newGroup];
-        console.log('[Groups Socket] ✅ New group added to list:', newGroup.label);
+        // console.log('[Groups Socket] ✅ New group added to list:', newGroup.label);
       }
     }
     
@@ -205,7 +205,7 @@ const setupGroupSocketListeners = (deviceId) => {
   
   // 🆕 Listen untuk device keluar/dikick dari grup
   const cleanup3 = listenToGroupLeft(deviceId, (data) => {
-    console.log('[Groups Socket] Device left/removed from group:', data);
+    // console.log('[Groups Socket] Device left/removed from group:', data);
     
     if (data.groupId) {
       const groupIdNormalized = normalizeGroupValue({ groupId: data.groupId });
@@ -216,16 +216,16 @@ const setupGroupSocketListeners = (deviceId) => {
       const afterCount = groupsState.value.length;
       
       if (beforeCount > afterCount) {
-        console.log('[Groups Socket] ✅ Group removed from dropdown:', data.groupId);
-        console.log(`[Groups Socket] Groups count: ${beforeCount} -> ${afterCount}`);
+        // console.log('[Groups Socket] ✅ Group removed from dropdown:', data.groupId);
+        // console.log(`[Groups Socket] Groups count: ${beforeCount} -> ${afterCount}`);
       } else {
-        console.warn('[Groups Socket] ⚠️ Group not found in list:', data.groupId);
+        // console.warn('[Groups Socket] ⚠️ Group not found in list:', data.groupId);
       }
     }
   });
   
   socketCleanups.push(cleanup1, cleanup2, cleanup3);
-  console.log('[Groups Socket] ✅ Listeners active');
+  // console.log('[Groups Socket] ✅ Listeners active');
 };
 
 // Listen for device changes to clear groups
@@ -252,7 +252,7 @@ export function useGroups() {
   };
 
   const refreshGroups = async () => {
-    console.log('Refreshing groups (force reload)...');
+    // console.log('Refreshing groups (force reload)...');
     return loadGroups({ force: true });
   };
 
@@ -283,12 +283,12 @@ export function useGroups() {
       throw new Error('Device ID tidak ditemukan');
     }
     
-    console.log('Syncing groups for device:', deviceId);
+    // console.log('Syncing groups for device:', deviceId);
     
     try {
       loading.value = true;
       const res = await userApi.post(`/whatsapp-groups/device/${deviceId}/sync`);
-      console.log('Sync response:', res.data);
+      // console.log('Sync response:', res.data);
       
       // After sync, reload groups from database
       await loadGroups({ force: true });
@@ -313,7 +313,7 @@ export function useGroups() {
       throw new Error('Link invite grup harus diisi');
     }
     
-    console.log('Joining group with link:', inviteLink);
+    // console.log('Joining group with link:', inviteLink);
     
     try {
       loading.value = true;
@@ -323,7 +323,7 @@ export function useGroups() {
         inviteLink: inviteLink.trim()
       });
       
-      console.log('Join group response:', res.data);
+      // console.log('Join group response:', res.data);
       
       // Reload groups after joining
       await loadGroups({ force: true });
@@ -350,7 +350,7 @@ export function useGroups() {
       throw new Error('Group JID harus diisi');
     }
     
-    console.log('Leaving group:', groupJid);
+    // console.log('Leaving group:', groupJid);
     
     try {
       loading.value = true;
@@ -358,7 +358,7 @@ export function useGroups() {
       
       const res = await userApi.post(`/whatsapp-groups/device/${deviceId}/leave/${groupJid}`);
       
-      console.log('Leave group response:', res.data);
+      // console.log('Leave group response:', res.data);
       
       // Remove group from local state immediately
       const groupIdNormalized = normalizeGroupValue({ groupId: groupJid });
