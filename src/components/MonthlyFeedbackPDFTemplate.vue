@@ -2,7 +2,7 @@
   <div class="pdf-template">
     <!-- Header Banner (With Margin) -->
     <div class="header-banner">
-      <img :src="images.header" alt="Student's Report Header">
+      <img :src="images.header" alt="Student's Report Header" />
     </div>
 
     <!-- Content Container -->
@@ -11,28 +11,26 @@
       <div class="info-score-section">
         <div class="info-box">
           <h3 class="box-title">Informasi Siswa</h3>
-          <table class="info-table">
-            <tbody>
-              <tr>
-                <td class="label">Nama :</td>
-                <td class="value">{{ data.studentName }}</td>
-              </tr>
-              <tr class="with-border">
-                <td colspan="2"></td>
-              </tr>
-              <tr>
-                <td class="label">Kursus:</td>
-                <td class="value">{{ data.courseName }}</td>
-              </tr>
-              <tr class="with-border">
-                <td colspan="2"></td>
-              </tr>
-              <tr>
-                <td class="label">Lama Pelatihan:</td>
-                <td class="value">{{ data.duration }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="info-table">
+            <div class="info-row">
+              <div class="label">Nama :</div>
+              <div class="value-wrapper">
+                <div class="value">{{ data.studentName }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="label">Kursus:</div>
+              <div class="value-wrapper">
+                <div class="value">{{ data.courseName }}</div>
+              </div>
+            </div>
+            <div class="info-row last">
+              <div class="label">Lama Pelatihan:</div>
+              <div class="value-wrapper">
+                <div class="value">{{ data.duration }}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="score-box">
@@ -46,28 +44,41 @@
       <div class="yellow-box-container">
         <div class="yellow-box-half">
           <div class="yellow-header-centered">
-            <img :src="images.trophy" alt="Trophy" class="icon-img">
+            <img :src="images.trophy" alt="Trophy" class="icon-img" />
             <h3>Proyek hasil Student</h3>
           </div>
-          <p class="yellow-text">Proyek akhir diakses melalui link dibawah ini:</p>
-          <div class="link-row">
-            <img :src="images.link" alt="Link" class="icon-img-small">
-            <a :href="data.youtubeLink" target="_blank">Proyek Akhir Bulan Ini</a>
+          <div class="yellow-content-wrapper">
+            <p class="yellow-text">Proyek akhir diakses melalui link dibawah ini:</p>
+            <div class="link-row">
+              <img :src="images.link" alt="Link" class="icon-img-small" />
+              <a :href="data.youtubeLink" target="_blank">Proyek Akhir Bulan Ini</a>
+            </div>
           </div>
         </div>
 
-        <div class="yellow-box-half">
+        <div class="yellow-box-half white-bg">
           <div class="yellow-header-centered">
-            <img :src="images.skills" alt="Free Lesson" class="icon-img">
+            <img :src="images.skills" alt="Free Lesson" class="icon-img" />
             <h3>Free Lesson</h3>
           </div>
-          <p class="yellow-text" style="display: flex; align-items: center; margin: 3px 0;">
-            <img :src="images.freeLessonGift" alt="Gift" class="icon-img-small" style="margin-right: 4px;">
-            <span>Mau dapatkan free lesson?</span>
-          </p>
-          <div class="link-row">
-            <img :src="images.link" alt="Link" class="icon-img-small">
-            <a :href="data.referralLink" target="_blank">Bagikan link ini dan dapatkan reward class gratis!</a>
+          <div class="yellow-content-wrapper">
+            <p
+              class="yellow-text"
+              style="margin: 3px 0"
+            >
+              <img
+                :src="images.freeLessonGift"
+                alt="Gift"
+                class="icon-img-inline"
+              />
+              <span>Mau dapatkan free lesson?</span>
+            </p>
+            <div class="link-row">
+              <img :src="images.link" alt="Link" class="icon-img-small" />
+              <a :href="data.referralLink" target="_blank"
+                >Bagikan link ini dan dapatkan reward class gratis!</a
+              >
+            </div>
           </div>
         </div>
       </div>
@@ -76,27 +87,32 @@
       <div class="two-columns">
         <div class="white-box">
           <div class="white-header-centered">
-            <img :src="images.aboutModule" alt="Module" class="icon-img">
+            <img :src="images.aboutModule" alt="Module" class="icon-img" />
             <h3>Tentang Modul Ini</h3>
           </div>
           <div class="content-box">
-            <p class="label-text">Topik Modul</p>
-            <p class="content-text">{{ data.topicModule }}</p>
+            <div class="module-row">
+              <div class="module-label">Topik Modul</div>
+              <div class="module-value">{{ data.topicModule }}</div>
+            </div>
             <div class="field-border"></div>
-            
-            <p class="label-text">Hasil:</p>
-            <p class="content-text">{{ data.result }}</p>
+
+            <div class="module-row">
+              <div class="module-label">Hasil:</div>
+              <div class="module-value">{{ data.result }}</div>
+            </div>
 
             <div class="top-border"></div>
             <div class="completion-text">
-              Menyelesaikan {{ data.month }} dari 9 bulan pembelajaran di level {{ data.level }} /9
+              Menyelesaikan {{ data.month }} dari 9 bulan pembelajaran di level
+              {{ data.level }} /9
             </div>
           </div>
         </div>
 
         <div class="white-box">
           <div class="white-header-centered">
-            <img :src="images.skills" alt="Skills" class="icon-img">
+            <img :src="images.skills" alt="Skills" class="icon-img" />
             <h3>Keahlian yang Didapatkan</h3>
           </div>
           <div class="content-box">
@@ -109,12 +125,18 @@
       <div class="two-columns bottom-section-full">
         <!-- Jalur Pendidikan (No Title, No Separator) -->
         <div class="jalur-box">
-          <img :src="images.jalurPendidikan" alt="Jalur Pendidikan" class="jalur-img">
+          <img :src="images.jalurPendidikan" alt="Jalur Pendidikan" class="jalur-img" />
           <div class="jalur-footer">
-            <p class="footer-label">Informasi lebih lanjut dapat diakses melalui link berikut :</p>
+            <p class="footer-label">
+              Informasi lebih lanjut dapat diakses melalui link berikut :
+            </p>
             <div class="link-row">
-              <img :src="images.link" alt="Link" class="icon-img-small">
-              <a href="https://drive.google.com/drive/u/0/folders/1lErW_RKjHOkAgqCr9yymELg3yUZzvBEb" target="_blank">Lihat Modul Lengkap</a>
+              <img :src="images.link" alt="Link" class="icon-img-2" />
+              <a
+                href="https://drive.google.com/drive/u/0/folders/1lErW_RKjHOkAgqCr9yymELg3yUZzvBEb"
+                target="_blank"
+                >Lihat Modul Lengkap</a
+              >
             </div>
           </div>
         </div>
@@ -122,7 +144,7 @@
         <!-- Tutor Feedback -->
         <div class="white-box">
           <div class="white-header-centered">
-            <img :src="images.feedback" alt="Feedback" class="icon-img">
+            <img :src="images.feedback" alt="Feedback" class="icon-img" />
             <h3>Tutor's Feedback</h3>
           </div>
           <div class="content-box">
@@ -133,26 +155,26 @@
 
       <!-- Footer -->
       <div class="report-footer">
-        <p>Laporan dibuat oleh: {{ data.reportBy || 'Tutor' }}</p>
+        <p>Laporan dibuat oleh: {{ data.reportBy || "Tutor" }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import images from '../utils/images.js';
+import { computed } from "vue";
+import images from "../utils/images.js";
 
 const props = defineProps({
   data: {
     type: Object,
-    required: true
-  }
+    required: true,
+  },
 });
 
 const renderStars = (rating) => {
-  const fullStars = '★'.repeat(rating);
-  const emptyStars = '☆'.repeat(5 - rating);
+  const fullStars = "★".repeat(rating);
+  const emptyStars = "☆".repeat(5 - rating);
   return fullStars + emptyStars;
 };
 </script>
@@ -164,7 +186,7 @@ const renderStars = (rating) => {
   height: auto;
   background: white;
   padding: 0;
-  font-family: 'Arial', 'Helvetica', sans-serif;
+  font-family: "Arial", "Helvetica", sans-serif;
   color: #000;
   box-sizing: border-box;
   display: flex;
@@ -214,6 +236,7 @@ const renderStars = (rating) => {
 }
 
 .box-title {
+  text-align: center;
   font-size: 10pt;
   font-weight: 700;
   color: #352079;
@@ -227,30 +250,41 @@ const renderStars = (rating) => {
 
 .info-table {
   width: 100%;
-  border-collapse: collapse;
+  padding-left: 20px;
 }
 
-.info-table td {
-  padding: 2px 0;
-  font-size: 8.5pt;
-  color: #4E3583;
+.info-row {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 8px;
+  border-bottom: 2px solid #5b88ef;
+  padding-bottom: 3px;
+  justify-content: center;
 }
 
-.info-table tr.with-border td {
-  padding: 0;
-  height: 1px;
-  border-bottom: 1.5px solid #7c3aed;
+.info-row.last {
+  border-bottom: none;
 }
 
-.info-table .label {
+.info-row .label {
   font-weight: 700;
-  width: 105px;
+  font-size: 8.5pt;
   color: #352079;
+  min-width: fit-content;
+  padding-right: 10px;
+  flex-shrink: 0;
 }
 
-.info-table .value {
-  color: #4E3583;
+.info-row .value-wrapper {
+  flex: 1;
+  display: flex;
+}
+
+.info-row .value {
+  font-size: 8.5pt;
+  color: #4e3583;
   font-weight: 400;
+  flex: 1;
 }
 
 .score-box {
@@ -270,7 +304,7 @@ const renderStars = (rating) => {
 
 .stars {
   font-size: 22pt;
-  color: #4E3583;
+  color: #4e3583;
   letter-spacing: 0px;
   line-height: 1;
 }
@@ -284,10 +318,23 @@ const renderStars = (rating) => {
 }
 
 .yellow-box-half {
-  background: #fffbeb;
+  background: white;
   border: 2px solid #7c3aed;
   border-radius: 0;
-  padding: 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.yellow-box-half.white-bg {
+  background: white;
+}
+
+.yellow-content-wrapper {
+  background: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 0;
+  margin-top: auto;
 }
 
 /* Centered Headers for Yellow & White Boxes */
@@ -297,7 +344,8 @@ const renderStars = (rating) => {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  margin-bottom: 6px;
+  margin-bottom: 0;
+  padding: 10px 8px 10px 8px;
 }
 
 .yellow-header-centered h3,
@@ -312,8 +360,8 @@ const renderStars = (rating) => {
 /* Field Border (for Topik Modul) */
 .field-border {
   width: 100%;
-  height: 1.5px;
-  background: #7c3aed;
+  height: 2px;
+  background: #5b88ef;
   margin: 4px 0;
 }
 
@@ -321,7 +369,7 @@ const renderStars = (rating) => {
 .top-border {
   width: 100%;
   height: 1.5px;
-  background: #7c3aed;
+  background: #5b88ef;
   margin: 6px 0 4px 0;
 }
 
@@ -334,35 +382,59 @@ const renderStars = (rating) => {
 }
 
 .icon-img-small {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: transparent !important;
+}
+.icon-img-2 {
+  width: 30px;
+  height: 30px;
   object-fit: contain;
   flex-shrink: 0;
   background: transparent !important;
 }
 
 .icon-img-inline {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   object-fit: contain;
-  flex-shrink: 0;
+  margin-right: 0;
   background: transparent !important;
-  margin-right: 4px;
+  flex-shrink: 0;
+  display: inline-block;
 }
 
 .yellow-text {
+  text-align: center;
   font-size: 8pt;
   font-weight: 600;
   color: #000;
   margin: 3px 0;
   line-height: 1.3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.yellow-text span {
+  display: inline;
 }
 
 .link-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   margin-top: 4px;
+  text-align: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.link-row img {
+  flex-shrink: 0;
 }
 
 .link-row a {
@@ -372,6 +444,7 @@ const renderStars = (rating) => {
   font-size: 7.5pt;
   word-break: break-word;
   line-height: 1.3;
+  display: inline;
 }
 
 /* Two Columns */
@@ -432,9 +505,45 @@ const renderStars = (rating) => {
   margin-top: 0;
 }
 
+/* Module Row Layout */
+.module-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.module-label {
+  font-size: 8pt;
+  font-weight: 700;
+  color: #000;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.module-value {
+  font-size: 7.5pt;
+  color: #000;
+  line-height: 1.3;
+  flex: 1;
+  font-weight: 400;
+}
+
+.module-content-block {
+  margin-top: 4px;
+}
+
+.module-content-block .label-text {
+  margin-bottom: 2px;
+}
+
+.module-content-block .content-text {
+  margin-top: 2px;
+}
+
 /* Jalur Pendidikan */
 .jalur-box {
-  background: white;
+  background: #F8F8EB;
   border: 2px solid #7c3aed;
   border-radius: 0;
   padding: 8px;
@@ -462,6 +571,23 @@ const renderStars = (rating) => {
   font-weight: 600;
   color: #000;
   margin-bottom: 4px;
+}
+
+.yellow-footer-wrapper {
+  background: #fef3c7;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.yellow-footer-wrapper .footer-label {
+  font-size: 7.5pt;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 3px;
+}
+
+.yellow-footer-wrapper .link-row {
+  margin-top: 3px;
 }
 
 /* Feedback */
@@ -501,7 +627,7 @@ const renderStars = (rating) => {
     height: auto;
     padding: 0;
   }
-  
+
   @page {
     size: A4 portrait;
     margin: 0;

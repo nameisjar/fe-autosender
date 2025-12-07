@@ -79,7 +79,8 @@
                 <p>{{ data.result }}</p>
               </div>
               <div class="progress-text">
-                Menyelesaikan {{ data.month }} dari 9 bulan pembelajaran di {{ data.level }}
+                Menyelesaikan {{ data.month }} dari 9 bulan pembelajaran di
+                {{ data.level }}
               </div>
             </div>
           </div>
@@ -115,7 +116,11 @@
       <!-- Module Link Section -->
       <div class="module-link-section">
         <p>Informasi lebih lanjut dapat diakses melalui link berikut:</p>
-        <a href="https://drive.google.com/drive/u/0/folders/1lErW_RKjHOkAgqCr9yymELg3yUZzvBEb" target="_blank" class="module-link">
+        <a
+          href="https://drive.google.com/drive/u/0/folders/1lErW_RKjHOkAgqCr9yymELg3yUZzvBEb"
+          target="_blank"
+          class="module-link"
+        >
           <img :src="images.link" alt="icon" class="link-icon" />
           Lihat Modul Lengkap
         </a>
@@ -130,14 +135,14 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue';
-import images from '../utils/images.js';
+import { defineProps } from "vue";
+import images from "../utils/images.js";
 
 const props = defineProps({
   data: {
     type: Object,
-    required: true
-  }
+    required: true,
+  },
 });
 </script>
 
@@ -147,7 +152,7 @@ const props = defineProps({
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
-  font-family: 'Manrope', Arial, sans-serif;
+  font-family: "Manrope", Arial, sans-serif;
 }
 
 .pdf-page {

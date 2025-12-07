@@ -1626,7 +1626,9 @@ const handleDownloadPDF = async () => {
               // Use PNG for icons (supports transparency), JPEG for photos
               const isIcon =
                 img.classList.contains("icon-img") ||
-                img.classList.contains("icon-img-small");
+                img.classList.contains("icon-img-small") ||
+                img.classList.contains("icon-img-inline") || // 🔥 TAMBAH: Deteksi icon-img-inline (icon kado)
+                img.classList.contains("icon-img-2");
               const base64 = isIcon
                 ? canvas.toDataURL("image/png", 1.0)
                 : canvas.toDataURL("image/jpeg", 0.95);
