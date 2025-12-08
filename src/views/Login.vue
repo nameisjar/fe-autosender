@@ -27,7 +27,7 @@
               />
             </svg>
           </div>
-          <h1 class="app-title">AutoSender</h1>
+          <h1 class="app-title">Autosender</h1>
         </div>
         <h2>Selamat Datang Kembali</h2>
         <p class="subtitle">Silakan masuk ke akun Anda</p>

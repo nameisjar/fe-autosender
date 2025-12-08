@@ -1096,7 +1096,7 @@ watch(deviceId, (newDeviceId, oldDeviceId) => {
     // ✅ Dispatch custom event untuk notify Dashboard.vue
     if (oldDeviceId && oldDeviceId !== newDeviceId) {
       isManualSelection = true;
-      window.dispatchEvent(new Event('deviceChanged'));
+      window.dispatchEvent(new Event("deviceChanged"));
       // console.log("[Manual Selection] User memilih device:", device?.name);
     }
   }
