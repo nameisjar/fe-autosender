@@ -26,7 +26,8 @@ export const convertToServerTime = (datetimeLocal) => {
 };
 
 /**
- * Format ISO string untuk display dengan timezone lokal Indonesia
+ * Format ISO string untuk display dengan timezone lokal user
+ * Otomatis mengikuti timezone browser (WIB/WITA/WIT/dll)
  * @param {string} isoString - ISO datetime string
  * @returns {string} Formatted local time
  */
@@ -35,13 +36,15 @@ export const formatLocalTime = (isoString) => {
   
   try {
     const date = new Date(isoString);
+    // Hapus timeZone parameter agar otomatis mengikuti timezone browser user
+    // User di WIB akan lihat waktu WIB, user di WITA lihat waktu WITA, dst.
     return date.toLocaleString('id-ID', {
       year: 'numeric',
       month: '2-digit', 
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'Asia/Jakarta'
+      // timeZone dihapus - biarkan browser yang tentukan berdasarkan lokasi user
     });
   } catch (error) {
     // console.warn('Error formatting date:', error);
