@@ -571,15 +571,8 @@ const CACHE_TTL = 30; // 30 seconds
 
 const isTutor = computed(() => auth.roleName === "cs");
 const tutorReachedLimit = computed(() => isTutor.value && devices.value.length >= 1);
-
-// ✅ CRITICAL FIX: Validasi lebih ketat untuk "Terhubung"
-// Hanya hitung device yang status "open" DAN punya phone number (benar-benar authenticated)
-const connectedDevices = computed(() => 
-  devices.value.filter((d) => d.status === "open" && d.phone && d.phone.length >= 10)
-);
-
 const tutorHasConnectedDevice = computed(
-  () => isTutor.value && connectedDevices.value.length > 0
+  () => isTutor.value && devices.value.some((d) => d.status === "open")
 );
 
 // Simplified group handling - groups are automatically synced when device connects
@@ -589,32 +582,10 @@ const { clearGroups } = useGroups();
 const selectedDevice = computed(() =>
   devices.value.find((d) => String(d.id) === String(deviceId.value))
 );
-
-// ✅ CRITICAL FIX: Validasi status lebih ketat
-// Status "open" saja tidak cukup, harus ada phone number juga (tanda authenticated)
-const selectedStatus = computed(() => {
-  if (!selectedDevice.value) return "";
-  
-  const device = selectedDevice.value;
-  // Jika status "open" tapi tidak ada phone, anggap masih "connecting"
-  if (device.status === "open" && (!device.phone || device.phone.length < 10)) {
-    return "connecting";
-  }
-  
-  return device.status || "";
-});
-
-// ✅ Computed untuk cek apakah device benar-benar terhubung
-const isReallyConnected = computed(() => {
-  if (!selectedDevice.value) return false;
-  return selectedDevice.value.status === "open" && 
-         selectedDevice.value.phone && 
-         selectedDevice.value.phone.length >= 10;
-});
-
+const selectedStatus = computed(() => selectedDevice.value?.status || "");
 // expose for template tests
 // eslint-disable-next-line no-undef
-defineExpose({ selectedStatus, isReallyConnected });
+defineExpose({ selectedStatus });
 
 // Fetch devices dengan cache layer
 const fetchDevices = async (forceRefresh = false) => {
