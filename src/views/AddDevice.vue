@@ -139,7 +139,7 @@
               </svg>
               Pilih Device
             </label>
-            <select v-model="deviceId" :disabled="pairingLoading">
+            <select v-model="deviceId">
               <option value="" disabled>Pilih device</option>
               <option v-for="d in devices" :key="d.id" :value="String(d.id)">
                 {{ d.name }} {{ d.status === "open" ? "✓ Terhubung" : "" }}
@@ -1033,12 +1033,14 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
 
     // Jika berubah menjadi open (terhubung)
     if (newStatus === "open") {
-      statusText.value = "Berhasil terhubung! ✅";
+      // ✅ FORCE clear semua QR state
       qr.value = "";
       asciiQr.value = "";
+      statusText.value = "Berhasil terhubung! ✅";
       pairingLoading.value = false;
+      apiError.value = "";
 
-      // Stop controller
+      // ✅ FORCE stop controller dan SSE stream
       if (controller) {
         try {
           controller.abort();
@@ -1050,6 +1052,12 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
 
       // Show success toast
       toast.success("Device berhasil terhubung dengan WhatsApp!");
+      
+      // ✅ Extra safety: Clear QR lagi setelah delay untuk handle race condition
+      setTimeout(() => {
+        qr.value = "";
+        asciiQr.value = "";
+      }, 500);
     }
 
     // Jika berubah menjadi closed/disconnected (terputus)
@@ -1062,6 +1070,7 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
       qr.value = "";
       asciiQr.value = "";
       statusText.value = "";
+      apiError.value = "";
 
       // Stop controller jika masih ada
       if (controller) {

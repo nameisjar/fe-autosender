@@ -1,8 +1,10 @@
-// Reusable groups loader from database (no cache, always fresh from DB)
-// Uses database-stored WhatsApp groups instead of cache
+// Reusable groups loader from database with cache and debounce
+// Uses database-stored WhatsApp groups with smart caching
 import { ref, onUnmounted } from 'vue';
 import { userApi } from '../api/http.js';
 import { listenToGroupUpdates, listenToNewGroup, listenToGroupLeft } from '../api/socket.js';
+import { cache } from '../utils/cache.js';
+import { debounce } from '../utils/debounce.js';
 
 // Singleton state (module-scoped)
 const groupsState = ref([]); // { value, label, meta }
@@ -10,6 +12,13 @@ const loadingState = ref(false);
 const errorState = ref('');
 let inFlight = null;
 let socketCleanups = [];
+
+// ✅ Cache configuration
+const CACHE_KEY_PREFIX = 'groups_device_';
+const CACHE_TTL = 30; // 30 seconds
+
+// ✅ Flag untuk mencegah multiple socket setup
+let socketSetupCompleted = false;
 
 const getDeviceId = () => {
   try { return localStorage.getItem('device_selected_id') || ''; } catch { return ''; }
@@ -38,46 +47,35 @@ const mapGroups = (items) => {
     .filter((g) => g.value);
 };
 
+const getCacheKey = (deviceId) => {
+  return `${CACHE_KEY_PREFIX}${deviceId}`;
+};
+
+// ✅ Debounced version untuk mencegah race condition
+const debouncedLoadGroups = debounce(async ({ force = false } = {}) => {
+  return loadGroupsInternal({ force });
+}, 500); // 500ms debounce
+
 const fetchGroupsFromDatabase = async () => {
   const deviceId = getDeviceId();
   if (!deviceId) {
     throw new Error('Device ID tidak ditemukan. Silakan pilih device terlebih dahulu.');
   }
 
-  // console.log('Fetching groups for device ID:', deviceId);
-  // console.log('API endpoint will be:', `/whatsapp-groups/device/${deviceId}/active`);
-
   try {
-    // Fetch active groups from database
     const res = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
-    // console.log('Groups API response:', res.data);
-    // console.log('Full API response status:', res.status);
-    // console.log('API response headers:', res.headers);
-    
     const payload = res?.data;
     
     if (!payload?.status) {
       const errorMsg = payload?.message || 'Gagal mengambil data grup dari server';
-      console.error('Groups API error:', errorMsg);
-      console.error('Full payload:', payload);
       throw new Error(errorMsg);
     }
     
     const list = Array.isArray(payload?.data) ? payload.data : [];
-    // console.log('Raw groups data:', list);
-    // console.log('Number of groups found:', list.length);
-    
-    if (list.length === 0) {
-      // console.warn('⚠️ No groups returned from API. Checking if device ID exists and has groups...');
-    }
-    
     const mappedGroups = mapGroups(list);
-    // console.log('Mapped groups:', mappedGroups);
     
     return mappedGroups;
   } catch (error) {
-    console.error('Error in fetchGroupsFromDatabase:', error);
-    console.error('Error response:', error?.response);
     throw error;
   }
 };
@@ -86,45 +84,55 @@ const fetchGroupsFromDatabase = async () => {
 const loadGroupsInternal = async ({ force = false } = {}) => {
   errorState.value = '';
   
-  if (!force && groupsState.value && groupsState.value.length > 0) {
-    // console.log('Using cached groups:', groupsState.value.length, 'groups');
-    return groupsState.value;
+  const deviceId = getDeviceId();
+  if (!deviceId) {
+    errorState.value = 'Device ID tidak ditemukan. Silakan pilih device terlebih dahulu.';
+    return [];
   }
 
+  // ✅ Check cache first (jika tidak force reload)
+  if (!force) {
+    const cacheKey = getCacheKey(deviceId);
+    const cachedGroups = cache.get(cacheKey);
+    if (cachedGroups) {
+      groupsState.value = cachedGroups;
+      
+      // ✅ Setup socket hanya jika belum setup
+      if (!socketSetupCompleted) {
+        setupGroupSocketListeners(deviceId);
+        socketSetupCompleted = true;
+      }
+      
+      return groupsState.value;
+    }
+  }
+
+  // ✅ Check in-flight request
   if (inFlight && !force) {
-    // console.log('Groups already loading, waiting for existing request...');
     return inFlight;
   }
   
   loadingState.value = true;
-  // console.log('Starting to load groups from database...');
   
   inFlight = (async () => {
     try {
       const data = await fetchGroupsFromDatabase();
       groupsState.value = data;
-      // console.log('Successfully loaded', data.length, 'groups');
       
-      if (data.length === 0) {
-        // console.warn('No groups found. Make sure WhatsApp is connected and groups exist.');
-      }
+      // ✅ Save to cache
+      const cacheKey = getCacheKey(deviceId);
+      cache.set(cacheKey, data, CACHE_TTL);
       
-      // Setup socket listeners setelah load groups
-      const deviceId = getDeviceId();
-      if (deviceId) {
+      // ✅ Setup socket hanya sekali
+      if (!socketSetupCompleted) {
         setupGroupSocketListeners(deviceId);
+        socketSetupCompleted = true;
       }
       
       return groupsState.value;
     } catch (e) {
       const errorMsg = e?.response?.data?.message || e?.message || 'Gagal memuat grup dari database';
       errorState.value = errorMsg;
-      console.error('Error loading groups from database:', e);
-      console.error('Error details:', {
-        status: e?.response?.status,
-        statusText: e?.response?.statusText,
-        data: e?.response?.data
-      });
       return [];
     } finally {
       loadingState.value = false;
@@ -138,43 +146,56 @@ const clearGroups = () => {
   groupsState.value = [];
   errorState.value = '';
   inFlight = null;
+  socketSetupCompleted = false; // ✅ Reset flag
   cleanupSocketListeners();
+  
+  const deviceId = getDeviceId();
+  if (deviceId) {
+    const cacheKey = getCacheKey(deviceId);
+    cache.invalidate(cacheKey);
+  }
 };
 
 // 🆕 Cleanup socket listeners
 const cleanupSocketListeners = () => {
-  socketCleanups.forEach(cleanup => cleanup());
+  socketCleanups.forEach((fn) => {
+    if (typeof fn === 'function') {
+      try { fn(); } catch (e) { console.error('Error cleaning up socket:', e); }
+    }
+  });
   socketCleanups = [];
 };
 
-// 🆕 Setup socket listeners untuk auto-refresh grup
+// ✅ Setup socket listeners dengan debounce untuk mencegah spam request
 const setupGroupSocketListeners = (deviceId) => {
   // Clean up existing listeners
   cleanupSocketListeners();
   
   if (!deviceId) return;
   
-  // console.log(`[Groups Socket] Setting up listeners for device ${deviceId}`);
+  // ✅ Debounced refresh function untuk mencegah spam
+  const debouncedRefresh = debounce(async () => {
+    await loadGroupsInternal({ force: true });
+  }, 1000); // 1 second debounce
   
   // Listen untuk group updates (bulk update)
   const cleanup1 = listenToGroupUpdates(deviceId, async (data) => {
-    // console.log('[Groups Socket] Groups updated, refreshing...', data);
-    
     // Jika action adalah group-left, hapus grup dari list secara langsung
     if (data.action === 'group-left' && data.groupId) {
       const groupIdNormalized = normalizeGroupValue({ groupId: data.groupId });
       groupsState.value = groupsState.value.filter(g => g.value !== groupIdNormalized);
-      // console.log('[Groups Socket] ✅ Group removed from list:', data.groupId);
+      
+      // ✅ Update cache
+      const cacheKey = getCacheKey(deviceId);
+      cache.set(cacheKey, groupsState.value, CACHE_TTL);
     } else {
-      // Untuk update lainnya, lakukan full refresh
-      await loadGroupsInternal({ force: true });
+      // ✅ Debounced refresh untuk update lainnya
+      debouncedRefresh();
     }
   });
   
   // Listen untuk new group joined (single group)
   const cleanup2 = listenToNewGroup(deviceId, async (groupData) => {
-    // console.log('[Groups Socket] New group joined:', groupData);
-    
     // Add new group to existing list tanpa full reload
     if (groupData && groupData.groupId) {
       const newGroup = {
@@ -193,20 +214,21 @@ const setupGroupSocketListeners = (deviceId) => {
       const exists = groupsState.value.some(g => g.value === newGroup.value);
       if (!exists) {
         groupsState.value = [...groupsState.value, newGroup];
-        // console.log('[Groups Socket] ✅ New group added to list:', newGroup.label);
+        
+        // ✅ Update cache
+        const cacheKey = getCacheKey(deviceId);
+        cache.set(cacheKey, groupsState.value, CACHE_TTL);
       }
     }
     
-    // Optional: Full refresh untuk memastikan data konsisten
+    // ✅ Debounced full refresh
     setTimeout(() => {
-      loadGroupsInternal({ force: true });
+      debouncedRefresh();
     }, 2000);
   });
   
   // 🆕 Listen untuk device keluar/dikick dari grup
   const cleanup3 = listenToGroupLeft(deviceId, (data) => {
-    // console.log('[Groups Socket] Device left/removed from group:', data);
-    
     if (data.groupId) {
       const groupIdNormalized = normalizeGroupValue({ groupId: data.groupId });
       
@@ -216,16 +238,14 @@ const setupGroupSocketListeners = (deviceId) => {
       const afterCount = groupsState.value.length;
       
       if (beforeCount > afterCount) {
-        // console.log('[Groups Socket] ✅ Group removed from dropdown:', data.groupId);
-        // console.log(`[Groups Socket] Groups count: ${beforeCount} -> ${afterCount}`);
-      } else {
-        // console.warn('[Groups Socket] ⚠️ Group not found in list:', data.groupId);
+        // ✅ Update cache
+        const cacheKey = getCacheKey(deviceId);
+        cache.set(cacheKey, groupsState.value, CACHE_TTL);
       }
     }
   });
   
   socketCleanups.push(cleanup1, cleanup2, cleanup3);
-  // console.log('[Groups Socket] ✅ Listeners active');
 };
 
 // Listen for device changes to clear groups
@@ -248,16 +268,15 @@ export function useGroups() {
 
   // Wrapper function yang memanggil internal function
   const loadGroups = async ({ force = false } = {}) => {
-    return loadGroupsInternal({ force });
+    // ✅ Gunakan debounced version untuk normal load, immediate untuk force
+    return force ? loadGroupsInternal({ force: true }) : debouncedLoadGroups({ force: false });
   };
 
   const refreshGroups = async () => {
-    // console.log('Refreshing groups (force reload)...');
     return loadGroups({ force: true });
   };
 
   const ensureFullGroupJid = async (jidOrId) => {
-    // Resolve using loaded groups first
     let val = String(jidOrId || '').trim();
     if (!val) return '';
     const clean = val.replace(/@g\.us$/i, '');
@@ -272,7 +291,6 @@ export function useGroups() {
       return found.value.includes('@g.us') ? found.value : `${found.value}@g.us`;
     }
 
-    // Fallback: just normalize format
     return val.includes('@') ? val : `${val}@g.us`;
   };
 
@@ -283,19 +301,21 @@ export function useGroups() {
       throw new Error('Device ID tidak ditemukan');
     }
     
-    // console.log('Syncing groups for device:', deviceId);
-    
     try {
       loading.value = true;
       const res = await userApi.post(`/whatsapp-groups/device/${deviceId}/sync`);
-      // console.log('Sync response:', res.data);
+      
+      // ✅ Invalidate cache sebelum reload
+      const cacheKey = getCacheKey(deviceId);
+      cache.invalidate(cacheKey);
       
       // After sync, reload groups from database
-      await loadGroups({ force: true });
+      await loadGroupsInternal({ force: true });
+      
+      return res.data;
     } catch (e) {
       const errorMsg = e?.response?.data?.message || e?.message || 'Gagal sinkronisasi grup';
       error.value = errorMsg;
-      console.error('Error syncing groups:', e);
       throw e;
     } finally {
       loading.value = false;
@@ -313,8 +333,6 @@ export function useGroups() {
       throw new Error('Link invite grup harus diisi');
     }
     
-    // console.log('Joining group with link:', inviteLink);
-    
     try {
       loading.value = true;
       error.value = '';
@@ -323,16 +341,17 @@ export function useGroups() {
         inviteLink: inviteLink.trim()
       });
       
-      // console.log('Join group response:', res.data);
+      // ✅ Invalidate cache sebelum reload
+      const cacheKey = getCacheKey(deviceId);
+      cache.invalidate(cacheKey);
       
       // Reload groups after joining
-      await loadGroups({ force: true });
+      await loadGroupsInternal({ force: true });
       
       return res.data;
     } catch (e) {
       const errorMsg = e?.response?.data?.message || e?.message || 'Gagal join grup';
       error.value = errorMsg;
-      console.error('Error joining group:', e);
       throw new Error(errorMsg);
     } finally {
       loading.value = false;
@@ -350,30 +369,35 @@ export function useGroups() {
       throw new Error('Group JID harus diisi');
     }
     
-    // console.log('Leaving group:', groupJid);
-    
     try {
       loading.value = true;
       error.value = '';
       
       const res = await userApi.post(`/whatsapp-groups/device/${deviceId}/leave/${groupJid}`);
       
-      // console.log('Leave group response:', res.data);
-      
       // Remove group from local state immediately
       const groupIdNormalized = normalizeGroupValue({ groupId: groupJid });
       groups.value = groups.value.filter(g => g.value !== groupIdNormalized);
+      
+      // ✅ Update cache
+      const cacheKey = getCacheKey(deviceId);
+      cache.set(cacheKey, groups.value, CACHE_TTL);
       
       return res.data;
     } catch (e) {
       const errorMsg = e?.response?.data?.message || e?.message || 'Gagal keluar dari grup';
       error.value = errorMsg;
-      console.error('Error leaving group:', e);
       throw new Error(errorMsg);
     } finally {
       loading.value = false;
     }
   };
+
+  // ✅ Cleanup on unmount
+  onUnmounted(() => {
+    cleanupSocketListeners();
+    socketSetupCompleted = false;
+  });
 
   return {
     groups,
