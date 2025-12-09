@@ -784,11 +784,13 @@
         </div>
 
         <div class="modal-footer">
-          <button class="btn-secondary" @click="showPreview = false">Tutup</button>
+          <button class="btn-secondary" @click="showPreview = false">
+            Tutup
+          </button>
           <button
             class="btn-download"
             @click="handleDownloadPDF"
-            :disabled="!previewData || generating"
+            :disabled="!previewData || generating || sending"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -798,15 +800,21 @@
             {{ generating ? "Generating..." : "Download PDF" }}
           </button>
           <button
-            class="btn-primary"
+            class="btn-primary btn-send"
             @click="handleGenerateAndSend"
-            :disabled="!previewData || sending"
+            :disabled="!previewData || generating"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 2L11 13" />
-              <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-            </svg>
-            {{ sending ? "Mengirim..." : "Kirim Sekarang" }}
+            <div v-if="sending" class="btn-loading">
+              <div class="btn-spinner"></div>
+              <span>Mengirim ke {{ recipients.length }} penerima...</span>
+            </div>
+            <template v-else>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 2L11 13" />
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+              </svg>
+              Kirim Sekarang
+            </template>
           </button>
         </div>
       </div>
@@ -1750,7 +1758,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
     recipientLabels.value = {};
     selectedContactId.value = "";
     selectedGroupId.value = "";
-    selectedLabelValue.value = "";
+    selectedLabelValue = "";
 
     // Auto-refresh semua data (termasuk GROUPS!)
     await Promise.allSettled([
@@ -3870,5 +3878,88 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 .btn-clear-data svg {
   width: 14px;
   height: 14px;
+}
+
+/* 🆕 Button Send with Loading */
+.btn-send {
+  position: relative;
+  min-width: 160px;
+}
+
+.btn-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.btn-loading span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 🆕 Sending Overlay */
+.sending-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.sending-content {
+  text-align: center;
+  color: white;
+}
+
+.sending-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+.sending-progress {
+  width: 100%;
+  max-width: 300px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 100%;
+  background: white;
+  animation: progress 2s linear infinite;
+}
+
+@keyframes progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 </style>
