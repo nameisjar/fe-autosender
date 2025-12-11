@@ -48,112 +48,51 @@
           </button>
         </div>
         <div class="card-body">
-          <!-- Device Info Card (when device is selected) -->
-          <div
-            v-if="selectedDevice"
-            class="device-info-card"
-            :class="{
-              connected: selectedDevice.isConnected,
-              disconnected: !selectedDevice.isConnected,
-            }"
-          >
-            <div class="device-avatar">
+          <!-- Device Info Compact -->
+          <div v-if="selectedDevice && !showDeviceList" class="device-info-compact">
+            <div class="device-avatar-compact" :class="{ online: selectedDevice.isConnected }">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                <path d="M12 8v4" />
-                <circle cx="12" cy="16" r="0.5" fill="currentColor" />
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                <line x1="12" y1="18" x2="12.01" y2="18" />
               </svg>
-              <div
-                class="status-indicator"
-                :class="{ online: selectedDevice.isConnected }"
-              ></div>
             </div>
-            <div class="device-details">
-              <div class="device-name">{{ selectedDevice.name || "Unknown Device" }}</div>
-              <div class="device-meta">
-                <span
-                  class="device-status"
-                  :class="{ online: selectedDevice.isConnected }"
-                >
-                  <svg viewBox="0 0 8 8" fill="currentColor">
-                    <circle cx="4" cy="4" r="3" />
-                  </svg>
-                  {{ selectedDevice.isConnected ? "Online" : "Offline" }}
-                </span>
-                <span class="device-divider">•</span>
-                <span class="device-id">{{ selectedDevice.status || "Unknown" }}</span>
+            <div class="device-info-text">
+              <div class="device-name-compact">
+                {{ selectedDevice.name || "Unknown" }}
+                <span v-if="selectedDevice.phone" class="device-phone-inline"> - {{ selectedDevice.phone }}</span>
+              </div>
+              <div class="device-status-compact" :class="{ online: selectedDevice.isConnected }">
+                {{ selectedDevice.isConnected ? "● Online" : "● Offline" }}
               </div>
             </div>
-            <button type="button" class="btn-change-device" @click="handleChangeDevice">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path
-                  d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
-                />
-              </svg>
-              Ganti Device
+            <button type="button" class="btn-change-compact" @click="showDeviceList = true">
+              Ganti
             </button>
           </div>
 
-          <!-- Device Selector (when no device selected) -->
-          <div v-else class="device-selector-empty">
-            <div class="empty-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-              </svg>
+          <!-- Device List Compact -->
+          <div v-if="!selectedDevice || showDeviceList" class="device-list-compact">
+            <div v-if="loadingDevices" class="device-loading">
+              <div class="spinner-small"></div>
+              <span>Memuat devices...</span>
             </div>
-            <div class="empty-text">
-              <h4>Pilih Device WhatsApp</h4>
-              <p>Pilih device yang akan digunakan untuk mengirim broadcast</p>
+            <div v-else-if="availableDevices.length === 0" class="device-empty">
+              <p>Tidak ada device tersedia</p>
             </div>
-          </div>
-
-          <!-- Device List -->
-          <div v-if="otherDevices.length > 0" class="device-list">
-            <label class="form-label">
-              {{
-                selectedDevice ? "Atau pilih device lain:" : "Pilih dari daftar device:"
-              }}
-            </label>
-            <div class="device-grid">
-              <button
-                v-for="device in otherDevices"
-                :key="device.id"
-                type="button"
-                class="device-item"
-                :class="{
-                  active: device.id === selectedDeviceId,
-                  connected: device.isConnected,
-                  disconnected: !device.isConnected,
-                }"
-                @click="handleSelectDevice(device.id)"
-              >
-                <div class="device-item-avatar">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                    <line x1="12" y1="18" x2="12.01" y2="18" />
-                  </svg>
-                  <div
-                    class="device-item-status"
-                    :class="{ online: device.isConnected }"
-                  ></div>
-                </div>
-                <div class="device-item-info">
-                  <div class="device-item-name">{{ device.name }}</div>
-                  <div
-                    class="device-item-status-text"
-                    :class="{ online: device.isConnected }"
-                  >
-                    {{ device.isConnected ? "Terhubung" : "Terputus" }}
-                  </div>
-                </div>
-              </button>
-            </div>
+            <button
+              v-else
+              v-for="device in availableDevices"
+              :key="device.id"
+              type="button"
+              class="device-item-compact"
+              :class="{ online: device.isConnected }"
+              @click="handleSelectDevice(device.id)"
+            >
+              <span class="device-item-label">
+                {{ device.name }}<span v-if="device.phone" class="device-phone-inline"> - {{ device.phone }}</span>
+              </span>
+              <span class="status-dot" :class="{ online: device.isConnected }"></span>
+            </button>
           </div>
         </div>
       </div>
@@ -163,7 +102,7 @@
         <div class="card-header">
           <h3 class="card-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0-2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
             Informasi Dasar
@@ -747,6 +686,7 @@ const err = ref("");
 const isDragOver = ref(false);
 const fileInput = ref(null);
 const activeTab = ref("manual");
+const showDeviceList = ref(false);
 
 function triggerFileInput() {
   if (mediaFile.value) return;
@@ -842,12 +782,6 @@ function addRecipientsFromInput() {
   // Tampilkan notifikasi
   if (validNumbers.length > 0 && invalidNumbers.length > 0) {
     toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-    toast.error(
-      `${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(", ")}`
-    );
-  } else if (validNumbers.length > 0) {
-    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-  } else if (invalidNumbers.length > 0) {
     toast.error(
       `Nomor tidak valid: ${invalidNumbers.join(
         ", "
@@ -1173,6 +1107,7 @@ function handleChangeDevice() {
 
 function handleSelectDevice(deviceId) {
   selectDevice(deviceId);
+  showDeviceList.value = false; // 🔥 Tutup device list setelah memilih
 }
 </script>
 
@@ -1344,357 +1279,181 @@ function handleSelectDevice(deviceId) {
   height: 16px;
 }
 
-/* Device Info Card (Selected Device) */
-.device-info-card {
+/* Device Info Compact */
+.device-info-compact {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  border: 2px solid;
-  transition: all 0.3s;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 16px;
 }
 
-.device-info-card.connected {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-color: #86efac;
-}
-
-.device-info-card.disconnected {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border-color: #fca5a5;
-}
-
-.device-avatar {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+.device-avatar-compact {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.3s;
 }
 
-.device-info-card.connected .device-avatar {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-}
-
-.device-info-card.disconnected .device-avatar {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.device-avatar svg {
-  width: 32px;
-  height: 32px;
+.device-avatar-compact svg {
+  width: 20px;
+  height: 20px;
   color: white;
 }
 
-.status-indicator {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 3px solid white;
-  background: #94a3b8;
-  transition: all 0.3s;
+.device-avatar-compact.online {
+  background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
 }
 
-.status-indicator.online {
-  background: #22c55e;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
-  }
-}
-
-.device-details {
+.device-info-text {
   flex: 1;
   min-width: 0;
 }
 
-.device-name {
-  font-size: 18px;
-  font-weight: 700;
+.device-name-compact {
+  font-size: 14px;
+  font-weight: 600;
   color: #1e293b;
-  margin-bottom: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.device-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #64748b;
-}
-
-.device-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 600;
-}
-
-.device-status.online {
-  color: #15803d;
-}
-
-.device-status svg {
-  width: 8px;
-  height: 8px;
-}
-
-.device-divider {
-  color: #cbd5e1;
-}
-
-.device-id {
-  font-family: "Courier New", monospace;
-  font-size: 12px;
-}
-
-.btn-change-device {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: white;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  color: #475569;
+.device-phone-inline {
   font-size: 14px;
-  font-weight: 600;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.device-status-compact {
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.device-status-compact.online {
+  color: #059669;
+}
+
+.btn-change-compact {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
 
-.btn-change-device:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+.btn-change-compact:hover {
   background: #f8fafc;
-  transform: translateY(-1px);
+  border-color: #cbd5e1;
 }
 
-.btn-change-device svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Device Selector Empty State */
-.device-selector-empty {
+/* Device List Compact */
+.device-list-compact {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 40px 20px;
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  background: #f8fafc;
-  margin-bottom: 24px;
+  gap: 8px;
 }
 
-.empty-icon {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border-radius: 16px;
+.device-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.empty-icon svg {
-  width: 32px;
-  height: 32px;
-  color: #1e40af;
-}
-
-.empty-text {
-  text-align: center;
-}
-
-.empty-text h4 {
-  margin: 0 0 6px 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.empty-text p {
-  margin: 0;
-  font-size: 14px;
-  color: #64748b;
-}
-
-/* Device List */
-.device-list {
-  margin-top: 24px;
-}
-
-.device-list .form-label {
-  margin-bottom: 12px;
-}
-
-.device-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
+  padding: 24px;
+  color: #64748b;
+  font-size: 14px;
 }
 
-.device-item {
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.device-empty {
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.device-empty p {
+  margin: 0;
+}
+
+.device-item-compact {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  justify-content: space-between;
+  padding: 10px 12px;
   background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
   width: 100%;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
 }
 
-.device-item:hover {
-  border-color: #3b82f6;
+.device-item-compact:hover {
   background: #f8fafc;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-}
-
-.device-item.active {
   border-color: #3b82f6;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
-.device-item.connected {
+.device-item-compact.online {
   border-color: #86efac;
 }
 
-.device-item.connected:hover {
-  border-color: #22c55e;
-  background: #f0fdf4;
-}
-
-.device-item.disconnected {
-  border-color: #fca5a5;
-  opacity: 0.7;
-}
-
-.device-item.disconnected:hover {
-  border-color: #ef4444;
-  background: #fef2f2;
-}
-
-.device-item-avatar {
-  position: relative;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+.device-item-content {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.device-item.active .device-item-avatar {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-}
-
-.device-item.connected .device-item-avatar {
-  background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
-}
-
-.device-item.disconnected .device-item-avatar {
-  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
-}
-
-.device-item-avatar svg {
-  width: 24px;
-  height: 24px;
-  color: #1e40af;
-}
-
-.device-item.active .device-item-avatar svg,
-.device-item.connected .device-item-avatar svg,
-.device-item.disconnected .device-item-avatar svg {
-  color: white;
-}
-
-.device-item-status {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid white;
-  background: #94a3b8;
-}
-
-.device-item-status.online {
-  background: #22c55e;
-}
-
-.device-item-info {
-  flex: 1;
-  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .device-item-name {
-  font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.device-item-status-text {
+.device-item-phone {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.device-phone-inline {
   font-size: 13px;
   color: #64748b;
   font-weight: 500;
 }
 
-.device-item-status-text.online {
-  color: #15803d;
-}
-
-.device-item-check {
-  width: 24px;
-  height: 24px;
-  background: #3b82f6;
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
 }
 
-.device-item-check svg {
-  width: 16px;
-  height: 16px;
-  color: white;
+.status-dot.online {
+  background: #10b981;
 }
 
 /* Form Elements */
@@ -2394,4 +2153,4 @@ function handleSelectDevice(deviceId) {
   }
 }
 </style>
-`
+``` 

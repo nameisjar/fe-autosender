@@ -346,6 +346,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth.js";
 import { useGroups } from "../composables/useGroups.js";
 import { deviceApi } from "../api/http.js";
+import { listenToDeviceStatus } from "../api/socket.js";
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -355,6 +356,7 @@ const sidebarOpen = ref(false);
 const profilePictureUrl = ref(null);
 const selectedDeviceId = ref(localStorage.getItem("device_selected_id"));
 const isFetchingProfile = ref(false);
+let cleanupSocketListener = null;
 
 onMounted(async () => {
   await auth.fetchMe();
@@ -365,10 +367,46 @@ onMounted(async () => {
   
   // Listen to custom event for same-tab changes
   window.addEventListener('deviceChanged', handleDeviceChange);
+  
+  // 🆕 Listen to device status changes (WhatsApp connection)
+  setupDeviceStatusListener();
 });
 
 const me = computed(() => auth.me);
 const isAdmin = computed(() => auth.isAdmin);
+
+// 🆕 Setup listener untuk status device (ketika WhatsApp terhubung)
+const setupDeviceStatusListener = () => {
+  const deviceId = localStorage.getItem("device_selected_id");
+  if (!deviceId) {
+    // Jika tidak ada device yang dipilih, hapus foto profil
+    profilePictureUrl.value = null;
+    return;
+  }
+  
+  // Cleanup previous listener if exists
+  if (cleanupSocketListener) {
+    cleanupSocketListener();
+  }
+  
+  // Listen to device status changes
+  cleanupSocketListener = listenToDeviceStatus(deviceId, (status) => {
+    console.log('Device status changed:', status);
+    
+    // Jika device status berubah menjadi 'open' (WhatsApp terhubung)
+    if (status === 'open') {
+      // Auto update foto profil
+      setTimeout(() => {
+        fetchProfilePicture();
+      }, 2000); // Delay 2 detik untuk memastikan WhatsApp sudah siap
+    } 
+    // 🆕 Jika device terputus atau dihapus
+    else if (status === 'close' || status === null) {
+      // Hapus foto profil
+      profilePictureUrl.value = null;
+    }
+  });
+};
 
 // Fungsi untuk mengambil foto profil WhatsApp
 const fetchProfilePicture = async () => {
@@ -406,6 +444,8 @@ const handleStorageChange = (event) => {
     if (newDeviceId !== selectedDeviceId.value) {
       selectedDeviceId.value = newDeviceId;
       fetchProfilePicture();
+      // 🆕 Setup listener untuk device baru
+      setupDeviceStatusListener();
     }
   }
 };
@@ -416,6 +456,8 @@ const handleDeviceChange = () => {
   if (currentDeviceId !== selectedDeviceId.value) {
     selectedDeviceId.value = currentDeviceId;
     fetchProfilePicture();
+    // 🆕 Setup listener untuk device baru
+    setupDeviceStatusListener();
   }
 };
 
@@ -423,6 +465,11 @@ const handleDeviceChange = () => {
 onUnmounted(() => {
   window.removeEventListener('storage', handleStorageChange);
   window.removeEventListener('deviceChanged', handleDeviceChange);
+  
+  // 🆕 Cleanup socket listener
+  if (cleanupSocketListener) {
+    cleanupSocketListener();
+  }
 });
 
 const toggleSidebar = () => {

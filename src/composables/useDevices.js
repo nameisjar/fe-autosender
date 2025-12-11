@@ -79,6 +79,7 @@ export function useDevices() {
     return {
       id: device.id,
       name: device.name || 'Unknown Device',
+      phone: device.phone || '', // 🆕 Tambahkan nomor WhatsApp
       status: device.status || 'unknown',
       isConnected: device.status === 'open', // ✅ Mapping status yang benar
     };
@@ -88,6 +89,7 @@ export function useDevices() {
     return devices.value.map((d) => ({
       id: d.id,
       name: d.name || 'Unknown Device',
+      phone: d.phone || '', // 🆕 Tambahkan nomor WhatsApp
       status: d.status || 'unknown',
       isConnected: d.status === 'open',
     }));
