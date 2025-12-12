@@ -1,120 +1,71 @@
 <template>
-  <div class="login-container">
-    <div class="login-background">
-      <div class="gradient-circle circle-1"></div>
-      <div class="gradient-circle circle-2"></div>
-      <div class="gradient-circle circle-3"></div>
-    </div>
-
-    <div class="wrapper auth">
-      <div class="login-header">
-        <div class="logo-container">
-          <div class="logo-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
-              />
-              <path
-                d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1"
-              />
-            </svg>
-          </div>
-          <h1 class="app-title">Autosender</h1>
-        </div>
-        <h2>Selamat Datang Kembali</h2>
-        <p class="subtitle">Silakan masuk ke akun Anda</p>
-      </div>
-
-      <form @submit.prevent="login" class="card form">
-        <label class="field">
-          <span class="field-label">
-            <svg
-              class="field-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 6h18v12H3z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 6l9 7 9-7"
-              />
-            </svg>
-
-            Email
-          </span>
-          <input
-            v-model="identifier"
-            type="email"
-            placeholder="nama@email.com"
-            autocomplete="email"
-          />
-        </label>
-
-        <label class="field">
-          <span class="field-label">
-            <svg
-              class="field-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-            Password
-          </span>
-          <input
-            v-model="password"
-            type="password"
-            placeholder="Masukkan password Anda"
-            autocomplete="current-password"
-          />
-        </label>
-
-        <button class="btn primary" :disabled="loading">
-          <span v-if="loading" class="spinner"></span>
-          {{ loading ? "Memproses..." : "Masuk" }}
-        </button>
-
-        <div v-if="error" class="error-message">
+  <div class="login-page">
+    <div class="login-box">
+      <div class="login-brand">
+        <div class="brand-logo">
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
             viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
             stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
+            <!-- Messages Square Icon - Multiple Chat Bubbles -->
             <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+            />
+            <path
+              d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1"
             />
           </svg>
+        </div>
+        <h1>Autosender</h1>
+      </div>
+
+      <div class="login-header">
+        <h2>Login</h2>
+        <p>Masukkan email dan password untuk melanjutkan</p>
+      </div>
+
+      <form @submit.prevent="login" class="login-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            v-model="identifier"
+            type="email"
+            placeholder="contoh@email.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            placeholder="Masukkan password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <div v-if="error" class="error-box">
           {{ error }}
         </div>
+
+        <button type="submit" class="btn-login" :disabled="loading">
+          {{ loading ? "Memproses..." : "Masuk" }}
+        </button>
       </form>
+
+      <div class="login-footer">
+        <p>&copy; 2025 Autosender. All rights reserved.</p>
+      </div>
     </div>
   </div>
 </template>
@@ -142,7 +93,7 @@ const login = async () => {
     router.push("/");
   } catch (e) {
     error.value =
-      (e && e.response && e.response.data && e.response.data.message) || "Login failed";
+      (e && e.response && e.response.data && e.response.data.message) || "Login gagal";
   } finally {
     loading.value = false;
   }
@@ -150,90 +101,51 @@ const login = async () => {
 </script>
 
 <style scoped>
-.login-container {
+.login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.login-background {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.gradient-circle {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: float 20s ease-in-out infinite;
-}
-
-.circle-1 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  top: -200px;
-  left: -200px;
-  animation-delay: 0s;
-}
-
-.circle-2 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: -150px;
-  right: -150px;
-  animation-delay: 7s;
-}
-
-.circle-3 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  top: 50%;
-  right: 10%;
-  animation-delay: 14s;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(50px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-30px, 30px) scale(0.9);
-  }
-}
-
-.wrapper {
-  max-width: 440px;
-  width: 100%;
-  margin: 0;
+  background: #f5f5f5;
   padding: 20px;
-  position: relative;
-  z-index: 1;
-  animation: slideUp 0.6s ease-out;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.login-box {
+  background: white;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.brand-logo {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  background: #3b82f6;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo svg {
+  width: 32px;
+  height: 32px;
+  color: white;
+}
+
+.login-brand h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
 }
 
 .login-header {
@@ -241,277 +153,127 @@ const login = async () => {
   margin-bottom: 32px;
 }
 
-.logo-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+.login-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.login-header p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.login-form {
   margin-bottom: 24px;
 }
 
-.logo-icon {
-  width: 48px;
-  height: 48px;
-  background: white;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.form-group {
+  margin-bottom: 20px;
 }
 
-.logo-icon svg {
-  width: 28px;
-  height: 28px;
-  color: #667eea;
-}
-
-.app-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: white;
-  margin: 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.login-header h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: white;
-  margin: 0 0 8px 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.subtitle {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0;
-}
-
-.card {
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  padding: 32px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.form-group label {
+  display: block;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: #374151;
+  margin-bottom: 8px;
 }
 
-.field-icon {
-  width: 24px;
-  height: 24px;
-  color: #667eea;
+.form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
-.field input {
-  padding: 14px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  font-size: 15px;
-  transition: all 0.3s ease;
-  background: white;
-}
-
-.field input:focus {
+.form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  transform: translateY(-1px);
+  border-color: #3b82f6;
 }
 
-.field input::placeholder {
+.form-group input::placeholder {
   color: #9ca3af;
 }
 
-.btn {
-  height: 48px;
-  padding: 0 24px;
-  border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
-}
-
-.btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #fee2e2;
+.error-box {
+  padding: 12px;
+  background: #fef2f2;
   border: 1px solid #fecaca;
-  border-radius: 10px;
+  border-radius: 6px;
   color: #dc2626;
   font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
   font-weight: 500;
-  animation: shake 0.5s ease;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.error-message svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
+.btn-login:hover:not(:disabled) {
+  background: #2563eb;
 }
 
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-5px);
-  }
-  75% {
-    transform: translateX(5px);
-  }
+.btn-login:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
-  .wrapper {
-    max-width: 100%;
-    padding: 16px;
-  }
+.login-footer {
+  text-align: center;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
 
-  .card {
-    padding: 24px;
-    border-radius: 16px;
-  }
-
-  .login-header h2 {
-    font-size: 22px;
-  }
-
-  .app-title {
-    font-size: 24px;
-  }
-
-  .logo-icon {
-    width: 42px;
-    height: 42px;
-  }
-
-  .logo-icon svg {
-    width: 24px;
-    height: 24px;
-  }
-
-  .subtitle {
-    font-size: 14px;
-  }
+.login-footer p {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0;
 }
 
 @media (max-width: 480px) {
-  .wrapper {
-    padding: 12px;
+  .login-box {
+    padding: 32px 24px;
   }
 
-  .card {
-    padding: 20px;
+  .login-brand {
+    margin-bottom: 28px;
   }
 
-  .login-header {
-    margin-bottom: 24px;
+  .brand-logo {
+    width: 48px;
+    height: 48px;
   }
 
-  .login-header h2 {
-    font-size: 20px;
+  .brand-logo svg {
+    width: 28px;
+    height: 28px;
   }
 
-  .app-title {
+  .login-brand h1 {
     font-size: 22px;
   }
 
-  .logo-icon {
-    width: 38px;
-    height: 38px;
+  .login-header h2 {
+    font-size: 18px;
   }
 
-  .logo-icon svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  .subtitle {
+  .login-header p {
     font-size: 13px;
-  }
-
-  .field input {
-    padding: 12px 14px;
-    font-size: 14px;
-  }
-
-  .btn {
-    height: 44px;
-    font-size: 15px;
-  }
-
-  .form {
-    gap: 16px;
   }
 }
 </style>

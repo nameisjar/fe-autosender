@@ -50,22 +50,42 @@
         <div class="card-body">
           <!-- Device Info Compact -->
           <div v-if="selectedDevice && !showDeviceList" class="device-info-compact">
-            <div class="device-avatar-compact" :class="{ online: selectedDevice.isConnected }">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                <line x1="12" y1="18" x2="12.01" y2="18" />
+            <div
+              class="device-avatar-compact"
+              :class="{ online: selectedDevice.isConnected }"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="5" y="2" width="14" height="20" rx="2" />
+                <line x1="12" y1="18" x2="12" y2="18" />
               </svg>
             </div>
             <div class="device-info-text">
               <div class="device-name-compact">
                 {{ selectedDevice.name || "Unknown" }}
-                <span v-if="selectedDevice.phone" class="device-phone-inline"> - {{ selectedDevice.phone }}</span>
+                <span v-if="selectedDevice.phone" class="device-phone-inline">
+                  - {{ selectedDevice.phone }}</span
+                >
               </div>
-              <div class="device-status-compact" :class="{ online: selectedDevice.isConnected }">
+              <div
+                class="device-status-compact"
+                :class="{ online: selectedDevice.isConnected }"
+              >
                 {{ selectedDevice.isConnected ? "● Online" : "● Offline" }}
               </div>
             </div>
-            <button type="button" class="btn-change-compact" @click="showDeviceList = true">
+            <button
+              type="button"
+              class="btn-change-compact"
+              @click="showDeviceList = true"
+            >
               Ganti
             </button>
           </div>
@@ -89,7 +109,10 @@
               @click="handleSelectDevice(device.id)"
             >
               <span class="device-item-label">
-                {{ device.name }}<span v-if="device.phone" class="device-phone-inline"> - {{ device.phone }}</span>
+                {{ device.name
+                }}<span v-if="device.phone" class="device-phone-inline">
+                  - {{ device.phone }}</span
+                >
               </span>
               <span class="status-dot" :class="{ online: device.isConnected }"></span>
             </button>
@@ -1075,8 +1098,8 @@ onMounted(async () => {
 watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
     // ✅ Dispatch custom event untuk Dashboard.vue
-    window.dispatchEvent(new Event('deviceChanged'));
-    
+    window.dispatchEvent(new Event("deviceChanged"));
+
     // Clear recipients ketika ganti device
     recipients.value = [];
     recipientLabels.value = {};
@@ -2153,4 +2176,4 @@ function handleSelectDevice(deviceId) {
   }
 }
 </style>
-``` 
+```

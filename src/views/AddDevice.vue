@@ -33,7 +33,7 @@
       <div class="stats-row">
         <div class="stat-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <rect x="5" y="2" width="14" height="20" rx="2" />
             <line x1="12" y1="18" x2="12.01" y2="18" />
           </svg>
           <div>
@@ -54,11 +54,19 @@
           </div>
         </div>
         <div class="stat-card stat-warning">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
+            <line x1="12" y1="16" x2="12" y2="16" />
           </svg>
+
           <div>
             <div class="stat-value">
               {{ devices.filter((d) => d.status !== "open").length }}
@@ -90,7 +98,7 @@
           <div class="field">
             <label>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                <rect x="5" y="2" width="14" height="20" rx="2" />
                 <line x1="12" y1="18" x2="12.01" y2="18" />
               </svg>
               Pilih Device
@@ -226,24 +234,41 @@
       <!-- 🆕 CLEAN: Unified Status Bar (replaces 3 separate boxes) -->
       <template v-else>
         <!-- State 1: Connecting (Normal) -->
-        <div v-if="pairingLoading && !apiError && !qr" class="status-bar status-bar-connecting">
+        <div
+          v-if="pairingLoading && !apiError && !qr"
+          class="status-bar status-bar-connecting"
+        >
           <div class="status-spinner"></div>
-          <span class="status-message">{{ statusText || "Menghubungkan ke WhatsApp..." }}</span>
+          <span class="status-message">{{
+            statusText || "Menghubungkan ke WhatsApp..."
+          }}</span>
         </div>
 
         <!-- State 2: Error (Timeout/Expired) -->
         <div v-else-if="apiError" class="status-bar status-bar-error">
-          <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            class="status-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <span class="status-message">{{ apiError }}</span>
-          <button 
-            v-if="!pairingLoading" 
-            @click="quickRetryPairing" 
+          <button
+            v-if="!pairingLoading"
+            @click="quickRetryPairing"
             class="status-retry-btn"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <path
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
             Generate Ulang
           </button>
@@ -251,11 +276,20 @@
 
         <!-- 🆕 Waiting for Disconnect -->
         <div v-if="waitingDisconnect" class="status-bar status-bar-waiting">
-          <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            class="status-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          <span class="status-message">Menunggu status terputus... (<strong>{{ disconnectCountdown }}s</strong>)</span>
+          <span class="status-message"
+            >Menunggu status terputus... (<strong>{{ disconnectCountdown }}s</strong
+            >)</span
+          >
         </div>
 
         <!-- 🆕 QR Code Display with Side-by-Side Layout (WhatsApp Web Style) -->
@@ -267,49 +301,85 @@
               <div class="instruction-item">
                 <div class="instruction-number">1</div>
                 <div class="instruction-content">
-                  <span class="instruction-text">Buka <strong>WhatsApp</strong> di ponsel</span>
+                  <span class="instruction-text"
+                    >Buka <strong>WhatsApp</strong> di ponsel</span
+                  >
                 </div>
               </div>
               <div class="instruction-item">
                 <div class="instruction-number">2</div>
                 <div class="instruction-content">
-                  <span class="instruction-text">Ketuk <strong>Menu</strong> <span class="instruction-icon">⋮</span> atau <strong>Setelan</strong> <span class="instruction-icon">⚙</span> dan pilih <strong>Perangkat Tertaut</strong></span>
+                  <span class="instruction-text"
+                    >Ketuk <strong>Menu</strong>
+                    <span class="instruction-icon">⋮</span> atau <strong>Setelan</strong>
+                    <span class="instruction-icon">⚙</span> dan pilih
+                    <strong>Perangkat Tertaut</strong></span
+                  >
                 </div>
               </div>
               <div class="instruction-item">
                 <div class="instruction-number">3</div>
                 <div class="instruction-content">
-                  <span class="instruction-text">Ketuk <strong>Tautkan Perangkat</strong></span>
+                  <span class="instruction-text"
+                    >Ketuk <strong>Tautkan Perangkat</strong></span
+                  >
                 </div>
               </div>
               <div class="instruction-item">
                 <div class="instruction-number">4</div>
                 <div class="instruction-content">
-                  <span class="instruction-text">Arahkan ponsel ke layar ini untuk <strong>memindai kode QR</strong></span>
+                  <span class="instruction-text"
+                    >Arahkan ponsel ke layar ini untuk
+                    <strong>memindai kode QR</strong></span
+                  >
                 </div>
               </div>
-              
+
               <!-- Timer info at bottom -->
-              <div v-if="!qrExpired" class="timer-info" :class="{ 'timer-warning': qrTimeLeft <= 10 }">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <div
+                v-if="!qrExpired"
+                class="timer-info"
+                :class="{ 'timer-warning': qrTimeLeft <= 10 }"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                <span v-if="qrTimeLeft > 10">Kode valid untuk <strong>{{ qrTimeLeft }}</strong> detik</span>
-                <span v-else>⚠️ Segera scan! <strong>{{ qrTimeLeft }}</strong> detik lagi</span>
+                <span v-if="qrTimeLeft > 10"
+                  >Kode valid untuk <strong>{{ qrTimeLeft }}</strong> detik</span
+                >
+                <span v-else
+                  >⚠️ Segera scan! <strong>{{ qrTimeLeft }}</strong> detik lagi</span
+                >
               </div>
             </div>
-            
+
             <!-- Right: QR Code with Reload Overlay -->
             <div class="qr-code-side">
               <div class="qr-box" :class="{ 'qr-expired': qrExpired }">
                 <img :src="qr" alt="QR Code" @error="onQRImageError" />
-                
+
                 <!-- 🆕 Reload Overlay when expired (like WhatsApp Web) -->
-                <div v-if="qrExpired" class="qr-expired-overlay" @click="quickRetryPairing">
+                <div
+                  v-if="qrExpired"
+                  class="qr-expired-overlay"
+                  @click="quickRetryPairing"
+                >
                   <div class="reload-icon-circle">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                    >
+                      <path
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                   </div>
                   <p class="reload-text">Klik untuk muat ulang kode QR</p>
@@ -346,7 +416,7 @@
             />
             <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
           </svg>
-          Daftar Device ({{ devices.length }})
+          Daftar Device ({{ filteredDevices.length }})
         </h3>
         <div class="header-actions">
           <button class="btn-reload" @click="fetchDevices(true)">
@@ -357,8 +427,8 @@
             </svg>
             Muat Ulang
           </button>
-          <button 
-            class="btn-add-device" 
+          <button
+            class="btn-add-device"
             @click="openAddDeviceModal"
             v-if="!tutorReachedLimit"
           >
@@ -368,6 +438,48 @@
             </svg>
             Tambah Device
           </button>
+        </div>
+      </div>
+
+      <!-- 🆕 Search Filter -->
+      <div class="search-filter-section" v-if="devices.length">
+        <div class="search-input-wrapper">
+          <svg
+            class="search-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            v-model="searchQuery"
+            placeholder="Cari device berdasarkan nama, nomor, atau status..."
+            class="search-input"
+          />
+          <button
+            v-if="searchQuery"
+            @click="searchQuery = ''"
+            class="clear-search-btn"
+            title="Hapus pencarian"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="search-result-info" v-if="searchQuery">
+          <span v-if="filteredDevices.length > 0">
+            Ditemukan <strong>{{ filteredDevices.length }}</strong> device dari
+            <strong>{{ devices.length }}</strong> total
+          </span>
+          <span v-else class="no-results">
+            Tidak ada device yang cocok dengan pencarian "{{ searchQuery }}"
+          </span>
         </div>
       </div>
 
@@ -383,13 +495,61 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="d in paginatedDevices" :key="d.id" :class="{ 'row-connected': d.status === 'open' }">
+            <!-- 🆕 Show "no results" row when filter returns empty -->
+            <tr v-if="filteredDevices.length === 0 && searchQuery" class="no-results-row">
+              <td colspan="5">
+                <div class="no-results-message">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                  <h4>Tidak ada hasil</h4>
+                  <p>
+                    Tidak ditemukan device yang cocok dengan pencarian "<strong>{{
+                      searchQuery
+                    }}</strong
+                    >"
+                  </p>
+                  <button class="btn-reset-search" @click="searchQuery = ''">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Reset Pencarian
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr
+              v-for="d in paginatedDevices"
+              :key="d.id"
+              :class="{ 'row-connected': d.status === 'open' }"
+            >
               <td data-label="Device">
                 <div class="device-cell">
                   <div class="device-icon-small" :class="statusClass(d.status)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                      <line x1="12" y1="18" x2="12.01" y2="18" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="5" y="2" width="14" height="20" rx="2" />
+                      <line x1="12" y1="18" x2="12" y2="18" />
                     </svg>
                   </div>
                   <div class="device-info-cell">
@@ -410,7 +570,12 @@
                 <div class="features-cell">
                   <template v-if="d.status === 'open' && deviceStats[d.id]">
                     <span class="feature-badge feature-contacts">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -419,7 +584,12 @@
                       {{ deviceStats[d.id].contacts }} Kontak
                     </span>
                     <span class="feature-badge feature-groups">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -430,17 +600,30 @@
                   </template>
                   <template v-else-if="d.status === 'open'">
                     <span class="feature-badge feature-loading">
-                      <svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                      <svg
+                        class="spin-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                        />
                       </svg>
                       Memuat...
                     </span>
                   </template>
                   <template v-else>
                     <span class="feature-badge disabled">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
                         <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y="8" x2="12" y2="12" />
                         <line x1="12" y1="16" x2="12.01" y2="16" />
                       </svg>
                       Belum terhubung
@@ -449,8 +632,18 @@
                 </div>
               </td>
               <td data-label="Aksi" class="text-center">
-                <button class="btn-delete-table" @click="deleteOne(d)" :disabled="deleting" title="Hapus Device">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button
+                  class="btn-delete-table"
+                  @click="deleteOne(d)"
+                  :disabled="deleting"
+                  title="Hapus Device"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
                     <polyline points="3 6 5 6 21 6" />
                     <path
                       d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
@@ -461,42 +654,37 @@
             </tr>
           </tbody>
         </table>
-        
+
         <!-- Pagination Controls -->
-        <div class="pagination-wrapper" v-if="totalPages > 1">
+        <div class="pagination" v-if="totalPages > 1">
           <div class="pagination-info">
-            Menampilkan {{ ((currentPage - 1) * itemsPerPage) + 1 }} - {{ Math.min(currentPage * itemsPerPage, devices.length) }} dari {{ devices.length }} device
+            Menampilkan
+            <strong
+              >{{ (currentPage - 1) * itemsPerPage + 1 }} -
+              {{ Math.min(currentPage * itemsPerPage, filteredDevices.length) }}</strong
+            >
+            dari <strong>{{ filteredDevices.length }}</strong> device{{
+              searchQuery ? " (terfilter)" : ""
+            }}
           </div>
           <div class="pagination-controls">
-            <button 
-              class="pagination-btn" 
-              @click="prevPage" 
-              :disabled="currentPage === 1"
-              title="Halaman Sebelumnya"
-            >
+            <button class="btn-page" :disabled="currentPage === 1" @click="prevPage">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
+              Sebelumnya
             </button>
-            
-            <div class="pagination-pages">
-              <button
-                v-for="page in visiblePages"
-                :key="page"
-                class="pagination-page"
-                :class="{ active: page === currentPage }"
-                @click="goToPage(page)"
-              >
-                {{ page }}
-              </button>
+            <div class="page-indicator">
+              <span class="current-page">{{ currentPage }}</span>
+              <span class="page-separator">/</span>
+              <span class="total-pages">{{ totalPages }}</span>
             </div>
-            
-            <button 
-              class="pagination-btn" 
-              @click="nextPage" 
+            <button
+              class="btn-page"
               :disabled="currentPage === totalPages"
-              title="Halaman Berikutnya"
+              @click="nextPage"
             >
+              Berikutnya
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
@@ -544,11 +732,18 @@
                   required
                   autofocus
                 />
-                <small class="field-hint">Beri nama yang mudah dikenali untuk device WhatsApp Anda</small>
+                <small class="field-hint"
+                  >Beri nama yang mudah dikenali untuk device WhatsApp Anda</small
+                >
               </div>
-              
+
               <div v-if="tutorReachedLimit" class="info-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -561,12 +756,17 @@
               <button type="button" class="btn-cancel" @click="closeAddDeviceModal">
                 Batal
               </button>
-              <button 
-                type="submit" 
-                class="btn-save" 
+              <button
+                type="submit"
+                class="btn-save"
                 :disabled="loading || tutorReachedLimit || !name.trim()"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="16" />
                   <line x1="8" y1="12" x2="16" y2="12" />
@@ -712,9 +912,9 @@ const qrTimerPercent = computed(() => {
 });
 
 const qrTimerWarning = computed(() => {
-  if (qrTimeLeft.value <= 10) return 'warning';
-  if (qrTimeLeft.value <= 30) return 'caution';
-  return '';
+  if (qrTimeLeft.value <= 10) return "warning";
+  if (qrTimeLeft.value <= 30) return "caution";
+  return "";
 });
 
 // 🆕 Flag untuk mendeteksi apakah user manual memilih device
@@ -749,12 +949,38 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const deviceStats = ref({}); // Store { deviceId: { contacts: 0, groups: 0 } }
 
-// 🆕 Computed pagination
-const totalPages = computed(() => Math.ceil(devices.value.length / itemsPerPage.value));
+// 🆕 Search/Filter state
+const searchQuery = ref("");
+
+// 🆕 Computed filtered devices based on search query
+const filteredDevices = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return devices.value;
+  }
+
+  const query = searchQuery.value.toLowerCase().trim();
+  return devices.value.filter((device) => {
+    const nameMatch = device.name && device.name.toLowerCase().includes(query);
+    const phoneMatch = device.phone && device.phone.includes(query);
+    const statusMatch = humanStatus(device.status).toLowerCase().includes(query);
+
+    return nameMatch || phoneMatch || statusMatch;
+  });
+});
+
+// 🆕 Watch searchQuery to reset pagination when filtering
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
+
+// 🆕 Computed pagination based on filtered devices
+const totalPages = computed(() =>
+  Math.ceil(filteredDevices.value.length / itemsPerPage.value)
+);
 const paginatedDevices = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
   const end = start + itemsPerPage.value;
-  return devices.value.slice(start, end);
+  return filteredDevices.value.slice(start, end);
 });
 
 // 🆕 Pagination controls
@@ -781,7 +1007,7 @@ const visiblePages = computed(() => {
   const total = totalPages.value;
   const current = currentPage.value;
   const pages = [];
-  
+
   if (total <= 5) {
     // Show all pages if total <= 5
     for (let i = 1; i <= total; i++) {
@@ -797,51 +1023,58 @@ const visiblePages = computed(() => {
       pages.push(current - 2, current - 1, current, current + 1, current + 2);
     }
   }
-  
+
   return pages;
 });
 
 // 🆕 Watch devices untuk reset pagination saat device count berubah
-watch(() => devices.value.length, () => {
-  // Reset to page 1 if current page is out of bounds
-  if (currentPage.value > totalPages.value) {
-    currentPage.value = 1;
+watch(
+  () => devices.value.length,
+  () => {
+    // Reset to page 1 if current page is out of bounds
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = 1;
+    }
   }
-});
+);
 
 // 🆕 Function untuk fetch stats kontak & grup per device
 const fetchDeviceStats = async (deviceId) => {
   try {
     console.log(`[Stats] Fetching stats for device ${deviceId}...`);
-    
+
     // Fetch contacts count
     const contactsRes = await userApi.get(`/contacts?deviceId=${deviceId}`);
     const contactsCount = contactsRes.data?.length || 0;
-    
+
     // Fetch groups count
     const groupsRes = await userApi.get(`/groups?deviceId=${deviceId}`);
     const groupsCount = groupsRes.data?.length || 0;
-    
+
     deviceStats.value[deviceId] = {
       contacts: contactsCount,
-      groups: groupsCount
+      groups: groupsCount,
     };
-    
-    console.log(`[Stats] Device ${deviceId}: ${contactsCount} kontak, ${groupsCount} grup`);
+
+    console.log(
+      `[Stats] Device ${deviceId}: ${contactsCount} kontak, ${groupsCount} grup`
+    );
   } catch (e) {
     console.error(`[Stats] Error fetching stats for device ${deviceId}:`, e);
     deviceStats.value[deviceId] = {
       contacts: 0,
-      groups: 0
+      groups: 0,
     };
   }
 };
 
 // 🆕 Fetch stats untuk semua connected devices
 const fetchAllDeviceStats = async () => {
-  const connectedDevices = devices.value.filter(d => d.status === 'open');
-  console.log(`[Stats] Fetching stats for ${connectedDevices.length} connected devices...`);
-  await Promise.all(connectedDevices.map(d => fetchDeviceStats(d.id)));
+  const connectedDevices = devices.value.filter((d) => d.status === "open");
+  console.log(
+    `[Stats] Fetching stats for ${connectedDevices.length} connected devices...`
+  );
+  await Promise.all(connectedDevices.map((d) => fetchDeviceStats(d.id)));
 };
 
 // Fetch devices dengan cache layer
@@ -875,7 +1108,7 @@ const fetchDevices = async (forceRefresh = false) => {
 
     // Setup socket listeners after fetching devices
     setupSocketListeners();
-    
+
     // 🆕 Fetch stats untuk connected devices
     await fetchAllDeviceStats();
 
@@ -892,7 +1125,6 @@ const fetchDevices = async (forceRefresh = false) => {
   }
 };
 
-// Auto-select device saat load halaman
 const autoSelectDevice = () => {
   if (!devices.value.length) return;
 
@@ -1166,39 +1398,41 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const startPairing = async () => {
   // 🔧 GUARD #1: Check if already pairing
   if (pairingLoading.value) {
-    toast.warning('Pairing sedang berlangsung. Mohon tunggu...');
-    console.log('[Frontend Guard] Blocked: Already pairing');
+    toast.warning("Pairing sedang berlangsung. Mohon tunggu...");
+    console.log("[Frontend Guard] Blocked: Already pairing");
     return;
   }
 
   // 🔧 GUARD #2: Check if still cleaning up
   if (isCleaningUp.value) {
-    toast.warning('Sedang membersihkan koneksi lama. Mohon tunggu...');
-    console.log('[Frontend Guard] Blocked: Still cleaning up');
+    toast.warning("Sedang membersihkan koneksi lama. Mohon tunggu...");
+    console.log("[Frontend Guard] Blocked: Still cleaning up");
     return;
   }
 
   // 🔧 GUARD #3: Check retry interval (prevent spam)
   const now = Date.now();
   const elapsed = now - lastPairingAttempt.value;
-  
+
   if (lastPairingAttempt.value > 0 && elapsed < MIN_RETRY_INTERVAL) {
     const waitTime = Math.ceil((MIN_RETRY_INTERVAL - elapsed) / 1000);
     toast.warning(`⏳ Tunggu ${waitTime} detik sebelum pairing lagi`);
-    console.log(`[Frontend Guard] Blocked: Too fast retry (${elapsed}ms < ${MIN_RETRY_INTERVAL}ms)`);
+    console.log(
+      `[Frontend Guard] Blocked: Too fast retry (${elapsed}ms < ${MIN_RETRY_INTERVAL}ms)`
+    );
     return;
   }
 
   // 🔧 GUARD #4: Validate device selection
   if (!deviceId.value) {
-    toast.error('Pilih device terlebih dahulu');
-    console.log('[Frontend Guard] Blocked: No device selected');
+    toast.error("Pilih device terlebih dahulu");
+    console.log("[Frontend Guard] Blocked: No device selected");
     return;
   }
 
   // ✅ ALL GUARDS PASSED - Record attempt time
   lastPairingAttempt.value = now;
-  console.log('[Frontend Guard] ✅ All guards passed, proceeding with pairing...');
+  console.log("[Frontend Guard] ✅ All guards passed, proceeding with pairing...");
 
   // Clear groups cache before re-pairing (old session groups become invalid)
   clearGroups();
@@ -1224,46 +1458,48 @@ const startPairing = async () => {
   try {
     const maxCycles = 1; // 🆕 Cukup 1 cycle karena backend sudah handle retry
     for (let i = 0; i < maxCycles; i++) {
-      statusText.value = i === 0 ? "Memulai koneksi..." : `Mencoba ulang... (${i + 1}/${maxCycles})`;
+      statusText.value =
+        i === 0 ? "Memulai koneksi..." : `Mencoba ulang... (${i + 1}/${maxCycles})`;
       const opened = await openSSEOnce();
-      
+
       if (opened) {
         statusText.value = "Berhasil terhubung!";
         toast.success("WhatsApp berhasil terhubung!");
-        
+
         // 🆕 Force clear QR dan stop loading saat sukses
         qr.value = "";
         asciiQr.value = "";
         pairingLoading.value = false;
-        
+
         // 🆕 Refresh devices untuk update status
         cache.invalidate(CACHE_KEY);
         await fetchDevices(true);
         break;
       }
-      
+
       if (!pairingLoading.value) break; // stopped manually
-      
+
       if (i < maxCycles - 1) {
         await wait(1000);
       }
     }
   } catch (e) {
     console.error("Pairing error:", e);
-    
+
     // 🆕 Better error messages
     let errorMessage = "Terjadi kesalahan saat melakukan pairing";
-    
+
     if (e?.message?.includes("timeout")) {
       errorMessage = "Pairing timeout. Silakan coba lagi.";
     } else if (e?.message?.includes("already connected")) {
-      errorMessage = "Device sudah terhubung. Refresh halaman untuk melihat status terbaru.";
+      errorMessage =
+        "Device sudah terhubung. Refresh halaman untuk melihat status terbaru.";
     } else if (e?.message?.includes("Device not found")) {
       errorMessage = "Device tidak ditemukan.";
     } else if (e?.message) {
       errorMessage = e.message;
     }
-    
+
     statusText.value = errorMessage;
     apiError.value = errorMessage;
     toast.error(errorMessage);
@@ -1278,58 +1514,58 @@ const startPairing = async () => {
 };
 
 const stopPairing = () => {
-  console.log('[Stop Pairing] User clicked stop - cleaning up...');
-  
+  console.log("[Stop Pairing] User clicked stop - cleaning up...");
+
   // 🆕 CRITICAL: Abort controller FIRST sebelum clear state
   if (controller) {
     try {
       controller.abort();
-      console.log('[Stop Pairing] Controller aborted');
+      console.log("[Stop Pairing] Controller aborted");
     } catch (e) {
       console.error("Error stopping pairing:", e);
     }
   }
-  
+
   // 🆕 Set controller ke null IMMEDIATELY untuk prevent race condition
   controller = null;
-  
+
   // 🆕 Clear semua state dengan force
   pairingLoading.value = false;
   apiError.value = "";
   qr.value = "";
   asciiQr.value = "";
   statusText.value = "Dihentikan";
-  
+
   // 🆕 Tampilkan "Waiting for Disconnect" info box
   waitingDisconnect.value = true;
   disconnectCountdown.value = 10; // Mulai dari 10 detik
-  
+
   // 🆕 Start countdown interval
   if (disconnectInterval) {
     clearInterval(disconnectInterval);
   }
-  
+
   disconnectInterval = setInterval(() => {
     disconnectCountdown.value -= 1;
-    
+
     // Jika countdown habis, stop interval dan hide info box
     if (disconnectCountdown.value <= 0) {
       clearInterval(disconnectInterval);
       disconnectInterval = null;
       waitingDisconnect.value = false;
-      
+
       // Show warning jika status masih belum berubah
-      if (selectedStatus.value !== 'close' && selectedStatus.value !== 'closed') {
-        toast.warning('Status masih belum berubah. Silakan refresh halaman jika perlu.');
+      if (selectedStatus.value !== "close" && selectedStatus.value !== "closed") {
+        toast.warning("Status masih belum berubah. Silakan refresh halaman jika perlu.");
       }
     }
   }, 1000);
-  
-  console.log('[Stop Pairing] All states cleared, showing disconnect countdown');
-  
+
+  console.log("[Stop Pairing] All states cleared, showing disconnect countdown");
+
   // 🆕 Extra safety: Force refresh device status setelah stop
   setTimeout(async () => {
-    console.log('[Stop Pairing] Refreshing device status after stop...');
+    console.log("[Stop Pairing] Refreshing device status after stop...");
     cache.invalidate(CACHE_KEY);
     await fetchDevices(true);
   }, 500);
@@ -1357,36 +1593,36 @@ const selectNextDisconnectedDevice = () => {
 
 // 🆕 PHASE 1: Quick Retry Function - One-click recovery from timeout/error
 const quickRetryPairing = async () => {
-  console.log('[Quick Retry] 🔄 User initiated quick retry...');
-  
+  console.log("[Quick Retry] 🔄 User initiated quick retry...");
+
   // Clear error state
   apiError.value = "";
   qrExpired.value = false;
-  
+
   // Reset retry throttle to allow immediate retry
   lastPairingAttempt.value = 0;
-  
+
   // Stop existing connection if any
   if (controller) {
     try {
       controller.abort();
     } catch (e) {
-      console.error('[Quick Retry] Error aborting:', e);
+      console.error("[Quick Retry] Error aborting:", e);
     }
     controller = null;
   }
-  
+
   // Reset UI state
   qr.value = "";
   asciiQr.value = "";
   pairingLoading.value = false;
   statusText.value = "";
-  
+
   // Wait 500ms for cleanup
   await wait(500);
-  
+
   // Retry pairing
-  toast.info('🔄 Membuat QR Code baru...');
+  toast.info("🔄 Membuat QR Code baru...");
   await startPairing();
 };
 
@@ -1440,12 +1676,12 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
         clearInterval(disconnectInterval);
         disconnectInterval = null;
       }
-      
+
       // Hide waiting disconnect box
       waitingDisconnect.value = false;
-      
-      console.log('[Disconnect] Status berubah menjadi terputus, countdown stopped');
-      toast.success('Device berhasil terputus!');
+
+      console.log("[Disconnect] Status berubah menjadi terputus, countdown stopped");
+      toast.success("Device berhasil terputus!");
     }
 
     // Jika berubah menjadi open (terhubung)
@@ -1469,7 +1705,7 @@ watch(selectedStatus, async (newStatus, oldStatus) => {
 
       // Show success toast
       toast.success("Device berhasil terhubung dengan WhatsApp!");
-      
+
       // ✅ Extra safety: Clear QR lagi setelah delay untuk handle race condition
       setTimeout(() => {
         qr.value = "";
@@ -1535,46 +1771,47 @@ watch(deviceId, (newDeviceId, oldDeviceId) => {
 
 // 🆕 PHASE 1: Watch QR untuk start countdown timer dan auto-clear saat expired
 watch(qr, (newQr) => {
-  if (newQr && newQr.startsWith('data:image')) {
+  if (newQr && newQr.startsWith("data:image")) {
     // QR baru di-generate
-    console.log('[QR Timer] ⏰ New QR generated, starting 60s countdown...');
+    console.log("[QR Timer] ⏰ New QR generated, starting 60s countdown...");
     qrGeneratedAt.value = Date.now();
     qrTimeLeft.value = 60;
     qrExpired.value = false;
-    
+
     // Clear old timer
     if (qrTimerInterval) {
       clearInterval(qrTimerInterval);
     }
-    
+
     // Start countdown
     qrTimerInterval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - qrGeneratedAt.value) / 1000);
       qrTimeLeft.value = Math.max(0, 60 - elapsed);
-      
+
       // Warning at 10 seconds
       if (qrTimeLeft.value === 10 && !qrExpired.value) {
-        console.log('[QR Timer] ⚠️ 10 seconds left!');
-        toast.warning('⚠️ QR akan expired dalam 10 detik! Scan sekarang.', {
-          duration: 5000
+        console.log("[QR Timer] ⚠️ 10 seconds left!");
+        toast.warning("⚠️ QR akan expired dalam 10 detik! Scan sekarang.", {
+          duration: 5000,
         });
       }
-      
+
       // Mark as expired and AUTO-CLEAR (CRITICAL FIX!)
       if (qrTimeLeft.value <= 0) {
-        console.log('[QR Timer] ❌ QR expired - auto-clearing...');
+        console.log("[QR Timer] ❌ QR expired - auto-clearing...");
         clearInterval(qrTimerInterval);
         qrTimerInterval = null;
         qrExpired.value = true;
-        
+
         // AUTO-CLEAR expired QR (Fix root cause masalah!)
         qr.value = "";
         asciiQr.value = "";
-        
+
         // Show expired message with retry option
-        apiError.value = "QR Code expired. Klik tombol 'Generate QR Baru' untuk mencoba lagi.";
-        
-        console.log('[QR Timer] ✅ Expired QR cleared from UI');
+        apiError.value =
+          "QR Code expired. Klik tombol 'Generate QR Baru' untuk mencoba lagi.";
+
+        console.log("[QR Timer] ✅ Expired QR cleared from UI");
       }
     }, 1000);
   } else if (!newQr) {
@@ -1699,10 +1936,10 @@ const handleCreateDevice = async () => {
   try {
     await userApi.post("/tutors/devices", { name: name.value });
     toast.success("Device berhasil dibuat");
-    
+
     // Close modal
     closeAddDeviceModal();
-    
+
     // Invalidate cache dan fetch ulang
     cache.invalidate(CACHE_KEY);
     await fetchDevices(true);
@@ -2310,7 +2547,7 @@ const handleCreateDevice = async () => {
 }
 
 .instruction-item::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 0;
@@ -2405,7 +2642,8 @@ const handleCreateDevice = async () => {
 }
 
 @keyframes pulse-warning {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -2655,11 +2893,11 @@ const handleCreateDevice = async () => {
     align-items: center;
     gap: 32px;
   }
-  
+
   .qr-instructions-side {
     max-width: 600px;
   }
-  
+
   .qr-main-title {
     font-size: 22px;
   }
@@ -2670,45 +2908,45 @@ const handleCreateDevice = async () => {
     font-size: 20px;
     margin-bottom: 24px;
   }
-  
+
   .qr-layout {
     gap: 24px;
   }
-  
+
   .instruction-item {
     padding: 12px;
     margin-bottom: 12px;
   }
-  
+
   .instruction-number {
     width: 32px;
     height: 32px;
     font-size: 14px;
   }
-  
+
   .instruction-text {
     font-size: 14px;
   }
-  
+
   .qr-box {
     padding: 20px;
   }
-  
+
   .qr-box img {
     width: 240px;
     height: 240px;
   }
-  
+
   .reload-icon-circle {
     width: 64px;
     height: 64px;
   }
-  
+
   .reload-icon-circle svg {
     width: 32px;
     height: 32px;
   }
-  
+
   .reload-text {
     font-size: 14px;
   }
@@ -2718,31 +2956,31 @@ const handleCreateDevice = async () => {
   .qr-main-title {
     font-size: 18px;
   }
-  
+
   .instruction-item {
     padding: 10px;
     gap: 12px;
   }
-  
+
   .instruction-number {
     width: 28px;
     height: 28px;
     font-size: 13px;
   }
-  
+
   .instruction-text {
     font-size: 13px;
   }
-  
+
   .qr-box {
     padding: 16px;
   }
-  
+
   .qr-box img {
     width: 200px;
     height: 200px;
   }
-  
+
   .timer-info {
     padding: 10px 12px;
     font-size: 13px;
@@ -2809,7 +3047,8 @@ const handleCreateDevice = async () => {
 }
 
 @keyframes pulse-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -2874,6 +3113,123 @@ const handleCreateDevice = async () => {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #94a3b8;
+}
+
+/* 🆕 Pagination Wrapper */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  gap: 16px;
+}
+
+.pagination-info {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.pagination-info strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-page svg {
+  width: 16px;
+  height: 16px;
+}
+
+.page-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.current-page {
+  font-size: 16px;
+}
+
+.page-separator {
+  opacity: 0.7;
+}
+
+.total-pages {
+  opacity: 0.9;
+}
+
+/* Delete Button in Table */
+.btn-delete-table {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-table:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.btn-delete-table:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-delete-table svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* 🆕 Table Styles - Modern & Clean */
@@ -3084,7 +3440,8 @@ const handleCreateDevice = async () => {
 }
 
 @keyframes pulse-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -3301,16 +3658,16 @@ const handleCreateDevice = async () => {
   .devices-table {
     font-size: 13px;
   }
-  
+
   .devices-table thead th {
     padding: 14px 16px;
     font-size: 12px;
   }
-  
+
   .devices-table tbody td {
     padding: 14px 16px;
   }
-  
+
   .device-name {
     font-size: 13px;
   }
@@ -3320,53 +3677,53 @@ const handleCreateDevice = async () => {
   .table-wrapper {
     border-radius: 8px;
   }
-  
+
   .devices-table {
     font-size: 12px;
   }
-  
+
   .devices-table thead th {
     padding: 12px;
     font-size: 11px;
   }
-  
+
   .devices-table tbody td {
     padding: 12px;
   }
-  
+
   .device-cell {
     gap: 10px;
   }
-  
+
   .device-icon-small {
     width: 36px;
     height: 36px;
   }
-  
+
   .device-icon-small svg {
     width: 18px;
     height: 18px;
   }
-  
+
   .device-name {
     font-size: 12px;
   }
-  
+
   .device-id-small {
     font-size: 10px;
   }
-  
+
   .status-badge,
   .feature-badge {
     font-size: 11px;
     padding: 5px 10px;
   }
-  
+
   .btn-delete-table {
     width: 32px;
     height: 32px;
   }
-  
+
   .btn-delete-table svg {
     width: 16px;
     height: 16px;
@@ -3379,18 +3736,18 @@ const handleCreateDevice = async () => {
     border: none;
     background: transparent;
   }
-  
+
   .devices-table thead {
     display: none;
   }
-  
+
   .devices-table,
   .devices-table tbody,
   .devices-table tr,
   .devices-table td {
     display: block;
   }
-  
+
   .devices-table tbody tr {
     margin-bottom: 16px;
     border: 1.5px solid #e2e8f0;
@@ -3399,26 +3756,26 @@ const handleCreateDevice = async () => {
     padding: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
-  
+
   .devices-table tbody tr.row-connected {
     border-color: #34d399;
   }
-  
+
   .devices-table tbody tr:hover {
     background: white;
     transform: none;
   }
-  
+
   .devices-table tbody td {
     padding: 8px 0;
     border: none;
   }
-  
+
   .devices-table tbody td:not(:last-child) {
     border-bottom: 1px solid #f1f5f9;
     margin-bottom: 8px;
   }
-  
+
   .devices-table tbody td::before {
     content: attr(data-label);
     display: block;
@@ -3429,15 +3786,15 @@ const handleCreateDevice = async () => {
     letter-spacing: 0.5px;
     margin-bottom: 6px;
   }
-  
+
   .devices-table tbody td.text-center {
     text-align: left;
   }
-  
+
   .features-cell {
     margin-top: 4px;
   }
-  
+
   .btn-delete-table {
     width: 100%;
     height: 40px;
@@ -4023,19 +4380,19 @@ const handleCreateDevice = async () => {
 .info-box {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 12px 14px;
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border: 1px solid #fbbf24;
   border-radius: 10px;
   color: #92400e;
   font-size: 13px;
-  line-height: 1.5;
+  margin-top: 16px;
 }
 
 .info-box svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   color: #f59e0b;
 }
@@ -4076,18 +4433,16 @@ const handleCreateDevice = async () => {
 .btn-cancel:hover {
   background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-save {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
   border: 1.5px solid #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
@@ -4095,8 +4450,6 @@ const handleCreateDevice = async () => {
 .btn-save:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
 .btn-save svg {
@@ -4111,31 +4464,31 @@ const handleCreateDevice = async () => {
     width: 100%;
     gap: 8px;
   }
-  
+
   .btn-reload,
   .btn-add-device {
     width: 100%;
     justify-content: center;
   }
-  
+
   .form-modal {
     max-width: 95%;
     width: 95%;
   }
-  
+
   .modal-header {
     padding: 20px;
   }
-  
+
   .modal-body {
     padding: 20px;
   }
-  
+
   .form-actions {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .btn-cancel,
   .btn-save {
     width: 100%;
@@ -4151,17 +4504,550 @@ const handleCreateDevice = async () => {
     border-radius: 20px 20px 0 0;
     max-height: 90vh;
   }
-  
+
   .modal-header {
     padding: 16px;
   }
-  
+
   .modal-body {
     padding: 16px;
   }
-  
+
   .form-grid-modal {
     gap: 16px;
   }
+}
+
+/* 🆕 Search Filter Section */
+.search-filter-section {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  width: 20px;
+  height: 20px;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 44px 12px 44px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  color: #1e293b;
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.clear-search-btn:hover {
+  background: #e2e8f0;
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.clear-search-btn svg {
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+}
+
+.search-result-info {
+  font-size: 13px;
+  color: #64748b;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.search-result-info strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.search-result-info .no-results {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* 🆕 No Results Row in Table */
+.no-results-row {
+  background: #f8fafc !important;
+}
+
+.no-results-row:hover {
+  background: #f8fafc !important;
+}
+
+.no-results-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 16px;
+}
+
+.no-results-message svg {
+  width: 48px;
+  height: 48px;
+  color: #94a3b8;
+}
+
+.no-results-message h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.no-results-message p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.no-results-message p strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.btn-reset-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  margin-top: 8px;
+}
+
+.btn-reset-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-reset-search svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive for Search Filter */
+@media (max-width: 768px) {
+  .search-filter-section {
+    padding: 16px;
+  }
+
+  .search-input {
+    font-size: 13px;
+    padding: 10px 40px 10px 40px;
+  }
+
+  .search-icon {
+    width: 18px;
+    height: 18px;
+    left: 12px;
+  }
+
+  .search-result-info {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .no-results-message {
+    padding: 32px 16px;
+  }
+
+  .no-results-message svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  .no-results-message h4 {
+    font-size: 16px;
+  }
+
+  .no-results-message p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-filter-section {
+    padding: 12px;
+  }
+
+  .search-input {
+    font-size: 12px;
+    padding: 10px 36px 10px 36px;
+  }
+
+  .search-icon {
+    width: 16px;
+    height: 16px;
+    left: 10px;
+  }
+
+  .clear-search-btn {
+    width: 24px;
+    height: 24px;
+    right: 6px;
+  }
+
+  .clear-search-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .no-results-message {
+    padding: 24px 12px;
+    gap: 12px;
+  }
+
+  .btn-reset-search {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* 🆕 Pagination Styles */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-top: 1.5px solid #e2e8f0;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pagination-info strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.btn-page svg {
+  width: 16px;
+  height: 16px;
+}
+
+.page-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  min-width: 80px;
+  justify-content: center;
+}
+
+.current-page {
+  font-size: 16px;
+}
+
+.page-separator {
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+.total-pages {
+  opacity: 0.9;
+  font-size: 14px;
+}
+
+/* Responsive for Pagination */
+@media (max-width: 768px) {
+  .pagination {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .pagination-info {
+    font-size: 13px;
+    width: 100%;
+    text-align: center;
+    order: 1;
+  }
+
+  .pagination-controls {
+    width: 100%;
+    justify-content: center;
+    order: 2;
+    gap: 10px;
+  }
+
+  .btn-page {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .btn-page span {
+    display: none;
+  }
+
+  .page-indicator {
+    padding: 8px 14px;
+    font-size: 13px;
+    min-width: 70px;
+  }
+
+  .current-page {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination {
+    padding: 12px;
+  }
+
+  .pagination-info {
+    font-size: 12px;
+  }
+
+  .pagination-controls {
+    gap: 8px;
+  }
+
+  .btn-page {
+    padding: 6px 12px;
+    min-width: 36px;
+    justify-content: center;
+  }
+
+  .btn-page svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .page-indicator {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-width: 60px;
+  }
+
+  .current-page {
+    font-size: 14px;
+  }
+}
+
+/* ...existing form modal styles... */
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.form-group label .required {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  color: #1e293b;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.field-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+  display: block;
+}
+
+.info-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fbbf24;
+  border-radius: 10px;
+  color: #92400e;
+  font-size: 13px;
+  margin-top: 16px;
+}
+
+.info-box svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #f59e0b;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-cancel,
+.btn-save {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+}
+
+.btn-cancel:hover {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-1px);
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: 1.5px solid #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-save:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-save svg,
+.btn-cancel svg {
+  width: 16px;
+  height: 16px;
 }
 </style>
