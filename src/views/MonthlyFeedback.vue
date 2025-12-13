@@ -70,6 +70,9 @@
                 <div class="device-info-text">
                   <div class="device-name-compact">
                     {{ selectedDevice.name || "Unknown" }}
+                    <span v-if="selectedDevice.phone" class="device-phone-inline">
+                      - {{ selectedDevice.phone }}</span
+                    >
                   </div>
                   <div
                     class="device-status-compact"
@@ -105,7 +108,12 @@
                   :class="{ online: device.isConnected }"
                   @click="handleSelectDevice(device.id)"
                 >
-                  <span>{{ device.name }}</span>
+                  <span
+                    >{{ device.name
+                    }}<span v-if="device.phone" class="device-phone-inline">
+                      - {{ device.phone }}</span
+                    ></span
+                  >
                   <span class="status-dot" :class="{ online: device.isConnected }"></span>
                 </button>
               </div>
@@ -2969,6 +2977,12 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.device-phone-inline {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .device-status-compact {

@@ -12,39 +12,29 @@ export function useDevices() {
       loading.value = true;
       const { data } = await userApi.get('/devices');
       devices.value = Array.isArray(data) ? data : [];
-      
-      // Check apakah deviceId dari localStorage masih valid
+
+      // 1) If there is a saved selection and it still exists, keep it as-is.
+      //    Do NOT auto-switch to an 'open' device; user may want to operate on another device.
       const savedDeviceId = localStorage.getItem('device_selected_id');
       if (savedDeviceId) {
-        const deviceExists = devices.value.find((d) => d.id === savedDeviceId);
+        const deviceExists = devices.value.find((d) => String(d.id) === String(savedDeviceId));
         if (deviceExists) {
-          selectedDeviceId.value = savedDeviceId;
-          
-          // ⚠️ Cek jika device sudah closed, auto-select device lain yang open
-          if (deviceExists.status !== 'open') {
-            // console.warn('[useDevices] Selected device is not open, finding alternative...');
-            const openDevice = devices.value.find((d) => d.status === 'open');
-            if (openDevice) {
-              // console.log('[useDevices] Auto-selecting open device:', openDevice.name);
-              selectDevice(openDevice.id);
-            }
-          }
-          return; // Device masih valid
+          selectedDeviceId.value = String(savedDeviceId);
+          return;
         }
       }
-      
-      // Auto-select device jika belum ada yang dipilih atau device tidak valid
-      if (!selectedDeviceId.value || devices.value.length > 0) {
-        // Prioritas: device yang open, atau device pertama
-        const openDevice = devices.value.find((d) => d.status === 'open');
-        const defaultDevice = openDevice || devices.value[0];
-        
-        if (defaultDevice) {
-          selectedDeviceId.value = defaultDevice.id;
-          // ✅ HANYA simpan deviceId dan name, TIDAK simpan API key
-          localStorage.setItem('device_selected_id', defaultDevice.id);
-          localStorage.setItem('device_selected_name', defaultDevice.name || 'Unknown Device');
-        }
+
+      // 2) If nothing is selected (or saved selection is invalid), pick a stable default.
+      //    Prefer the first device (NOT prioritizing 'open') to avoid jumping around.
+      const defaultDevice = devices.value[0];
+      if (defaultDevice) {
+        selectedDeviceId.value = String(defaultDevice.id);
+        localStorage.setItem('device_selected_id', String(defaultDevice.id));
+        localStorage.setItem('device_selected_name', defaultDevice.name || 'Unknown Device');
+      } else {
+        selectedDeviceId.value = '';
+        localStorage.removeItem('device_selected_id');
+        localStorage.removeItem('device_selected_name');
       }
     } catch (error) {
       console.error('Error loading devices:', error);
@@ -55,33 +45,35 @@ export function useDevices() {
   };
 
   const selectDevice = (deviceId) => {
-    if (!deviceId) return;
-    
-    selectedDeviceId.value = deviceId;
-    const device = devices.value.find((d) => d.id === deviceId);
+    if (deviceId === undefined || deviceId === null || deviceId === '') return;
+
+    const id = String(deviceId);
+    selectedDeviceId.value = id;
+
+    // Find by stringified id (avoid number/string mismatch)
+    const device = devices.value.find((d) => String(d.id) === id);
     if (device) {
-      // ✅ HANYA simpan deviceId dan name
-      localStorage.setItem('device_selected_id', device.id);
+      localStorage.setItem('device_selected_id', String(device.id));
       localStorage.setItem('device_selected_name', device.name || 'Unknown Device');
-      
-      // 🔔 Trigger event untuk notify komponen lain bahwa device berubah
-      window.dispatchEvent(new CustomEvent('device:changed', { 
-        detail: { deviceId: device.id, deviceName: device.name } 
-      }));
+
+      window.dispatchEvent(
+        new CustomEvent('device:changed', {
+          detail: { deviceId: String(device.id), deviceName: device.name },
+        })
+      );
     }
   };
 
   const selectedDevice = computed(() => {
-    const device = devices.value.find((d) => d.id === selectedDeviceId.value);
+    const device = devices.value.find((d) => String(d.id) === String(selectedDeviceId.value));
     if (!device) return null;
-    
-    // ✅ Map device dengan format yang sama seperti availableDevices
+
     return {
-      id: device.id,
+      id: String(device.id),
       name: device.name || 'Unknown Device',
-      phone: device.phone || '', // 🆕 Tambahkan nomor WhatsApp
+      phone: device.phone || '',
       status: device.status || 'unknown',
-      isConnected: device.status === 'open', // ✅ Mapping status yang benar
+      isConnected: device.status === 'open',
     };
   });
 
@@ -105,11 +97,9 @@ export function useDevices() {
   // 🆕 Listen untuk event device session closed
   const handleDeviceSessionClosed = (event) => {
     const { deviceId } = event.detail || {};
-    // console.warn('[useDevices] Device session closed:', deviceId);
-    
-    // Jika device yang closed adalah device yang sedang dipilih
-    if (deviceId === selectedDeviceId.value) {
-      // Refresh device list untuk update status
+
+    // Compare as strings to avoid pkId/id mismatch
+    if (String(deviceId || '') === String(selectedDeviceId.value || '')) {
       loadDevices();
     }
   };

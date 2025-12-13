@@ -11,27 +11,18 @@
             stroke="currentColor"
             stroke-width="2"
           >
-            <path
-              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-            />
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             <path d="M8 10h.01M12 10h.01M16 10h.01" stroke-linecap="round" />
           </svg>
           Semua Pesan Terkirim (Admin)
         </h2>
-        <p class="subtitle">
-          Monitor dan kelola semua pesan yang telah terkirim
-        </p>
+        <p class="subtitle">Monitor dan kelola semua pesan yang telah terkirim</p>
       </div>
 
       <!-- Stats Row -->
       <div class="stats-row">
         <div class="stat-card">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <div>
@@ -40,12 +31,7 @@
           </div>
         </div>
         <div class="stat-card">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <div>
@@ -62,12 +48,7 @@
           </div>
         </div>
         <div class="stat-card">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="15" y1="9" x2="9" y2="15" />
             <line x1="9" y1="9" x2="15" y2="15" />
@@ -86,21 +67,15 @@
           </div>
         </div>
         <div class="stat-card">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
           <div>
             <div class="stat-value">
               {{
-                displayedRows.filter(
-                  (r) => String(r.status).toLowerCase() === "pending"
-                ).length
+                displayedRows.filter((r) => String(r.status).toLowerCase() === "pending")
+                  .length
               }}
             </div>
             <div class="stat-label">Pending</div>
@@ -113,12 +88,7 @@
     <section class="list-card">
       <div class="card-header-section">
         <h3>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="4" y1="21" x2="4" y2="14" />
             <line x1="4" y1="10" x2="4" y2="3" />
             <line x1="12" y1="21" x2="12" y2="12" />
@@ -137,12 +107,7 @@
             @click="exportCsv"
             :disabled="loading || exporting"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
@@ -154,15 +119,10 @@
             @click="deleteAllSent"
             :disabled="loading || deleting"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6" />
               <path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2v2"
               />
             </svg>
             {{ deleting ? "Menghapus..." : "Hapus Semua" }}
@@ -173,12 +133,7 @@
       <!-- Toolbar -->
       <div class="toolbar-section">
         <div class="search-box">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.35-4.35" />
           </svg>
@@ -219,11 +174,7 @@
             {{ loading ? "..." : "Cari" }}
           </button>
 
-          <select
-            v-model.number="pageSize"
-            class="page-size-select"
-            @change="load(1)"
-          >
+          <select v-model.number="pageSize" class="page-size-select" @change="load(1)">
             <option :value="10">10</option>
             <option :value="25">25</option>
             <option :value="50">50</option>
@@ -258,10 +209,14 @@
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
                     <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                    <!-- batang i (dipendekkan) -->
+                    <line x1="12" y1="11.5" x2="12" y2="15" />
+                    <!-- titik i (kecil & pas) -->
+                    <circle cx="12" cy="8.5" r="0.7" />
                   </svg>
                 </button>
               </td>
@@ -279,16 +234,20 @@
               <td class="col-status">
                 <span class="status-badge" :class="badgeClass(r.status)">
                   {{ statusLabel(r.status) }}
+                  <span
+                    v-if="isGroup(r.to) && Array.isArray(r.readBy)"
+                    class="badge-count"
+                    :title="`Dibaca ${r.readBy.length}`"
+                  >
+                    {{ r.readBy.length }}
+                  </span>
                 </span>
               </td>
               <td class="col-time">
                 <div class="time-cell">{{ fmt(r.createdAt) }}</div>
               </td>
               <td class="col-source">
-                <span
-                  v-if="sourceSimple(r) === 'reminder'"
-                  class="source-chip reminder"
-                >
+                <span v-if="sourceSimple(r) === 'reminder'" class="source-chip reminder">
                   <svg
                     viewBox="0 0 24 24"
                     fill="none"
@@ -351,19 +310,9 @@
           </tbody>
         </table>
 
-        <div
-          v-else-if="!loading && displayedRows.length === 0"
-          class="empty-state"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-            />
+        <div v-else-if="!loading && displayedRows.length === 0" class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             <path d="M8 10h.01M12 10h.01M16 10h.01" />
           </svg>
           <h3>Tidak Ada Pesan</h3>
@@ -383,12 +332,7 @@
             :disabled="page <= 1 || loading"
             @click="load(page - 1)"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
             Sebelumnya
@@ -402,12 +346,7 @@
             @click="load(page + 1)"
           >
             Berikutnya
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
@@ -426,15 +365,8 @@
       <div class="detail-modal" @click.stop>
         <div class="detail-modal-header">
           <div class="detail-modal-title">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-              />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
             <div>
               <h3>Detail Pesan Terkirim</h3>
@@ -442,12 +374,7 @@
             </div>
           </div>
           <button class="btn-close-modal" @click="closeDetailModal" title="Tutup">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -458,12 +385,7 @@
           <!-- Contact Info -->
           <div class="detail-section">
             <label class="detail-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -510,15 +432,8 @@
           <!-- Message Content -->
           <div class="detail-section">
             <label class="detail-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-                />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               Pesan
             </label>
@@ -528,12 +443,7 @@
           <!-- Status & Time Info -->
           <div class="detail-section">
             <label class="detail-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
@@ -553,10 +463,7 @@
                   </svg>
                   Status
                 </label>
-                <span
-                  class="status-badge"
-                  :class="badgeClass(selectedMessage.status)"
-                >
+                <span class="status-badge" :class="badgeClass(selectedMessage.status)">
                   {{ statusLabel(selectedMessage.status) }}
                 </span>
               </div>
@@ -582,12 +489,7 @@
           <!-- Tutor Info (if exists) -->
           <div class="detail-section" v-if="tutorName(selectedMessage) !== '-'">
             <label class="detail-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -601,12 +503,7 @@
           <!-- Source Info -->
           <div class="detail-section" v-if="sourceSimple(selectedMessage)">
             <label class="detail-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="2" />
                 <path
                   d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"
@@ -678,15 +575,36 @@
             </div>
           </div>
 
+          <!-- Group Read Info (if exists) -->
+          <div
+            class="detail-section"
+            v-if="isGroup(selectedMessage.to) && Array.isArray(selectedMessage.readBy)"
+          >
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Dibaca
+            </label>
+
+            <div class="info-value">{{ selectedMessage.readBy.length }} orang</div>
+
+            <!-- <div class="readby-list" v-if="selectedMessage.readBy.length">
+              <div
+                class="readby-item"
+                v-for="jid in selectedMessage.readBy"
+                :key="String(jid)"
+              >
+                {{ formatReaderJid(jid) }}
+              </div>
+            </div> -->
+          </div>
+
           <!-- Media (if exists) -->
           <div class="detail-section" v-if="selectedMessage.mediaPath">
             <label class="detail-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="m21 15-5-5L5 21" />
@@ -706,9 +624,7 @@
                   stroke="currentColor"
                   stroke-width="2"
                 >
-                  <path
-                    d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                  />
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
@@ -726,12 +642,7 @@
 
         <div class="detail-modal-footer">
           <button class="btn-close-footer" @click="closeDetailModal">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Tutup
@@ -745,15 +656,10 @@
       <div class="delete-modal" @click.stop>
         <div class="delete-modal-icon">
           <div class="icon-circle">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6" />
               <path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2v2"
               />
             </svg>
           </div>
@@ -764,27 +670,17 @@
         </div>
         <div class="delete-modal-actions">
           <button class="btn-keep" @click="cancelConfirm">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
             Batal
           </button>
           <button class="btn-delete-confirm" @click="executeConfirm">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6" />
               <path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2v2"
               />
             </svg>
             Hapus
@@ -884,12 +780,14 @@ const loadGroupNames = async () => {
       if (device && device.id) {
         try {
           const { data: groupsData } = await userApi.get(
-            `/whatsapp-groups/device/${device.id}/active`
+            `/whatsapp-groups/device/${device.id}/active`,
+            {
+              params: { includeInactive: 1 },
+            }
           );
 
           if (groupsData && groupsData.status && Array.isArray(groupsData.data)) {
             groupsData.data.forEach((group) => {
-              // Get group ID and name from various possible fields
               const groupId = group.id || group.groupId || group.value || group._id || "";
               const groupName =
                 group.name ||
@@ -900,24 +798,20 @@ const loadGroupNames = async () => {
                 "";
 
               if (groupId && groupName) {
-                // Store with full ID format (@g.us)
-                const fullId = groupId.includes("@g.us") ? groupId : `${groupId}@g.us`;
+                const idOnly = String(groupId).replace(/@g\.us$/i, "");
+                const fullId = idOnly.includes("@") ? idOnly : `${idOnly}@g.us`;
                 map[fullId] = groupName;
-
-                // Also store without @g.us for flexibility
-                const shortId = groupId.replace("@g.us", "");
-                map[shortId] = groupName;
+                map[idOnly] = groupName;
               }
             });
           }
-        } catch (error) {
-          console.error(`Error loading groups for device ${device.id}:`, error);
+        } catch {
+          // ignore per-device failures
         }
       }
     }
 
     groupNameMap.value = map;
-    // console.log("Loaded group names:", groupNameMap.value);
   } catch (error) {
     console.error("Error loading group names:", error);
   }
@@ -926,28 +820,28 @@ const loadGroupNames = async () => {
 // Check if recipient is a group
 const isGroup = (to) => {
   const recipient = String(to || "");
-  return recipient.includes("@g.us") || recipient.includes("-");
+  if (!recipient) return false;
+  if (recipient.includes("@g.us")) return true;
+  // Support raw numeric group IDs stored without suffix
+  if (!recipient.includes("@") && /^\d{8,}$/.test(recipient)) return true;
+  // keep old heuristic
+  return recipient.includes("-");
 };
 
 // Get group name from mapping or return cleaned ID
 const getGroupName = (to) => {
   const recipient = String(to || "");
+  if (!isGroup(recipient)) return null;
 
-  // Check if it's a group
-  if (!isGroup(recipient)) {
-    return null; // Not a group
-  }
+  const idOnly = recipient.includes("@") ? recipient.split("@")[0] : recipient;
+  const normalized = recipient.includes("@") ? recipient : `${idOnly}@g.us`;
 
-  // Try to find group name in mapping
-  let groupName = groupNameMap.value[recipient];
-
-  // If not found with full format, try without @g.us
-  if (!groupName) {
-    const shortId = recipient.replace("@g.us", "");
-    groupName = groupNameMap.value[shortId];
-  }
-
-  return groupName || null;
+  return (
+    groupNameMap.value[recipient] ||
+    groupNameMap.value[normalized] ||
+    groupNameMap.value[idOnly] ||
+    null
+  );
 };
 
 // Get display name for contact or group
@@ -1317,6 +1211,11 @@ const truncateMessage = (message, length) => {
   if (message.length <= length) return message;
   return message.substring(0, length) + "...";
 };
+
+const formatReaderJid = (jid) => {
+  const cleaned = String(jid || "").replace(/@s\.whatsapp\.net$/, "");
+  return cleaned.startsWith("62") ? `+${cleaned}` : cleaned;
+};
 </script>
 
 <style scoped>
@@ -1651,6 +1550,15 @@ const truncateMessage = (message, length) => {
 .col-status {
   width: 120px;
 }
+
+/* Small helper line under status badge for group messages */
+.read-count {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
 .col-time {
   width: 160px;
 }
@@ -1724,6 +1632,7 @@ const truncateMessage = (message, length) => {
   font-size: 12px;
   font-weight: 600;
   text-transform: capitalize;
+  gap: 6px;
 }
 
 .status-badge.ok {
@@ -1742,6 +1651,27 @@ const truncateMessage = (message, length) => {
   background: #fef3c7;
   color: #92400e;
   border: 1px solid #fcd34d;
+}
+
+/* Badge Count */
+.badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  background: rgba(15, 23, 42, 0.12);
+  color: currentColor;
+}
+
+/* keep read-count class for modal/legacy but hide it in table since we moved into badge */
+.col-status .read-count {
+  display: none;
 }
 
 /* Source Chips */
@@ -2418,5 +2348,24 @@ const truncateMessage = (message, length) => {
     width: 100%;
   }
 }
+
+/* Read-by List */
+.readby-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.readby-item {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
 </style>
-``` 

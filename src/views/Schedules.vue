@@ -164,10 +164,14 @@
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
                     <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                    <!-- batang i (dipendekkan) -->
+                    <line x1="12" y1="11.5" x2="12" y2="15" />
+                    <!-- titik i (kecil & pas) -->
+                    <circle cx="12" cy="8.5" r="0.7" />
                   </svg>
                 </button>
               </td>
@@ -322,10 +326,39 @@
                 </svg>
                 Status
               </label>
-              <span class="status-badge" :class="badgeClass(selectedOf(selectedGroup))">
-                <span class="badge-dot"></span>
-                {{ badgeText(selectedOf(selectedGroup)) }}
-              </span>
+              <div class="status-toggle-wrapper">
+                <span class="status-badge" :class="badgeClass(selectedOf(selectedGroup))">
+                  <span class="badge-dot"></span>
+                  {{ badgeText(selectedOf(selectedGroup)) }}
+                </span>
+                <button
+                  v-if="!selectedOf(selectedGroup)?.isSent"
+                  class="btn-toggle-status"
+                  :class="{ active: selectedOf(selectedGroup)?.status !== false }"
+                  @click="toggleBroadcastStatus(selectedOf(selectedGroup))"
+                  :disabled="togglingStatus"
+                  :title="
+                    selectedOf(selectedGroup)?.status !== false
+                      ? 'Nonaktifkan jadwal ini'
+                      : 'Aktifkan jadwal ini'
+                  "
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="8" width="18" height="8" rx="4" />
+                    <circle
+                      :cx="selectedOf(selectedGroup)?.status !== false ? '15' : '9'"
+                      cy="12"
+                      r="3"
+                    />
+                  </svg>
+                  {{ selectedOf(selectedGroup)?.status !== false ? "Aktif" : "Nonaktif" }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -435,7 +468,7 @@
                   stroke-width="2"
                 >
                   <path
-                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
                   />
                 </svg>
                 {{ getPhoneDisplay(num) }}
@@ -505,6 +538,23 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Dibaca (summary) for selected broadcast -->
+          <div class="detail-section" v-if="selectedGroup && selectedOf(selectedGroup)">
+            <label class="detail-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Dibaca
+            </label>
+
+            <div v-if="outgoingLoading" class="outgoing-loading">Memuat...</div>
+            <div v-else-if="outgoingError" class="outgoing-error">
+              {{ outgoingError }}
+            </div>
+            <div v-else class="info-value">{{ outgoingTotalGroupReaders }} orang</div>
           </div>
         </div>
 
@@ -602,53 +652,38 @@ const loadGroupNames = async () => {
       return;
     }
 
-    // console.log('Loading groups from database for device:', deviceId);
+    // 🆕 Primary: Load dari database (ambil juga yang inactive supaya nama grup tetap ada saat WA offline)
+    try {
+      const { data } = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`, {
+        params: { includeInactive: 1 },
+      });
+      const groups = Array.isArray(data?.data) ? data.data : [];
 
-    // Ambil data group dari database melalui API
-    const { data } = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
-    // console.log("Groups API response:", data);
+      const map = {};
+      for (const g of groups) {
+        const groupJid = g.id || g.groupId || "";
+        const groupName = g.name || g.subject || "Tanpa Nama";
 
-    const groups = Array.isArray(data?.data) ? data.data : [];
-    // console.log("Parsed groups:", groups);
-
-    const map = {};
-    for (const g of groups) {
-      // Backend sekarang mengembalikan:
-      // - id: WhatsApp JID (groupId dari database)
-      // - groupId: WhatsApp JID (sama dengan id)
-      // - name: nama grup (groupName dari database)
-      // - subject: nama grup (alias dari name)
-      const groupJid = g.id || g.groupId || "";
-      const groupName = g.name || g.subject || "Tanpa Nama";
-
-      // console.log("Mapping group:", { jid: groupJid, name: groupName });
-
-      // Simpan dengan berbagai format JID untuk memudahkan pencarian
-      if (groupJid) {
-        map[groupJid] = groupName;
-
-        // Jika JID tidak mengandung @g.us, tambahkan juga versi dengan @g.us
-        if (!groupJid.includes("@")) {
-          map[`${groupJid}@g.us`] = groupName;
-        }
-
-        // Simpan juga dengan ID saja (tanpa @g.us)
-        const idOnly = groupJid.split("@")[0];
-        if (idOnly && idOnly !== groupJid) {
-          map[idOnly] = groupName;
+        if (groupJid) {
+          map[groupJid] = groupName;
+          if (!groupJid.includes("@")) {
+            map[`${groupJid}@g.us`] = groupName;
+          }
+          const idOnly = groupJid.split("@")[0];
+          if (idOnly && idOnly !== groupJid) {
+            map[idOnly] = groupName;
+          }
         }
       }
+
+      groupsMap.value = map;
+      return; // Success, exit early
+    } catch (primaryError) {
+      console.warn("Primary loadGroupNames from database failed:", primaryError);
     }
 
-    // console.log("Groups map created:", map);
-    groupsMap.value = map;
-  } catch (error) {
-    // console.error("Error loading groups from database:", error);
-    // console.error("Error response:", error?.response?.data);
-
-    // Fallback ke method lama jika API database gagal
+    // 🔄 Fallback 1: Coba dari WhatsApp API (butuh device open)
     try {
-      // console.log("Attempting fallback to old API...");
       let res;
       try {
         res = await deviceApi.get("/messages/get-groups/detail");
@@ -666,10 +701,35 @@ const loadGroupNames = async () => {
         map[full] = name;
       }
       groupsMap.value = map;
-      // console.log("Fallback groups map:", map);
+      return; // Success, exit early
     } catch (fallbackError) {
-      // console.error("Fallback also failed:", fallbackError);
+      console.warn("Fallback loadGroupNames from WhatsApp API failed:", fallbackError);
     }
+
+    // 🆘 Fallback 2: Extract dari recipients di broadcast yang sudah loaded
+    // Ini untuk kasih label minimal "Group (xxx)" daripada ID penuh
+    console.log("Using broadcast data as last resort for group names");
+    const map = {};
+    for (const b of items.value) {
+      const recipients = Array.isArray(b.recipients) ? b.recipients : [];
+      for (const r of recipients) {
+        const str = String(r);
+        if (str.includes("@g.us")) {
+          const idOnly = str.split("@")[0];
+          // Simpan dengan format yang lebih user-friendly
+          if (!map[str]) {
+            map[str] = `Group ${idOnly.substring(0, 8)}`;
+          }
+          if (!map[idOnly]) {
+            map[idOnly] = `Group ${idOnly.substring(0, 8)}`;
+          }
+        }
+      }
+    }
+    groupsMap.value = map;
+  } catch (error) {
+    console.error("Critical error in loadGroupNames:", error);
+    groupsMap.value = {};
   }
 };
 
@@ -735,6 +795,20 @@ const phoneToContactMap = computed(() => {
   }
   return map;
 });
+
+// Helper: strict group detection for recipients in Schedules
+// NOTE: Previously we treated any long numeric id as group, which caused phone numbers like 6282... to be counted as group.
+const isGroupJid = (val) => {
+  const s = String(val || "").trim();
+  if (!s) return false;
+  if (s.includes("@g.us")) return true;
+  // legacy heuristic: some stored groups may appear like "12345-67890" without suffix
+  if (!s.includes("@") && s.includes("-")) return true;
+  // if we already have a mapping for it, treat as group
+  if (groupsMap.value && (groupsMap.value[s] || groupsMap.value[`${s}@g.us`]))
+    return true;
+  return false;
+};
 
 // Fungsi untuk mendapatkan display name dari nomor (nama kontak atau nomor)
 const getPhoneDisplay = (phoneNum) => {
@@ -863,27 +937,23 @@ const badgeText = (b) => {
 const groupRecipientLabels = (b) => {
   if (!b) return [];
   const arr = Array.isArray(b.recipients) ? b.recipients : [];
+
   return arr
-    .filter((r) => typeof r === "string" && r.includes("@g.us"))
-    .map((jid) => {
-      // Normalisasi jid untuk mencocokkan dengan groupsMap
-      const normalizedJid = jid.includes("@") ? jid : `${jid}@g.us`;
+    .filter((r) => typeof r === "string" || typeof r === "number")
+    .filter(isGroupJid)
+    .map((jidOrId) => {
+      const raw = String(jidOrId).trim();
+      const idOnly = raw.includes("@") ? raw.split("@")[0] : raw;
+      const normalizedJid = raw.includes("@") ? raw : `${idOnly}@g.us`;
 
-      // Cek di groupsMap dengan berbagai variasi
-      if (groupsMap.value[normalizedJid]) {
-        return groupsMap.value[normalizedJid];
-      }
+      if (groupsMap.value[normalizedJid]) return groupsMap.value[normalizedJid];
+      if (groupsMap.value[idOnly]) return groupsMap.value[idOnly];
 
-      // Coba cari dengan ID tanpa suffix
-      const idOnly = jid.split("@")[0];
       for (const [key, value] of Object.entries(groupsMap.value)) {
-        if (key.startsWith(idOnly)) {
-          return value;
-        }
+        if (String(key).startsWith(idOnly)) return value;
       }
 
-      // Jika tidak ditemukan, tampilkan ID yang lebih bersih (tanpa @g.us)
-      return idOnly;
+      return `Group ${idOnly.substring(0, 8)}`;
     });
 };
 
@@ -937,12 +1007,59 @@ const confirmDelete = async () => {
 const load = async () => {
   loading.value = true;
   err.value = "";
+
   try {
-    const { data } = await deviceApi.get("/messages/broadcasts");
-    items.value = Array.isArray(data) ? data : [];
-    await loadGroupNames(); // Reload group names when loading broadcasts
+    const deviceId = localStorage.getItem("device_selected_id") || "";
+
+    if (!deviceId) {
+      toast.error("Silakan pilih device terlebih dahulu");
+      items.value = [];
+      loading.value = false;
+      return;
+    }
+
+    // 🆕 Primary: Load dari database via userApi (tidak butuh WA connect)
+    try {
+      const { data } = await userApi.get("/broadcasts", {
+        params: { deviceId },
+      });
+
+      const broadcasts = Array.isArray(data) ? data : [];
+
+      // Transform response agar compatible dengan struktur existing
+      items.value = broadcasts.map((b) => ({
+        id: b.id,
+        name: b.name,
+        schedule: b.schedule,
+        message: b.message,
+        mediaPath: b.mediaPath,
+        recipients: Array.isArray(b.recipients) ? b.recipients : [],
+        status: b.status,
+        isSent: b.isSent,
+        sentCount: b.sentCount || 0,
+        failedCount: b.failedCount || 0,
+        lastError: b.lastError || null,
+      }));
+
+      await loadGroupNames();
+      loading.value = false;
+      return;
+    } catch (primaryError) {
+      console.warn("Primary load from database failed, trying fallback:", primaryError);
+
+      // 🔄 Fallback: Load dari WhatsApp API (butuh device open)
+      try {
+        const { data } = await deviceApi.get("/messages/broadcasts");
+        items.value = Array.isArray(data) ? data : [];
+        await loadGroupNames();
+      } catch (fallbackError) {
+        throw fallbackError; // Let outer catch handle final error
+      }
+    }
   } catch (e) {
-    toast.error("Gagal memuat jadwal. Pastikan WhatsApp sudah terhubung");
+    const errorMsg = e?.response?.data?.message || e?.message || "Gagal memuat jadwal";
+    toast.error(errorMsg);
+    items.value = [];
   } finally {
     loading.value = false;
   }
@@ -956,13 +1073,15 @@ const displayName = (g) => {
 const phoneRecipients = (b) => {
   if (!b) return [];
   const arr = Array.isArray(b.recipients) ? b.recipients : [];
+
   const set = new Set(
     arr
-      .map((r) => String(r))
-      .filter((r) => !r.includes("@g.us"))
+      .map((r) => String(r).trim())
+      // exclude groups strictly
+      .filter((r) => !isGroupJid(r))
       .filter((r) => r.toLowerCase() !== "all")
       .filter((r) => !r.toLowerCase().startsWith("label"))
-      .filter((r) => r.trim().length > 0)
+      .filter((r) => r.length > 0)
   );
 
   if (arr.some((r) => String(r).toLowerCase() === "all")) {
@@ -1120,7 +1239,7 @@ const getFailedInfo = (b) => {
           failedGroups.push(groupName);
         }
       } else {
-        // Coba cari dengan ID saja (tanpa @g.us)
+        // Coba cari dengan ID tanpa suffix
         const idOnly = jidMatch.split("@")[0];
         let found = false;
 
@@ -1220,15 +1339,87 @@ const goNext = () => {
 const showDetailModal = ref(false);
 const selectedGroup = ref(null);
 
+const outgoingRows = ref([]);
+const outgoingLoading = ref(false);
+const outgoingError = ref("");
+
+const isGroupRecipient = (to) => isGroupJid(to);
+
+const outgoingTotalGroupReaders = computed(() => {
+  // If selected broadcast is a 1:1 (single phone recipient), WA doesn't provide per-user readBy.
+  // In that case, treat as 1 reader when the outgoing message is read/played.
+  const b = selectedGroup.value ? selectedOf(selectedGroup.value) : null;
+  if (b) {
+    const phoneCount = phoneRecipients(b).length;
+    const groupCount = groupRecipientLabels(b).length;
+    const labelCount = labelRecipientLabels(b).length;
+
+    // Only handle the strictest case: exactly one direct phone recipient, no group/label.
+    if (phoneCount === 1 && groupCount === 0 && labelCount === 0) {
+      const anyRead = (outgoingRows.value || []).some((row) => {
+        const s = String(row?.status || "").toLowerCase();
+        return s === "read" || s === "played";
+      });
+      return anyRead ? 1 : 0;
+    }
+  }
+
+  // Group behavior: compute unique readers across all outgoing rows (avoid double-counting across multiple sends)
+  const readers = new Set();
+  for (const row of outgoingRows.value || []) {
+    if (!isGroupRecipient(row?.to)) continue;
+    const rb = row?.readBy;
+    if (!Array.isArray(rb)) continue;
+    for (const jid of rb) {
+      if (jid) readers.add(String(jid));
+    }
+  }
+  return readers.size;
+});
+
+const loadOutgoing = async (broadcastId) => {
+  if (!broadcastId) return;
+
+  outgoingLoading.value = true;
+  outgoingError.value = "";
+  outgoingRows.value = [];
+
+  try {
+    const { data } = await userApi.get(`/broadcasts/${broadcastId}/outgoing`);
+    outgoingRows.value = Array.isArray(data?.outgoingBroadcasts)
+      ? data.outgoingBroadcasts
+      : [];
+  } catch (e) {
+    outgoingError.value =
+      e?.response?.data?.message || e?.message || "Gagal memuat data dibaca";
+  } finally {
+    outgoingLoading.value = false;
+  }
+};
+
 const openDetailModal = (group) => {
   selectedGroup.value = group;
   showDetailModal.value = true;
+
+  const selectedBroadcast = selectedOf(group);
+  if (selectedBroadcast?.id) loadOutgoing(selectedBroadcast.id);
 };
 
 const closeDetailModal = () => {
   showDetailModal.value = false;
   selectedGroup.value = null;
+  outgoingRows.value = [];
+  outgoingError.value = "";
 };
+
+watch(
+  () => selections.value?.[selectedGroup.value?.name],
+  () => {
+    if (!selectedGroup.value) return;
+    const selectedBroadcast = selectedOf(selectedGroup.value);
+    if (selectedBroadcast?.id) loadOutgoing(selectedBroadcast.id);
+  }
+);
 
 const getRecipientsSummary = (b) => {
   if (!b) return "";
@@ -1245,6 +1436,29 @@ const getRecipientCount = (b) => {
     labelRecipientLabels(b).length +
     phoneRecipients(b).length
   );
+};
+
+const togglingStatus = ref(false);
+
+const toggleBroadcastStatus = async (broadcast) => {
+  if (!broadcast || togglingStatus.value) return;
+
+  togglingStatus.value = true;
+
+  try {
+    const newStatus = broadcast.status === false ? true : false;
+    await userApi.patch(`/broadcasts/${broadcast.id}/status`, { status: newStatus });
+    broadcast.status = newStatus;
+    toast.success(
+      `Jadwal "${broadcast.name}" berhasil di${newStatus ? "aktifkan" : "nonaktifkan"}`
+    );
+  } catch (e) {
+    const errorMessage =
+      e?.response?.data?.message || e?.message || "Gagal mengubah status jadwal";
+    toast.error(errorMessage);
+  } finally {
+    togglingStatus.value = false;
+  }
 };
 
 onMounted(async () => {
@@ -2471,5 +2685,65 @@ onMounted(async () => {
   .toolbar-card {
     padding: 16px;
   }
+}
+
+.status-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-toggle-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-status:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-toggle-status:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-toggle-status svg {
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+}
+
+.btn-toggle-status.active {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.btn-toggle-status.active svg {
+  color: #15803d;
+}
+
+.outgoing-loading,
+.outgoing-error {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #475569;
+  text-align: center;
 }
 </style>

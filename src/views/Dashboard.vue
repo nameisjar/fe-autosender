@@ -365,8 +365,11 @@ onMounted(async () => {
   // Listen to storage events for cross-tab changes
   window.addEventListener('storage', handleStorageChange);
   
-  // Listen to custom event for same-tab changes
+  // Legacy event (some views still emit this)
   window.addEventListener('deviceChanged', handleDeviceChange);
+  
+  // Canonical event (emitted by useDevices)
+  window.addEventListener('device:changed', handleDeviceChangedCanonical);
   
   // 🆕 Listen to device status changes (WhatsApp connection)
   setupDeviceStatusListener();
@@ -379,31 +382,38 @@ const isAdmin = computed(() => auth.isAdmin);
 const setupDeviceStatusListener = () => {
   const deviceId = localStorage.getItem("device_selected_id");
   if (!deviceId) {
-    // Jika tidak ada device yang dipilih, hapus foto profil
     profilePictureUrl.value = null;
     return;
   }
-  
-  // Cleanup previous listener if exists
+
   if (cleanupSocketListener) {
     cleanupSocketListener();
   }
-  
-  // Listen to device status changes
+
   cleanupSocketListener = listenToDeviceStatus(deviceId, (status) => {
-    console.log('Device status changed:', status);
-    
+    // Normalize status to string
+    const s = String(status || '').toLowerCase();
+
     // Jika device status berubah menjadi 'open' (WhatsApp terhubung)
-    if (status === 'open') {
-      // Auto update foto profil
+    if (s === 'open') {
       setTimeout(() => {
         fetchProfilePicture();
-      }, 2000); // Delay 2 detik untuk memastikan WhatsApp sudah siap
-    } 
-    // 🆕 Jika device terputus atau dihapus
-    else if (status === 'close' || status === null) {
-      // Hapus foto profil
+      }, 2000);
+      return;
+    }
+
+    // Jika device logout/terputus
+    if (s === 'close' || s === 'closed' || s === 'logged_out' || s === 'disconnected') {
       profilePictureUrl.value = null;
+
+      // Notify the rest of the app to refresh device status + clear caches
+      try {
+        window.dispatchEvent(
+          new CustomEvent('wa:device-session-closed', {
+            detail: { deviceId },
+          })
+        );
+      } catch (_) {}
     }
   });
 };
@@ -461,10 +471,24 @@ const handleDeviceChange = () => {
   }
 };
 
+// Canonical event handler: ensure we update selectedDeviceId and refresh profile/avatar
+function handleDeviceChangedCanonical(event) {
+  const { deviceId } = event.detail || {};
+  const currentDeviceId = deviceId || localStorage.getItem("device_selected_id");
+
+  if (currentDeviceId !== selectedDeviceId.value) {
+    selectedDeviceId.value = currentDeviceId;
+  }
+
+  fetchProfilePicture();
+  setupDeviceStatusListener();
+}
+
 // Cleanup saat component unmount
 onUnmounted(() => {
   window.removeEventListener('storage', handleStorageChange);
   window.removeEventListener('deviceChanged', handleDeviceChange);
+  window.removeEventListener('device:changed', handleDeviceChangedCanonical);
   
   // 🆕 Cleanup socket listener
   if (cleanupSocketListener) {
