@@ -31,9 +31,7 @@
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
           <div>
-            <div class="stat-value">
-              {{ sortedGroups.filter((g) => selectedOf(g)?.isSent).length }}
-            </div>
+            <div class="stat-value">{{ summary.sent }}</div>
             <div class="stat-label">Terkirim</div>
           </div>
         </div>
@@ -43,13 +41,7 @@
             <polyline points="12 6 12 12 16 14" />
           </svg>
           <div>
-            <div class="stat-value">
-              {{
-                sortedGroups.filter(
-                  (g) => !selectedOf(g)?.isSent && selectedOf(g)?.status !== false
-                ).length
-              }}
-            </div>
+            <div class="stat-value">{{ summary.scheduled }}</div>
             <div class="stat-label">Terjadwal</div>
           </div>
         </div>
@@ -60,9 +52,7 @@
             <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
           <div>
-            <div class="stat-value">
-              {{ sortedGroups.filter((g) => selectedOf(g)?.status === false).length }}
-            </div>
+            <div class="stat-value">{{ summary.inactive }}</div>
             <div class="stat-label">Nonaktif</div>
           </div>
         </div>
@@ -117,6 +107,7 @@
             <option :value="25">25 baris</option>
             <option :value="50">50 baris</option>
           </select>
+
         </div>
 
         <button class="btn-reload" @click="load" :disabled="loading">
@@ -140,7 +131,11 @@
     <!-- Table View -->
     <div class="table-container">
       <div class="table-wrapper">
-        <table class="schedules-table" v-if="!loading && visibleGroups.length > 0">
+        <!-- GROUP VIEW -->
+        <table
+          class="schedules-table"
+          v-if="!loading && visibleGroups.length > 0"
+        >
           <thead>
             <tr>
               <th class="col-expand"></th>
@@ -178,7 +173,7 @@
               <td class="col-name">
                 <div class="name-cell">
                   <div class="name-text">{{ displayName(g) }}</div>
-                  <div class="name-meta">{{ g.broadcasts.length }} jadwal</div>
+                  <div class="name-meta">{{ g.broadcastsCount }} jadwal</div>
                 </div>
               </td>
               <td class="col-schedule">
@@ -224,9 +219,13 @@
             </tr>
           </tbody>
         </table>
+
       </div>
 
-      <div v-if="!loading && visibleGroups.length === 0" class="empty-state">
+      <div
+        v-if="!loading && visibleGroups.length === 0"
+        class="empty-state"
+      >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="4" width="18" height="18" rx="2" />
           <path d="M16 2V6M8 2V6M3 10H21" />
@@ -236,7 +235,7 @@
       </div>
     </div>
 
-    <div class="pagination" v-if="meta.totalPages > 1">
+    <div class="pagination" v-if="activeMeta.totalPages > 1">
       <button class="btn-page" :disabled="page <= 1 || loading" @click="goPrev">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="15 18 9 12 15 6" />
@@ -246,9 +245,9 @@
       <div class="page-info">
         <span class="current-page">{{ page }}</span>
         <span class="page-separator">/</span>
-        <span class="total-pages">{{ meta.totalPages }}</span>
+        <span class="total-pages">{{ activeMeta.totalPages }}</span>
       </div>
-      <button class="btn-page" :disabled="!meta.hasMore || loading" @click="goNext">
+      <button class="btn-page" :disabled="!activeMeta.hasMore || loading" @click="goNext">
         Selanjutnya
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="9 18 15 12 9 6" />
@@ -257,7 +256,11 @@
     </div>
 
     <!-- Detail Modal Popup -->
-    <div v-if="showDetailModal" class="modal-overlay" @click="closeDetailModal">
+    <div
+      v-if="showDetailModal && selectedGroup"
+      class="modal-overlay"
+      @click="closeDetailModal"
+    >
       <div class="detail-modal" @click.stop>
         <div class="detail-modal-header">
           <div class="detail-modal-title">
@@ -421,7 +424,7 @@
             </label>
             <div class="recipients-grid">
               <span
-                v-for="lbl in groupRecipientLabels(selectedOf(selectedGroup))"
+                v-for="lbl in modalGroupRecipients"
                 :key="'g-' + lbl"
                 class="recipient-chip group-chip"
               >
@@ -439,7 +442,7 @@
                 {{ lbl }}
               </span>
               <span
-                v-for="lbl in labelRecipientLabels(selectedOf(selectedGroup))"
+                v-for="lbl in modalLabelRecipients"
                 :key="'l-' + lbl"
                 class="recipient-chip label-chip"
               >
@@ -457,7 +460,7 @@
                 {{ lbl }}
               </span>
               <span
-                v-for="num in phoneRecipients(selectedOf(selectedGroup))"
+                v-for="num in modalPhoneRecipients"
                 :key="'p-' + num"
                 class="recipient-chip phone-chip"
               >
@@ -473,6 +476,19 @@
                 </svg>
                 {{ getPhoneDisplay(num) }}
               </span>
+
+              <button
+                v-if="modalHasMorePhones"
+                type="button"
+                class="btn-show-more"
+                @click="toggleShowAllRecipients"
+              >
+                {{
+                  showAllRecipients
+                    ? "Tampilkan lebih sedikit"
+                    : `Lihat semua nomor (${modalTotalPhones})`
+                }}
+              </button>
             </div>
           </div>
 
@@ -637,6 +653,16 @@ import { useToast } from "../composables/useToast.js";
 
 const toast = useToast();
 
+// --- pagination/sort state MUST be declared before any watch/load uses it ---
+const page = ref(1);
+const pageSize = ref(10);
+const sortBy = ref("schedule");
+const sortDir = ref("asc");
+
+// ✅ groups = sumber utama untuk tabel (1 baris per nama)
+const groups = ref([]);
+
+// Perubahan: items sekarang berisi list group dari server (/broadcasts/groups)
 const items = ref([]);
 const loading = ref(false);
 const err = ref("");
@@ -841,6 +867,13 @@ const getPhoneDisplay = (phoneNum) => {
 };
 
 const selections = ref({});
+
+// --- PERF NOTES ---
+// For very large datasets (10k-100k+ broadcasts/contacts), avoid:
+// - mutating reactive state inside computed
+// - repeated expensive scans from template (find/sort/recipients expansion)
+// The changes below keep UI responsive by caching and keeping computed pure.
+
 const pickDefault = (arr) => {
   const upcoming = arr.find(
     (b) => !b.isSent && b.status !== false && new Date(b.schedule).getTime() > Date.now()
@@ -849,34 +882,10 @@ const pickDefault = (arr) => {
 };
 
 const grouped = computed(() => {
-  const byName = {};
-  for (const b of items.value) {
-    const n = b.name || "(Tanpa Nama)";
-    (byName[n] ||= []).push(b);
-  }
-  const groups = Object.keys(byName).map((name) => {
-    const arr = byName[name]
-      .slice()
-      .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
-    if (!selections.value[name]) selections.value[name] = pickDefault(arr);
-    return { name, broadcasts: arr };
-  });
+  // groups sudah terfilter oleh server, tapi tetap apply filter q secara ringan (jaga-jaga)
   const qq = q.value.toLowerCase();
-  const filteredByName = groups.filter((g) => g.name.toLowerCase().includes(qq));
-  return filteredByName;
+  return (groups.value || []).filter((g) => String(g.name || "").toLowerCase().includes(qq));
 });
-
-const selectedOf = (g) =>
-  g.broadcasts.find((b) => b.id === selections.value[g.name]) ||
-  g.broadcasts[g.broadcasts.length - 1];
-
-const statusShort = (b) => {
-  if (!b) return "";
-  if (b.status === false) return "Nonaktif";
-  if (b.isSent) return "Terkirim";
-  const due = new Date(b.schedule).getTime();
-  return due > Date.now() ? "Terjadwal" : "Tertunda";
-};
 
 const matchesStatus = (g) => {
   const b = selectedOf(g);
@@ -892,6 +901,38 @@ const matchesStatus = (g) => {
 };
 
 const filtered = computed(() => grouped.value.filter(matchesStatus));
+
+// --- Recipients caching ---
+// In large datasets, expanding recipients (especially "all" / labels) is expensive.
+// Cache per broadcast id and invalidate when contacts change.
+const contactsVersion = ref(0);
+watch(
+  contacts,
+  () => {
+    contactsVersion.value += 1;
+  },
+  { deep: true }
+);
+
+const recipientsCache = ref(new Map());
+const getRecipientsCached = (broadcast) => {
+  if (!broadcast?.id) return { groups: [], labels: [], phones: [] };
+  const key = `${broadcast.id}::${contactsVersion.value}`;
+  const cached = recipientsCache.value.get(key);
+  if (cached) return cached;
+
+  const groups = groupRecipientLabels(broadcast);
+  const labels = labelRecipientLabels(broadcast);
+  const phones = phoneRecipients(broadcast);
+  const value = { groups, labels, phones };
+  recipientsCache.value.set(key, value);
+  return value;
+};
+
+// Prevent unbounded growth when contactsVersion changes a lot
+watch(contactsVersion, () => {
+  recipientsCache.value = new Map();
+});
 
 const fmt = (d) => {
   try {
@@ -928,6 +969,14 @@ const badgeClass = (b) => {
 };
 
 const badgeText = (b) => {
+  if (b.status === false) return "Nonaktif";
+  if (b.isSent) return "Terkirim";
+  const due = new Date(b.schedule).getTime();
+  return due > Date.now() ? "Terjadwal" : "Tertunda";
+};
+
+const statusShort = (b) => {
+  if (!b) return "-";
   if (b.status === false) return "Nonaktif";
   if (b.isSent) return "Terkirim";
   const due = new Date(b.schedule).getTime();
@@ -988,9 +1037,19 @@ const confirmDelete = async () => {
   err.value = "";
 
   try {
+    const deviceId = localStorage.getItem("device_selected_id") || "";
+    if (!deviceId) {
+      toast.error("Silakan pilih device terlebih dahulu");
+      closeDeleteDialog();
+      return;
+    }
+
     await userApi.delete("/broadcasts/by-name", {
+      params: { deviceId },
+      headers: { "x-device-id": deviceId },
       data: { name: scheduleToDelete.value },
     });
+
     toast.success(
       `Jadwal "${scheduleToDelete.value}" yang belum terkirim berhasil dihapus`
     );
@@ -1004,6 +1063,41 @@ const confirmDelete = async () => {
   }
 };
 
+const summary = ref({ sent: 0, scheduled: 0, inactive: 0 });
+
+const loadSummary = async () => {
+  try {
+    const deviceId = localStorage.getItem("device_selected_id") || "";
+    if (!deviceId) {
+      summary.value = { sent: 0, scheduled: 0, inactive: 0 };
+      return;
+    }
+    const { data } = await userApi.get("/broadcasts/summary", { params: { deviceId } });
+    summary.value = {
+      sent: Number(data?.sent || 0),
+      scheduled: Number(data?.scheduled || 0),
+      inactive: Number(data?.inactive || 0),
+    };
+  } catch {
+    summary.value = { sent: 0, scheduled: 0, inactive: 0 };
+  }
+};
+
+// debounce query to reduce API calls while typing
+let qTimer;
+watch(q, () => {
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => {
+    page.value = 1;
+    load();
+  }, 250);
+});
+
+watch([statusFilter, sortBy, sortDir, pageSize], async () => {
+  page.value = 1;
+  await load();
+});
+
 const load = async () => {
   loading.value = true;
   err.value = "";
@@ -1014,55 +1108,145 @@ const load = async () => {
     if (!deviceId) {
       toast.error("Silakan pilih device terlebih dahulu");
       items.value = [];
-      loading.value = false;
+      groups.value = [];
+      serverMeta.value = { total: 0, page: 1, pageSize: pageSize.value, totalPages: 1, hasMore: false };
       return;
     }
 
-    // 🆕 Primary: Load dari database via userApi (tidak butuh WA connect)
-    try {
-      const { data } = await userApi.get("/broadcasts", {
-        params: { deviceId },
-      });
+    // 1) ambil groups per name dari backend baru
+    const params = {
+      deviceId,
+      page: page.value,
+      pageSize: pageSize.value,
+      q: q.value || "",
+      status: statusFilter.value,
+      sortBy: sortBy.value,
+      sortDir: sortDir.value,
+    };
 
-      const broadcasts = Array.isArray(data) ? data : [];
+    const { data } = await userApi.get("/broadcasts/groups", { params });
 
-      // Transform response agar compatible dengan struktur existing
-      items.value = broadcasts.map((b) => ({
-        id: b.id,
-        name: b.name,
-        schedule: b.schedule,
-        message: b.message,
-        mediaPath: b.mediaPath,
-        recipients: Array.isArray(b.recipients) ? b.recipients : [],
-        status: b.status,
-        isSent: b.isSent,
-        sentCount: b.sentCount || 0,
-        failedCount: b.failedCount || 0,
-        lastError: b.lastError || null,
-      }));
+    const list = Array.isArray(data?.data) ? data.data : [];
+    serverMeta.value = data?.meta || null;
 
-      await loadGroupNames();
-      loading.value = false;
-      return;
-    } catch (primaryError) {
-      console.warn("Primary load from database failed, trying fallback:", primaryError);
+    // Konversi group row -> bentuk yg dipakai UI
+    // broadcasts: isi awal 1 sample broadcast (untuk status/schedule/recipients summary).
+    groups.value = list.map((row) => {
+      const sample = {
+        id: row.sampleId,
+        name: row.name,
+        schedule: row.sampleSchedule || row.nextSchedule,
+        message: row.sampleMessage,
+        mediaPath: row.sampleMediaPath,
+        recipients: Array.isArray(row.sampleRecipients) ? row.sampleRecipients : [],
+        status: row.sampleStatus,
+        isSent: row.sampleIsSent,
+        sentCount: row.sampleSentCount || 0,
+        failedCount: row.sampleFailedCount || 0,
+        lastError: row.sampleLastError || null,
+      };
 
-      // 🔄 Fallback: Load dari WhatsApp API (butuh device open)
-      try {
-        const { data } = await deviceApi.get("/messages/broadcasts");
-        items.value = Array.isArray(data) ? data : [];
-        await loadGroupNames();
-      } catch (fallbackError) {
-        throw fallbackError; // Let outer catch handle final error
-      }
-    }
+      return {
+        name: row.name,
+        broadcastsCount: row.broadcastsCount,
+        nextSchedule: row.nextSchedule,
+        broadcasts: [sample],
+      };
+    });
+
+    items.value = list;
+
+    await loadGroupNames();
+    await loadSummary();
   } catch (e) {
     const errorMsg = e?.response?.data?.message || e?.message || "Gagal memuat jadwal";
     toast.error(errorMsg);
     items.value = [];
+    groups.value = [];
+    serverMeta.value = null;
   } finally {
     loading.value = false;
   }
+};
+
+const serverMeta = ref(null);
+const meta = computed(() => {
+  if (serverMeta.value) {
+    return {
+      totalGroups: Number(serverMeta.value.total || 0),
+      currentPage: Number(serverMeta.value.page || 1),
+      totalPages: Number(serverMeta.value.totalPages || 1),
+      hasMore: !!serverMeta.value.hasMore,
+    };
+  }
+  // fallback safety
+  return {
+    totalGroups: 0,
+    currentPage: page.value,
+    totalPages: 1,
+    hasMore: false,
+  };
+});
+
+const activeMeta = computed(() => meta.value);
+
+const goNext = () => {
+  if (activeMeta.value.hasMore) {
+    page.value += 1;
+    load();
+  }
+};
+const goPrev = () => {
+  if (page.value > 1) {
+    page.value -= 1;
+    load();
+  }
+};
+
+const sortedGroups = computed(() => {
+  const arr = filtered.value.slice();
+  if (sortBy.value === "name") {
+    arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+  } else {
+    arr.sort((a, b) => {
+      const sa = new Date(selectedOf(a)?.schedule || 0).getTime();
+      const sb = new Date(selectedOf(b)?.schedule || 0).getTime();
+      return sa - sb;
+    });
+  }
+  if (sortDir.value === "desc") arr.reverse();
+  return arr;
+});
+
+// Karena pagination sudah dari server, tampilkan apa adanya.
+const visibleGroups = computed(() => sortedGroups.value);
+
+// --- selections / selectedOf ---
+watch(
+  grouped,
+  (gs) => {
+    const next = { ...selections.value };
+    for (const g of gs || []) {
+      if (!next[g.name]) next[g.name] = pickDefault(g.broadcasts || []);
+    }
+    selections.value = next;
+  },
+  { immediate: true }
+);
+
+const selectedBroadcastByGroupName = computed(() => {
+  const map = {};
+  for (const g of grouped.value) {
+    const selId = selections.value[g.name];
+    const arr = Array.isArray(g.broadcasts) ? g.broadcasts : [];
+    map[g.name] = arr.find((b) => b.id === selId) || arr[arr.length - 1] || null;
+  }
+  return map;
+});
+
+const selectedOf = (g) => {
+  if (!g) return null;
+  return selectedBroadcastByGroupName.value[g.name] || g.broadcasts?.[g.broadcasts.length - 1] || null;
 };
 
 const displayName = (g) => {
@@ -1079,16 +1263,9 @@ const phoneRecipients = (b) => {
       .map((r) => String(r).trim())
       // exclude groups strictly
       .filter((r) => !isGroupJid(r))
-      .filter((r) => r.toLowerCase() !== "all")
       .filter((r) => !r.toLowerCase().startsWith("label"))
       .filter((r) => r.length > 0)
   );
-
-  if (arr.some((r) => String(r).toLowerCase() === "all")) {
-    for (const c of contacts.value || []) {
-      if (c?.phone) set.add(String(c.phone));
-    }
-  }
 
   for (const r of arr) {
     const s = String(r).toLowerCase();
@@ -1161,41 +1338,6 @@ const onDeviceChange = () => {
     loadGroupNames(); // Reload group names when device changes
   }
 };
-
-const page = ref(1);
-const pageSize = ref(25);
-const sortBy = ref("schedule");
-const sortDir = ref("asc");
-const meta = ref({ totalGroups: 0, currentPage: 1, totalPages: 1, hasMore: false });
-
-const sortedGroups = computed(() => {
-  const arr = filtered.value.slice();
-  if (sortBy.value === "name") {
-    arr.sort((a, b) => a.name.localeCompare(b.name));
-  } else {
-    arr.sort((a, b) => {
-      const sa = new Date(selectedOf(a)?.schedule || 0).getTime();
-      const sb = new Date(selectedOf(b)?.schedule || 0).getTime();
-      return sa - sb;
-    });
-  }
-  if (sortDir.value === "desc") arr.reverse();
-  return arr;
-});
-
-const visibleGroups = computed(() => {
-  const start = (page.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  const total = sortedGroups.value.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize.value));
-  meta.value = {
-    totalGroups: total,
-    currentPage: page.value,
-    totalPages,
-    hasMore: page.value < totalPages,
-  };
-  return sortedGroups.value.slice(start, end);
-});
 
 const mediaUrl = (p) => {
   if (!p) return "";
@@ -1325,17 +1467,6 @@ const truncateError = (error) => {
   return error.substring(0, maxLength) + "...";
 };
 
-watch([q, statusFilter, sortBy, sortDir, pageSize], () => {
-  page.value = 1;
-});
-
-const goPrev = () => {
-  if (page.value > 1) page.value -= 1;
-};
-const goNext = () => {
-  if (meta.value.hasMore) page.value += 1;
-};
-
 const showDetailModal = ref(false);
 const selectedGroup = ref(null);
 
@@ -1346,16 +1477,11 @@ const outgoingError = ref("");
 const isGroupRecipient = (to) => isGroupJid(to);
 
 const outgoingTotalGroupReaders = computed(() => {
-  // If selected broadcast is a 1:1 (single phone recipient), WA doesn't provide per-user readBy.
-  // In that case, treat as 1 reader when the outgoing message is read/played.
   const b = selectedGroup.value ? selectedOf(selectedGroup.value) : null;
   if (b) {
-    const phoneCount = phoneRecipients(b).length;
-    const groupCount = groupRecipientLabels(b).length;
-    const labelCount = labelRecipientLabels(b).length;
+    const { groups, labels, phones } = getRecipientsCached(b);
 
-    // Only handle the strictest case: exactly one direct phone recipient, no group/label.
-    if (phoneCount === 1 && groupCount === 0 && labelCount === 0) {
+    if (phones.length === 1 && groups.length === 0 && labels.length === 0) {
       const anyRead = (outgoingRows.value || []).some((row) => {
         const s = String(row?.status || "").toLowerCase();
         return s === "read" || s === "played";
@@ -1364,7 +1490,6 @@ const outgoingTotalGroupReaders = computed(() => {
     }
   }
 
-  // Group behavior: compute unique readers across all outgoing rows (avoid double-counting across multiple sends)
   const readers = new Set();
   for (const row of outgoingRows.value || []) {
     if (!isGroupRecipient(row?.to)) continue;
@@ -1397,7 +1522,54 @@ const loadOutgoing = async (broadcastId) => {
   }
 };
 
-const openDetailModal = (group) => {
+const loadBroadcastsByName = async (name) => {
+  const deviceId = localStorage.getItem("device_selected_id") || "";
+  if (!deviceId || !name) return [];
+
+  // Ambil cukup besar supaya mencakup semua jadwal untuk name ini.
+  const params = {
+    deviceId,
+    page: 1,
+    pageSize: 200,
+    q: name,
+    status: "all",
+    sortBy: "schedule",
+    sortDir: "asc",
+  };
+
+  const { data } = await userApi.get("/broadcasts", { params });
+  const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+
+  // Filter strict by exact name (karena q adalah contains)
+  return list
+    .filter((b) => String(b?.name || "") === String(name))
+    .map((b) => ({
+      id: b.id,
+      name: b.name,
+      schedule: b.schedule,
+      message: b.message,
+      mediaPath: b.mediaPath,
+      recipients: Array.isArray(b.recipients) ? b.recipients : [],
+      status: b.status,
+      isSent: b.isSent,
+      sentCount: b.sentCount || 0,
+      failedCount: b.failedCount || 0,
+      lastError: b.lastError || null,
+    }));
+};
+
+const openDetailModal = async (group) => {
+  // hydrate broadcasts list for this name
+  try {
+    const full = await loadBroadcastsByName(group?.name);
+    if (Array.isArray(full) && full.length) {
+      group.broadcasts = full;
+      if (!selections.value[group.name]) selections.value[group.name] = pickDefault(full);
+    }
+  } catch {
+    // ignore, keep sample
+  }
+
   selectedGroup.value = group;
   showDetailModal.value = true;
 
@@ -1423,19 +1595,14 @@ watch(
 
 const getRecipientsSummary = (b) => {
   if (!b) return "";
-  const groupCount = groupRecipientLabels(b).length;
-  const labelCount = labelRecipientLabels(b).length;
-  const phoneCount = phoneRecipients(b).length;
-  return `${groupCount} grup, ${labelCount} label, ${phoneCount} nomor`;
+  const { groups, labels, phones } = getRecipientsCached(b);
+  return `${groups.length} grup, ${labels.length} label, ${phones.length} nomor`;
 };
 
 const getRecipientCount = (b) => {
   if (!b) return 0;
-  return (
-    groupRecipientLabels(b).length +
-    labelRecipientLabels(b).length +
-    phoneRecipients(b).length
-  );
+  const { groups, labels, phones } = getRecipientsCached(b);
+  return groups.length + labels.length + phones.length;
 };
 
 const togglingStatus = ref(false);
@@ -1461,10 +1628,45 @@ const toggleBroadcastStatus = async (broadcast) => {
   }
 };
 
+const showAllRecipients = ref(false);
+const maxPhoneChips = 200;
+
+const toggleShowAllRecipients = () => {
+  showAllRecipients.value = !showAllRecipients.value;
+};
+
+watch(showDetailModal, (open) => {
+  if (!open) showAllRecipients.value = false;
+});
+
+const selectedBroadcastForModal = computed(() => {
+  return selectedGroup.value ? selectedOf(selectedGroup.value) : null;
+});
+
+const modalRecipients = computed(() => {
+  const b = selectedBroadcastForModal.value;
+  if (!b) return { groups: [], labels: [], phones: [] };
+  return getRecipientsCached(b);
+});
+
+const modalGroupRecipients = computed(() => modalRecipients.value.groups);
+const modalLabelRecipients = computed(() => modalRecipients.value.labels);
+
+const modalTotalPhones = computed(() => modalRecipients.value.phones.length);
+const modalHasMorePhones = computed(
+  () => !showAllRecipients.value && modalRecipients.value.phones.length > maxPhoneChips
+);
+
+const modalPhoneRecipients = computed(() => {
+  const phones = modalRecipients.value.phones;
+  if (showAllRecipients.value) return phones;
+  return phones.slice(0, maxPhoneChips);
+});
+
 onMounted(async () => {
   await fetchDevices();
   if (!ensureDeviceKeyValid()) pickDefaultDevice();
-  await Promise.allSettled([load(), loadGroupNames(), loadContacts()]);
+  await Promise.allSettled([load(), loadGroupNames(), loadContacts(), loadSummary()]);
 });
 </script>
 
@@ -2745,5 +2947,23 @@ onMounted(async () => {
   font-size: 14px;
   color: #475569;
   text-align: center;
+}
+
+.btn-show-more {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-show-more:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 </style>
