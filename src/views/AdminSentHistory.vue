@@ -44,7 +44,7 @@
                 ).length
               }}
             </div>
-            <div class="stat-label">Terkirim</div>
+            <div class="stat-label">Terkirim (halaman ini)</div>
           </div>
         </div>
         <div class="stat-card">
@@ -63,7 +63,7 @@
                 ).length
               }}
             </div>
-            <div class="stat-label">Gagal</div>
+            <div class="stat-label">Gagal (halaman ini)</div>
           </div>
         </div>
         <div class="stat-card">
@@ -78,7 +78,7 @@
                   .length
               }}
             </div>
-            <div class="stat-label">Pending</div>
+            <div class="stat-label">Pending (halaman ini)</div>
           </div>
         </div>
       </div>
@@ -730,7 +730,11 @@ const executeConfirm = async () => {
   }
 };
 
-const isBroadcast = (r) => String(r?.id || "").startsWith("BC_");
+const isBroadcast = (r) => {
+  const id = String(r?.id || "");
+  // support both legacy and alternative prefixes
+  return id.startsWith("BC_") || id.startsWith("BROADCAST_");
+};
 
 const displayedRows = computed(() => {
   const list = rows.value || [];
@@ -741,34 +745,46 @@ const displayedRows = computed(() => {
 
 const deviceTutorMap = ref({});
 const sessionTutorMap = ref({});
-const tutorMapLoaded = ref(false);
 
 // Group name mapping
 const groupNameMap = ref({});
 
-const broadcastNameMap = ref({});
-const getBroadcastPkId = (id) => {
-  const m = String(id || "").match(/^BC_(\d+)_/);
-  return m ? Number(m[1]) : null;
-};
-const loadBroadcasts = async () => {
+// --- P2: lightweight cache for group names (avoid N+1 on every visit) ---
+const GROUP_CACHE_KEY = "__admin_sent_group_names_v1";
+const GROUP_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const readGroupCache = () => {
   try {
-    const { data } = await deviceApi.get("/messages/broadcasts");
-    const arr = Array.isArray(data) ? data : [];
-    const map = {};
-    for (const b of arr) {
-      const key = Number(b?.pkId ?? b?.id);
-      if (Number.isFinite(key)) map[key] = String(b?.name || "");
-    }
-    broadcastNameMap.value = map;
-  } catch (_) {
+    const raw = localStorage.getItem(GROUP_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    const ts = Number(parsed.ts);
+    if (!Number.isFinite(ts)) return null;
+    if (Date.now() - ts > GROUP_CACHE_TTL_MS) return null;
+    return parsed.map && typeof parsed.map === "object" ? parsed.map : null;
+  } catch {
+    return null;
+  }
+};
+const writeGroupCache = (map) => {
+  try {
+    localStorage.setItem(GROUP_CACHE_KEY, JSON.stringify({ ts: Date.now(), map }));
+  } catch {
     /* ignore */
   }
 };
 
 // Load group names from all devices
-const loadGroupNames = async () => {
+const loadGroupNames = async ({ force = false } = {}) => {
   try {
+    if (!force) {
+      const cached = readGroupCache();
+      if (cached) {
+        groupNameMap.value = cached;
+        return;
+      }
+    }
+
     // Get all devices first
     const { data: devicesData } = await userApi.get("/devices");
     const devices = Array.isArray(devicesData) ? devicesData : [];
@@ -812,6 +828,7 @@ const loadGroupNames = async () => {
     }
 
     groupNameMap.value = map;
+    writeGroupCache(map);
   } catch (error) {
     console.error("Error loading group names:", error);
   }
@@ -824,8 +841,8 @@ const isGroup = (to) => {
   if (recipient.includes("@g.us")) return true;
   // Support raw numeric group IDs stored without suffix
   if (!recipient.includes("@") && /^\d{8,}$/.test(recipient)) return true;
-  // keep old heuristic
-  return recipient.includes("-");
+  // P3: drop old heuristic ("-") to avoid false positives
+  return false;
 };
 
 // Get group name from mapping or return cleaned ID
@@ -888,23 +905,6 @@ const fmt = (d) => {
   }
 };
 
-const normalizeNumber = (to) => {
-  const recipient = String(to || "");
-
-  // If it's a group, try to get the group name
-  if (isGroup(recipient)) {
-    const groupName = getGroupName(recipient);
-    if (groupName) {
-      return groupName; // Return group name instead of ID
-    }
-    // If no group name found, return a cleaned version without @g.us
-    return recipient.replace("@g.us", "").replace("@s.whatsapp.net", "");
-  }
-
-  // For regular contacts, just remove @s.whatsapp.net
-  return recipient.replace("@s.whatsapp.net", "");
-};
-
 const badgeClass = (status) => {
   const s = String(status || "").toLowerCase();
   if (s.includes("fail") || s.includes("error")) return "warn";
@@ -946,83 +946,6 @@ const tutorName = (r) => {
   return bySession || "-";
 };
 
-const sourceLabel = (r) => {
-  const t = r && r.broadcastType ? String(r.broadcastType).toLowerCase() : "";
-  if (t === "feedback") return "Feedback";
-  if (t === "reminder") return "Reminder";
-
-  const name = typeof r?.broadcastName === "string" ? r.broadcastName : "";
-  if (name) {
-    const isReminderByName = /\bRecipients\b/i.test(name);
-    return isReminderByName ? "Reminder" : "Feedback";
-  }
-
-  const id = r?.id;
-  if (!id || typeof id !== "string" || !id.startsWith("BC_")) return "";
-  const pk = getBroadcastPkId(id);
-  const nm = pk != null ? broadcastNameMap.value[pk] || "" : "";
-  if (!nm) return "";
-  const isReminder = /\bRecipients\b/i.test(nm);
-  return isReminder ? "Reminder" : "Feedback";
-};
-
-const loadTutorDeviceMap = async () => {
-  try {
-    const { data } = await userApi.get("/tutors");
-    const map = {};
-    const list = Array.isArray(data) ? data : [];
-    for (const t of list) {
-      const name =
-        [t?.firstName, t?.lastName].filter(Boolean).join(" ") || t?.email || "Tutor";
-      const devices = Array.isArray(t?.devices) ? t.devices : [];
-      for (const d of devices) {
-        if (d && d.id) map[d.id] = name;
-      }
-    }
-    deviceTutorMap.value = map;
-  } catch (_) {
-    // ignore
-  }
-};
-
-const loadSessionTutorMap = async () => {
-  try {
-    const { data } = await userApi.get("/tutors");
-    const list = Array.isArray(data) ? data : [];
-    const entries = [];
-    for (const t of list) {
-      const name =
-        [t?.firstName, t?.lastName].filter(Boolean).join(" ") || t?.email || "Tutor";
-      const devices = Array.isArray(t?.devices) ? t.devices : [];
-      for (const d of devices) {
-        if (d && d.id) {
-          entries.push({ deviceId: d.id, name });
-        }
-      }
-    }
-    const results = await Promise.allSettled(
-      entries.map((e) => userApi.get(`/devices/${encodeURIComponent(e.deviceId)}`))
-    );
-    const map = {};
-    results.forEach((res, idx) => {
-      if (res.status === "fulfilled") {
-        const tutorName = entries[idx].name;
-        const sessions = Array.isArray(res.value?.data?.sessions)
-          ? res.value.data.sessions
-          : [];
-        sessions.forEach((s) => {
-          if (s && s.sessionId) map[s.sessionId] = tutorName;
-        });
-      }
-    });
-    sessionTutorMap.value = map;
-  } catch (_) {
-    // ignore
-  } finally {
-    tutorMapLoaded.value = true;
-  }
-};
-
 const load = async (p = page.value) => {
   loading.value = true;
   err.value = "";
@@ -1039,6 +962,10 @@ const load = async (p = page.value) => {
     const { data } = await userApi.get("/tutors/messages/all", { params });
     rows.value = data.data || [];
     meta.value = data.metadata || meta.value;
+
+    // 🔍 DEBUG: Cek data yang diterima dari API
+    console.log("🔍 Sample data from API:", rows.value.slice(0, 3));
+    console.log("🔍 First row broadcastType:", rows.value[0]?.broadcastType);
   } catch (e) {
     err.value = e?.response?.data?.message || e?.message || "Gagal memuat data";
   } finally {
@@ -1094,14 +1021,31 @@ const isRecurrenceName = (name) => {
 };
 
 const sourceSimple = (r) => {
-  if (!isBroadcast(r)) return "";
-  const t = r && r.broadcastType ? String(r.broadcastType).toLowerCase() : "";
-  const name = getBroadcastName(r);
+  const id = String(r?.id || "");
 
-  if (t === "reminder" || isReminderName(name)) return "reminder";
-  if (t === "feedback" || isFeedbackName(name)) return "feedback";
-  if (t === "recurrence" || isRecurrenceName(name)) return "recurrence";
-  return "broadcast";
+  // 🔥 1) PRIORITAS TERTINGGI: Explicit broadcastType dari database
+  const t = r && r.broadcastType ? String(r.broadcastType).toLowerCase() : "";
+  if (t === "reminder") return "reminder";
+  if (t === "feedback") return "feedback";
+  if (t === "recurrence") return "recurrence";
+  if (t === "broadcast") return "broadcast";
+
+  // 2) Prefix-based fallback (helps dummy data)
+  //    RE_ / FB_ / RC_ are optional conventions; keep BC_ as broadcast
+  if (id.startsWith("RE_")) return "reminder";
+  if (id.startsWith("FB_")) return "feedback";
+  if (id.startsWith("RC_") || id.startsWith("RBC_")) return "recurrence";
+
+  // 3) Name-based inference for broadcasts (LEGACY FALLBACK)
+  if (isBroadcast(r) || r?.broadcastId != null || r?.broadcast != null) {
+    const name = getBroadcastName(r);
+    if (isReminderName(name)) return "reminder";
+    if (isFeedbackName(name)) return "feedback";
+    if (isRecurrenceName(name)) return "recurrence";
+    return "broadcast";
+  }
+
+  return "";
 };
 
 const exportCsv = async () => {
@@ -1122,7 +1066,7 @@ const exportCsv = async () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    setAttribute("download", "sent-messages.csv");
+    link.setAttribute("download", "sent-messages.csv");
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -1136,7 +1080,8 @@ const exportCsv = async () => {
 };
 
 const deleteAllSent = async () => {
-  confirmTitle.value = "localhost:5173 says";
+  // P0: remove dev-only title
+  confirmTitle.value = "Konfirmasi";
   confirmMessage.value =
     "Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini permanen.";
   confirmAction.value = async () => {
@@ -1178,19 +1123,94 @@ const mediaUrl = (p) => {
 
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || "");
 
+// --- P2: fetch tutors once and build both maps ---
+const buildTutorMapsFromTutors = (list) => {
+  const deviceMap = {};
+  const entries = [];
+  const safeList = Array.isArray(list) ? list : [];
+
+  for (const t of safeList) {
+    const name =
+      [t?.firstName, t?.lastName].filter(Boolean).join(" ") || t?.email || "Tutor";
+    const devices = Array.isArray(t?.devices) ? t.devices : [];
+    for (const d of devices) {
+      if (d && d.id) {
+        deviceMap[d.id] = name;
+        entries.push({ deviceId: d.id, name });
+      }
+    }
+  }
+
+  deviceTutorMap.value = deviceMap;
+  return entries;
+};
+
+const loadTutorMaps = async () => {
+  try {
+    const { data } = await userApi.get("/tutors");
+    const entries = buildTutorMapsFromTutors(data);
+
+    // session mapping requires device detail calls
+    const results = await Promise.allSettled(
+      entries.map((e) => userApi.get(`/devices/${encodeURIComponent(e.deviceId)}`))
+    );
+
+    const map = {};
+    results.forEach((res, idx) => {
+      if (res.status === "fulfilled") {
+        const tutorNm = entries[idx].name;
+        const sessions = Array.isArray(res.value?.data?.sessions)
+          ? res.value.data.sessions
+          : [];
+        sessions.forEach((s) => {
+          if (s && s.sessionId) map[s.sessionId] = tutorNm;
+        });
+      }
+    });
+
+    sessionTutorMap.value = map;
+  } catch {
+    // ignore
+  }
+};
+
+const broadcastNameMap = ref({});
+const getBroadcastPkId = (id) => {
+  const m = String(id || "").match(/^BC_(\d+)_/);
+  return m ? Number(m[1]) : null;
+};
+
+const loadBroadcasts = async () => {
+  try {
+    // backend returns list of broadcasts; map by pkId/id -> name
+    const { data } = await deviceApi.get("/messages/broadcasts");
+    const arr = Array.isArray(data) ? data : [];
+    const map = {};
+    for (const b of arr) {
+      const key = Number(b?.pkId ?? b?.id);
+      if (Number.isFinite(key)) map[key] = String(b?.name || "");
+    }
+    broadcastNameMap.value = map;
+  } catch {
+    // ignore
+  }
+};
+
 watch([sortBy, sortDir, pageSize], () => {
   page.value = 1;
   load(1);
 });
 
 onMounted(async () => {
-  await Promise.allSettled([
-    loadTutorDeviceMap(),
-    loadSessionTutorMap(),
+  // P2: prioritize main data load first for better TTl/UX
+  await load(1);
+
+  // Run the rest in background
+  void Promise.allSettled([
+    loadTutorMaps(),
     loadBroadcasts(),
     loadFbNameMap(),
-    loadGroupNames(), // Load group names
-    load(1),
+    loadGroupNames(),
   ]);
 });
 
@@ -1208,8 +1228,9 @@ const closeDetailModal = () => {
 };
 
 const truncateMessage = (message, length) => {
-  if (message.length <= length) return message;
-  return message.substring(0, length) + "...";
+  const s = String(message ?? "");
+  if (s.length <= length) return s;
+  return s.substring(0, length) + "...";
 };
 
 const formatReaderJid = (jid) => {

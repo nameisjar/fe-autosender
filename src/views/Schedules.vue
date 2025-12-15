@@ -77,6 +77,14 @@
             <option value="inactive">❌ Nonaktif</option>
           </select>
 
+          <select v-model="typeFilter" class="filter-select">
+            <option value="all">📝 Semua Tipe</option>
+            <option value="broadcast">📢 Broadcast</option>
+            <option value="feedback">💬 Feedback</option>
+            <option value="reminder">🔔 Reminder</option>
+            <option value="recurrence">🔄 Recurrence</option>
+          </select>
+
           <select
             v-model="selectedDeviceId"
             @change="onDeviceChange"
@@ -107,7 +115,6 @@
             <option :value="25">25 baris</option>
             <option :value="50">50 baris</option>
           </select>
-
         </div>
 
         <button class="btn-reload" @click="load" :disabled="loading">
@@ -132,10 +139,7 @@
     <div class="table-container">
       <div class="table-wrapper">
         <!-- GROUP VIEW -->
-        <table
-          class="schedules-table"
-          v-if="!loading && visibleGroups.length > 0"
-        >
+        <table class="schedules-table" v-if="!loading && visibleGroups.length > 0">
           <thead>
             <tr>
               <th class="col-expand"></th>
@@ -219,13 +223,9 @@
             </tr>
           </tbody>
         </table>
-
       </div>
 
-      <div
-        v-if="!loading && visibleGroups.length === 0"
-        class="empty-state"
-      >
+      <div v-if="!loading && visibleGroups.length === 0" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="4" width="18" height="18" rx="2" />
           <path d="M16 2V6M8 2V6M3 10H21" />
@@ -669,6 +669,7 @@ const err = ref("");
 const msg = ref("");
 const q = ref("");
 const statusFilter = ref("upcoming");
+const typeFilter = ref("all");
 
 const groupsMap = ref({});
 const loadGroupNames = async () => {
@@ -884,11 +885,23 @@ const pickDefault = (arr) => {
 const grouped = computed(() => {
   // groups sudah terfilter oleh server, tapi tetap apply filter q secara ringan (jaga-jaga)
   const qq = q.value.toLowerCase();
-  return (groups.value || []).filter((g) => String(g.name || "").toLowerCase().includes(qq));
+  return (groups.value || []).filter((g) =>
+    String(g.name || "")
+      .toLowerCase()
+      .includes(qq)
+  );
 });
 
+// ✅ FIX: Gunakan sample broadcast (pertama dari server) untuk filtering tabel
+// Sample ini adalah broadcast yang sesuai dengan filter status dari server
+const getOriginalSample = (g) => {
+  if (!g) return null;
+  return g._originalSample || null; // Sample pertama adalah yang dari server (sesuai filter)
+};
+
 const matchesStatus = (g) => {
-  const b = selectedOf(g);
+  // ✅ FIX: Gunakan original sample untuk filtering, bukan selected broadcast
+  const b = getOriginalSample(g);
   if (!b) return false;
   if (statusFilter.value === "all") return true;
   if (statusFilter.value === "inactive") return b.status === false;
@@ -900,7 +913,14 @@ const matchesStatus = (g) => {
   return true;
 };
 
-const filtered = computed(() => grouped.value.filter(matchesStatus));
+const matchesType = (g) => {
+  const b = getOriginalSample(g);
+  if (!b) return false;
+  if (typeFilter.value === "all") return true;
+  return b.type === typeFilter.value;
+};
+
+const filtered = computed(() => grouped.value.filter(matchesStatus).filter(matchesType));
 
 // --- Recipients caching ---
 // In large datasets, expanding recipients (especially "all" / labels) is expensive.
@@ -1093,7 +1113,7 @@ watch(q, () => {
   }, 250);
 });
 
-watch([statusFilter, sortBy, sortDir, pageSize], async () => {
+watch([statusFilter, typeFilter, sortBy, sortDir, pageSize], async () => {
   page.value = 1;
   await load();
 });
@@ -1109,7 +1129,13 @@ const load = async () => {
       toast.error("Silakan pilih device terlebih dahulu");
       items.value = [];
       groups.value = [];
-      serverMeta.value = { total: 0, page: 1, pageSize: pageSize.value, totalPages: 1, hasMore: false };
+      serverMeta.value = {
+        total: 0,
+        page: 1,
+        pageSize: pageSize.value,
+        totalPages: 1,
+        hasMore: false,
+      };
       return;
     }
 
@@ -1120,6 +1146,7 @@ const load = async () => {
       pageSize: pageSize.value,
       q: q.value || "",
       status: statusFilter.value,
+      type: typeFilter.value,
       sortBy: sortBy.value,
       sortDir: sortDir.value,
     };
@@ -1144,6 +1171,7 @@ const load = async () => {
         sentCount: row.sampleSentCount || 0,
         failedCount: row.sampleFailedCount || 0,
         lastError: row.sampleLastError || null,
+        type: row.sampleType || row.type || "broadcast", // ✅ Tambahkan type untuk filtering
       };
 
       return {
@@ -1151,6 +1179,8 @@ const load = async () => {
         broadcastsCount: row.broadcastsCount,
         nextSchedule: row.nextSchedule,
         broadcasts: [sample],
+        // ✅ FIX: Simpan original sample terpisah agar tidak terpengaruh hydration modal
+        _originalSample: sample,
       };
     });
 
@@ -1246,7 +1276,11 @@ const selectedBroadcastByGroupName = computed(() => {
 
 const selectedOf = (g) => {
   if (!g) return null;
-  return selectedBroadcastByGroupName.value[g.name] || g.broadcasts?.[g.broadcasts.length - 1] || null;
+  return (
+    selectedBroadcastByGroupName.value[g.name] ||
+    g.broadcasts?.[g.broadcasts.length - 1] ||
+    null
+  );
 };
 
 const displayName = (g) => {
@@ -1478,27 +1512,42 @@ const isGroupRecipient = (to) => isGroupJid(to);
 
 const outgoingTotalGroupReaders = computed(() => {
   const b = selectedGroup.value ? selectedOf(selectedGroup.value) : null;
-  if (b) {
-    const { groups, labels, phones } = getRecipientsCached(b);
 
-    if (phones.length === 1 && groups.length === 0 && labels.length === 0) {
-      const anyRead = (outgoingRows.value || []).some((row) => {
-        const s = String(row?.status || "").toLowerCase();
-        return s === "read" || s === "played";
-      });
-      return anyRead ? 1 : 0;
-    }
+  // ✅ FIX: Jangan hitung pembaca jika broadcast belum terkirim
+  if (!b || !b.isSent) {
+    return 0;
   }
 
+  const { groups, labels, phones } = getRecipientsCached(b);
+
+  // ✅ FIX: Untuk single phone recipient, hitung berdasarkan status message
+  if (phones.length === 1 && groups.length === 0 && labels.length === 0) {
+    const anyRead = (outgoingRows.value || []).some((row) => {
+      const s = String(row?.status || "").toLowerCase();
+      return s === "read" || s === "played";
+    });
+    return anyRead ? 1 : 0;
+  }
+
+  // ✅ FIX: Untuk group recipients, HANYA hitung JID yang benar-benar ada di readBy
   const readers = new Set();
   for (const row of outgoingRows.value || []) {
+    // Pastikan ini pesan ke group
     if (!isGroupRecipient(row?.to)) continue;
+
     const rb = row?.readBy;
-    if (!Array.isArray(rb)) continue;
+    // ✅ CRITICAL: Hanya proses jika readBy adalah array dengan isi
+    if (!Array.isArray(rb) || rb.length === 0) continue;
+
+    // ✅ CRITICAL: Hanya tambahkan JID yang valid
     for (const jid of rb) {
-      if (jid) readers.add(String(jid));
+      const jidStr = String(jid || "").trim();
+      if (jidStr) {
+        readers.add(jidStr);
+      }
     }
   }
+
   return readers.size;
 });
 
