@@ -12,7 +12,7 @@
           >
             <!-- Clipboard dengan checklist untuk feedback -->
             <path
-              d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+              d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0-2-2V7a2 2 0 0 0-2-2h-2"
             />
             <rect x="9" y="3" width="6" height="4" rx="1" />
             <path d="M9 12l2 2 4-4" />
@@ -828,6 +828,165 @@
         </div>
       </div>
     </div>
+
+    <!-- 🆕 Send Results Modal -->
+    <div v-if="showSendResults" class="modal-overlay" @click="showSendResults = false">
+      <div class="results-modal" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            Hasil Pengiriman
+          </h3>
+          <button class="btn-close" @click="showSendResults = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body results-body">
+          <!-- Summary -->
+          <div class="results-summary">
+            <div class="summary-item success">
+              <div class="summary-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <div class="summary-content">
+                <span class="summary-value">{{
+                  sendResults.filter((r) => r.success).length
+                }}</span>
+                <span class="summary-label">Berhasil</span>
+              </div>
+            </div>
+            <div class="summary-item failed">
+              <div class="summary-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+              </div>
+              <div class="summary-content">
+                <span class="summary-value">{{
+                  sendResults.filter((r) => !r.success).length
+                }}</span>
+                <span class="summary-label">Gagal</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rate Limit Info -->
+          <div v-if="rateLimitInfo" class="rate-limit-info">
+            <div class="rate-limit-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>Rate Limit Info</span>
+            </div>
+            <div class="rate-limit-content">
+              <div class="rate-limit-item">
+                <span class="rate-label">Sisa Kuota:</span>
+                <span class="rate-value" :class="{ low: rateLimitInfo.remaining < 10 }">
+                  {{ rateLimitInfo.remaining }} / {{ rateLimitInfo.limit }}
+                </span>
+              </div>
+              <div v-if="rateLimitInfo.resetTime" class="rate-limit-item">
+                <span class="rate-label">Reset:</span>
+                <span class="rate-value">{{
+                  formatResetTime(rateLimitInfo.resetTime)
+                }}</span>
+              </div>
+              <div v-if="rateLimitInfo.remaining < 10" class="rate-limit-warning">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                  />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span
+                  >Kuota hampir habis! Tunggu hingga reset untuk mengirim lebih banyak
+                  pesan.</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Results List -->
+          <div class="results-list">
+            <h4>Detail Pengiriman</h4>
+            <div class="results-scroll">
+              <div
+                v-for="(result, index) in sendResults"
+                :key="index"
+                class="result-item"
+                :class="{ success: result.success, failed: !result.success }"
+              >
+                <div class="result-icon">
+                  <svg
+                    v-if="result.success"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <svg
+                    v-else
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </div>
+                <div class="result-content">
+                  <span class="result-recipient">{{ getRecipientDisplayName(result.recipient) }}</span>
+                  <span v-if="!result.success" class="result-error">{{
+                    result.error || "Gagal mengirim"
+                  }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-primary" @click="showSendResults = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1213,6 +1372,12 @@ const sending = ref(false);
 const error = ref("");
 const success = ref("");
 
+// 🆕 Send Results & Rate Limit Info
+const sendResults = ref([]);
+const showSendResults = ref(false);
+const rateLimitInfo = ref(null);
+const savedRecipientLabels = ref({}); // 🔥 Simpan copy recipientLabels untuk ditampilkan di hasil
+
 // 🆕 Recipient management
 const recipients = ref([]);
 const activeTab = ref("manual");
@@ -1252,6 +1417,28 @@ const availableMonths = computed(() => {
 
 // 🆕 Helper functions untuk recipients
 const chipLabel = (r) => recipientLabels.value[r] || r;
+
+// 🔥 Helper untuk mendapatkan display name dari recipient (untuk hasil pengiriman)
+const getRecipientDisplayName = (recipient) => {
+  // Cek di savedRecipientLabels dulu (karena recipientLabels sudah di-reset setelah kirim)
+  if (savedRecipientLabels.value[recipient]) {
+    return savedRecipientLabels.value[recipient];
+  }
+  // Cek di recipientLabels
+  if (recipientLabels.value[recipient]) {
+    return recipientLabels.value[recipient];
+  }
+  // Jika berupa group JID, format lebih ramah
+  if (recipient && recipient.includes("@g.us")) {
+    return `Grup: ${recipient.replace("@g.us", "")}`;
+  }
+  // Jika berupa label
+  if (recipient && recipient.startsWith("label_")) {
+    return `Label: ${recipient.replace("label_", "")}`;
+  }
+  // Return as-is untuk nomor telepon
+  return recipient;
+};
 
 const isValidPhoneNumber = (phone) => {
   const cleaned = String(phone).replace(/\D/g, "");
@@ -1481,6 +1668,22 @@ const previewData = computed(() => {
   };
 });
 
+// 🆕 Format reset time untuk rate limit
+const formatResetTime = (resetTime) => {
+  if (!resetTime) return "-";
+  try {
+    const date = new Date(resetTime);
+    return date.toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return resetTime;
+  }
+};
+
 const loadTemplates = async () => {
   try {
     const { data } = await userApi.get("/algorithmics/monthly-templates");
@@ -1536,10 +1739,14 @@ const handleGenerateAndSend = async () => {
   success.value = "";
   sending.value = true;
 
+  // 🆕 Reset send results
+  sendResults.value = [];
+  rateLimitInfo.value = null;
+
   try {
     // 🔥 FIX: Gunakan selectedCommentsText sebagai tutorComment agar backend bisa memproses
     const payload = {
-      studentName: formattedStudentName.value, // 🔥 Gunakan nama yang sudah diformat
+      studentName: formattedStudentName.value,
       courseName: previewData.value.courseName,
       month: Number(previewData.value.month),
       duration: previewData.value.duration,
@@ -1550,47 +1757,80 @@ const handleGenerateAndSend = async () => {
       skillsAcquired: previewData.value.skillsAcquired,
       youtubeLink: previewData.value.youtubeLink,
       referralLink: previewData.value.referralLink,
-      tutorComment: selectedCommentsText.value, // 🔥 FIX: Kirim komentar gabungan dari checkbox
+      tutorComment: selectedCommentsText.value,
       recipients: recipients.value,
       deviceId: form.value.deviceId,
       rating: previewData.value.rating,
       reportBy: previewData.value.reportBy,
     };
 
-    // console.log('Sending payload:', payload);
-
     const { data } = await userApi.post("/algorithmics/monthly-feedback/send", payload);
 
-    const recipientCount = recipients.value.length;
-    success.value =
-      "Feedback bulanan berhasil dikirim ke " + recipientCount + " penerima!";
-    toast.success(
-      "Feedback bulanan berhasil dikirim ke " + recipientCount + " penerima!"
-    );
+    // 🆕 Capture send results dari response
+    if (data.results && Array.isArray(data.results)) {
+      // 🔥 FIX: Backend returns status: 'success'/'failed', not success: true/false
+      sendResults.value = data.results.map((r) => ({
+        recipient: r.recipient,
+        success: r.status === "success",
+        error: r.error,
+      }));
+    } else {
+      // Fallback jika backend tidak mengembalikan results detail
+      sendResults.value = recipients.value.map((r) => ({
+        recipient: r,
+        success: true,
+      }));
+    }
 
-    // 🔥 PERBAIKAN: Reset HANYA data yang perlu di-reset (nama siswa, bulan, komentar)
-    // Data tersimpan (courseName, youtubeLink, referralLink, reportBy, rating) TETAP ADA
-    // form.value.studentName = '';
+    const successCount = sendResults.value.filter((r) => r.success).length;
+    const failedCount = sendResults.value.filter((r) => !r.success).length;
+
+    // 🆕 Capture rate limit info dari response
+    if (data.rateLimit) {
+      rateLimitInfo.value = data.rateLimit;
+    }
+
+    if (failedCount === 0) {
+      success.value = `Feedback bulanan berhasil dikirim ke ${successCount} penerima!`;
+      toast.success(`Feedback bulanan berhasil dikirim ke ${successCount} penerima!`);
+    } else {
+      success.value = `Terkirim: ${successCount}, Gagal: ${failedCount}`;
+      toast.warning(`Terkirim: ${successCount}, Gagal: ${failedCount}`);
+    }
+
+    // 🆕 Show results modal
+    showSendResults.value = true;
+
+    // 🔥 Simpan copy recipientLabels sebelum reset untuk ditampilkan di hasil
+    savedRecipientLabels.value = { ...recipientLabels.value };
+
+    // Reset form data
     form.value.duration = "";
-    // form.value.selectedComments = []; // 🆕 Uncommenting to reset selected comments
-    // form.value.tutorComment = '';
-
-    // Reset custom comment text
-    // commentCategories.value.custom.forEach(comment => {
-    //   comment.text = '';
-    // }); // 🆕 Uncommenting to reset custom comments
-
-    // 🆕 Reset recipients
     recipients.value = [];
     recipientLabels.value = {};
 
     showPreview.value = false;
   } catch (e) {
-    // console.error("Error sending feedback:", e);
     const errorMsg =
       e?.response?.data?.message || e?.message || "Gagal mengirim feedback";
     error.value = errorMsg;
     toast.error(errorMsg);
+
+    // 🆕 Capture rate limit info even on error
+    if (e?.response?.data?.rateLimit) {
+      rateLimitInfo.value = e.response.data.rateLimit;
+    }
+
+    // 🆕 Show partial results if available
+    // 🔥 FIX: Juga konversi format status dari backend
+    if (e?.response?.data?.results && Array.isArray(e.response.data.results)) {
+      sendResults.value = e.response.data.results.map((r) => ({
+        recipient: r.recipient,
+        success: r.status === "success",
+        error: r.error,
+      }));
+      showSendResults.value = true;
+    }
   } finally {
     sending.value = false;
   }
@@ -3466,11 +3706,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 }
 
 .rating-stars .star:hover {
-  transform: scale(1.2);
-}
-
-.rating-stars .star.filled {
-  color: #fbbf24;
   text-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
 }
 
@@ -3977,4 +4212,313 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
     transform: translateX(100%);
   }
 }
+
+/* 🆕 Results Modal */
+.results-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+.results-modal .modal-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.results-modal .modal-header h3 svg {
+  width: 24px;
+  height: 24px;
+  color: #10b981;
+}
+
+.results-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* Results Summary */
+.results-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid;
+}
+
+.summary-item.success {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #86efac;
+}
+
+.summary-item.failed {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fca5a5;
+}
+
+.summary-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.summary-item.success .summary-icon {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.summary-item.failed .summary-icon {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.summary-icon svg {
+  width: 24px;
+  height: 24px;
+  color: white;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.summary-item.success .summary-value {
+  color: #15803d;
+}
+
+.summary-item.failed .summary-value {
+  color: #991b1b;
+}
+
+.summary-label {
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.summary-item.success .summary-label {
+  color: #166534;
+}
+
+.summary-item.failed .summary-label {
+  color: #b91c1c;
+}
+
+/* Rate Limit Info */
+.rate-limit-info {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+}
+
+.rate-limit-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin-bottom: 12px;
+}
+
+.rate-limit-header svg {
+  width: 18px;
+  height: 18px;
+  color: #0284c7;
+}
+
+.rate-limit-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rate-limit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+}
+
+.rate-label {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.rate-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0c4a6e;
+}
+
+.rate-value.low {
+  color: #dc2626;
+}
+
+.rate-limit-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+}
+
+.rate-limit-warning svg {
+  width: 20px;
+  height: 20px;
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rate-limit-warning span {
+  font-size: 13px;
+  color: #92400e;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* Results List */
+.results-list {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.results-list h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.results-scroll {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.result-item.success {
+  border-left: 4px solid #22c55e;
+}
+
+.result-item.failed {
+  border-left: 4px solid #ef4444;
+}
+
+.result-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.result-item.success .result-icon {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+}
+
+.result-item.failed .result-icon {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.result-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.result-item.success .result-icon svg {
+  color: #16a34a;
+}
+
+.result-item.failed .result-icon svg {
+  color: #dc2626;
+}
+
+.result-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.result-recipient {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-error {
+  font-size: 12px;
+  color: #dc2626;
+}
+
+/* Responsive for Results Modal */
+@media (max-width: 768px) {
+  .results-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .results-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .results-scroll {
+    max-height: 150px;
+  }
+}
 </style>
+``` 
