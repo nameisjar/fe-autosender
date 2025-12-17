@@ -323,7 +323,11 @@
               </svg>
               Nama Lengkap
             </label>
-            <input v-model.trim="firstName" placeholder="Masukkan nama lengkap" required />
+            <input
+              v-model.trim="firstName"
+              placeholder="Masukkan nama lengkap"
+              required
+            />
           </div>
           <div class="form-group">
             <label>
@@ -360,13 +364,23 @@
           </div>
         </form>
         <div class="edit-modal-actions">
-          <button type="button" class="btn-cancel" @click="closeCreateModal" :disabled="loading">
+          <button
+            type="button"
+            class="btn-cancel"
+            @click="closeCreateModal"
+            :disabled="loading"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
             Batal
           </button>
-          <button type="button" class="btn-save" @click="createTutor" :disabled="loading || !canSubmit">
+          <button
+            type="button"
+            class="btn-save"
+            @click="createTutor"
+            :disabled="loading || !canSubmit"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
