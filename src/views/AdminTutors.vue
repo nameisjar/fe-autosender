@@ -59,75 +59,6 @@
       </div>
     </div>
 
-    <section class="create-card">
-      <div class="card-header-section">
-        <h3>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="16" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-          </svg>
-          Tambah Tutor Baru
-        </h3>
-      </div>
-      <form @submit.prevent="createTutor" class="form-grid">
-        <div class="form-group">
-          <label>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            Nama Lengkap
-          </label>
-          <input v-model.trim="firstName" placeholder="Masukkan nama lengkap" required />
-        </div>
-        <div class="form-group">
-          <label>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="4" width="20" height="16" rx="2" />
-              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-            </svg>
-            Email
-          </label>
-          <input
-            v-model.trim="email"
-            type="email"
-            placeholder="email@example.com"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            Password
-          </label>
-          <input v-model="password" type="password" placeholder="Minimal 6 karakter" />
-        </div>
-        <div class="form-actions">
-          <button class="btn-submit" :disabled="loading || !canSubmit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            {{ loading ? "Menyimpan..." : "Tambah Tutor" }}
-          </button>
-        </div>
-      </form>
-      <div class="form-hint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="16" x2="12" y2="12" />
-          <line x1="12" y1="8" x2="12.01" y2="8" />
-        </svg>
-        Pastikan nama, email valid, dan password minimal 6 karakter
-      </div>
-      <p v-if="msg" class="success-message">{{ msg }}</p>
-      <p v-if="err" class="error-message">{{ err }}</p>
-    </section>
-
     <section class="list-card">
       <div class="card-header-section">
         <h3>
@@ -139,14 +70,24 @@
           </svg>
           Daftar Tutor ({{ total }})
         </h3>
-        <button class="btn-reload" @click="loadTutors">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-            />
-          </svg>
-          Muat Ulang
-        </button>
+        <div class="header-actions">
+          <button class="btn-add" @click="showCreateModal = true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
+            Tambah Tutor
+          </button>
+          <button class="btn-reload" @click="loadTutors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
+            </svg>
+            Muat Ulang
+          </button>
+        </div>
       </div>
 
       <div class="toolbar-section">
@@ -360,6 +301,82 @@
       </div>
     </section>
 
+    <!-- Create Tutor Modal -->
+    <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal">
+      <div class="edit-modal create-modal" @click.stop>
+        <div class="edit-modal-header">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
+            Tambah Tutor Baru
+          </h3>
+        </div>
+        <form @submit.prevent="createTutor" class="edit-modal-body">
+          <div class="form-group">
+            <label>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              Nama Lengkap
+            </label>
+            <input v-model.trim="firstName" placeholder="Masukkan nama lengkap" required />
+          </div>
+          <div class="form-group">
+            <label>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>
+              Email
+            </label>
+            <input
+              v-model.trim="email"
+              type="email"
+              placeholder="email@example.com"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              Password
+            </label>
+            <input v-model="password" type="password" placeholder="Minimal 6 karakter" />
+          </div>
+          <div class="form-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            Pastikan nama, email valid, dan password minimal 6 karakter
+          </div>
+        </form>
+        <div class="edit-modal-actions">
+          <button type="button" class="btn-cancel" @click="closeCreateModal" :disabled="loading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+            Batal
+          </button>
+          <button type="button" class="btn-save" @click="createTutor" :disabled="loading || !canSubmit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            {{ loading ? "Menyimpan..." : "Tambah Tutor" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Edit Mode Modal (outside of list-card) -->
     <div v-if="editingId" class="modal-overlay" @click="cancelEdit">
       <div class="edit-modal" @click.stop>
@@ -500,6 +517,7 @@ const loading = ref(false);
 const deletingId = ref("");
 const msg = ref("");
 const err = ref("");
+const showCreateModal = ref(false);
 
 // list state
 const search = ref("");
@@ -588,6 +606,15 @@ const loadTutors = async () => {
   }
 };
 
+const closeCreateModal = () => {
+  showCreateModal.value = false;
+  firstName.value = "";
+  email.value = "";
+  password.value = "";
+  msg.value = "";
+  err.value = "";
+};
+
 const createTutor = async () => {
   msg.value = "";
   err.value = "";
@@ -605,9 +632,7 @@ const createTutor = async () => {
   try {
     await userApi.post("/tutors", body);
     toast.success("Tutor berhasil dibuat");
-    firstName.value = "";
-    email.value = "";
-    password.value = "";
+    closeCreateModal();
     page.value = 1;
     await loadTutors();
   } catch (e) {
@@ -852,6 +877,37 @@ const SortIcon = {
   color: #3b82f6;
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-add:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-add svg {
+  width: 18px;
+  height: 18px;
+}
+
 .btn-reload {
   display: inline-flex;
   align-items: center;
@@ -975,6 +1031,26 @@ const SortIcon = {
 }
 
 .form-hint svg {
+  width: 18px;
+  height: 18px;
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.create-modal .form-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  color: #0c4a6e;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.create-modal .form-hint svg {
   width: 18px;
   height: 18px;
   color: #0284c7;
@@ -1435,6 +1511,16 @@ const SortIcon = {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-add {
+    width: 100%;
+    justify-content: center;
   }
 
   .btn-reload {

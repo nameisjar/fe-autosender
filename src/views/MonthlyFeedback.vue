@@ -967,7 +967,9 @@
                   </svg>
                 </div>
                 <div class="result-content">
-                  <span class="result-recipient">{{ getRecipientDisplayName(result.recipient) }}</span>
+                  <span class="result-recipient">{{
+                    getRecipientDisplayName(result.recipient)
+                  }}</span>
                   <span v-if="!result.success" class="result-error">{{
                     result.error || "Gagal mengirim"
                   }}</span>
@@ -4521,4 +4523,4 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   }
 }
 </style>
-``` 
+```
