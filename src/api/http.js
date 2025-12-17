@@ -120,7 +120,6 @@ async function fetchDeviceApiKey(deviceId) {
     // Fetch from backend
     const paths = [
         `/devices/${encodeURIComponent(deviceId)}`,
-        `/tutors/devices/${encodeURIComponent(deviceId)}`,
     ];
     
     for (const p of paths) {
@@ -145,9 +144,50 @@ async function fetchDeviceApiKey(deviceId) {
     return null;
 }
 
+// Cache device access token (in-memory) per deviceId
+const deviceAccessTokenCache = new Map();
+
+async function fetchDeviceAccessToken(deviceId) {
+    if (!deviceId) return null;
+
+    const cached = deviceAccessTokenCache.get(deviceId);
+    const now = Date.now();
+    if (cached && cached.token && cached.expiresAtMs && cached.expiresAtMs - now > 15_000) {
+        return cached.token;
+    }
+
+    try {
+        const { data } = await userApi.post(`/devices/${encodeURIComponent(deviceId)}/access-token`);
+        const token = data && data.token;
+        const ttl = (data && data.expiresIn) || '2m';
+
+        // best-effort parse ttl
+        let ttlMs = 120_000;
+        if (typeof ttl === 'number') ttlMs = ttl * 1000;
+        if (typeof ttl === 'string') {
+            const m = ttl.match(/^\s*(\d+)\s*(ms|s|m|h)\s*$/i);
+            if (m) {
+                const n = Number(m[1]);
+                const unit = m[2].toLowerCase();
+                ttlMs = unit === 'ms' ? n : unit === 's' ? n * 1000 : unit === 'm' ? n * 60_000 : n * 3_600_000;
+            }
+        }
+
+        if (token) {
+            deviceAccessTokenCache.set(deviceId, { token, expiresAtMs: now + ttlMs });
+            return token;
+        }
+    } catch (e) {
+        // silent; caller will proceed without token and backend will reject
+    }
+
+    return null;
+}
+
 // 🆕 Clear API key cache (called on logout or device change)
 export function clearDeviceApiKeyCache() {
     deviceApiKeyCache.clear();
+    deviceAccessTokenCache.clear();
 }
 
 // Enhanced deviceApi interceptor - Session-based approach
@@ -162,8 +202,12 @@ deviceApi.interceptors.request.use(async (config) => {
         const apiKey = await fetchDeviceApiKey(deviceId);
         if (apiKey) {
             config.headers['X-Forwardin-Key-Device'] = apiKey;
-        } else {
-            // console.warn('Could not retrieve API key for device:', deviceId);
+        }
+
+        // NEW: attach device access token for /api
+        const dat = await fetchDeviceAccessToken(deviceId);
+        if (dat) {
+            config.headers.Authorization = `Bearer ${dat}`;
         }
     } else {
         // Fallback: auto-select first available device
