@@ -9,15 +9,24 @@
             fill="none"
             stroke="currentColor"
             stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <!-- Clipboard dengan checklist untuk feedback -->
+            <!-- Clipboard body -->
             <path
-              d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0-2-2V7a2 2 0 0 0-2-2h-2"
+              d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
             />
+
+            <!-- Clipboard top -->
             <rect x="9" y="3" width="6" height="4" rx="1" />
+
+            <!-- Check icon -->
             <path d="M9 12l2 2 4-4" />
+
+            <!-- Text line -->
             <line x1="9" y1="17" x2="15" y2="17" />
           </svg>
+
           Feedback Bulanan (Algo)
         </h2>
         <p class="subtitle">
@@ -46,77 +55,29 @@
                 </svg>
                 Device WhatsApp
               </h3>
+              <button
+                type="button"
+                class="btn-refresh-header"
+                @click="devicePicker?.loadDevices()"
+                :disabled="devicePicker?.loading"
+                title="Refresh device list"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  :class="{ spinning: devicePicker?.loading }"
+                >
+                  <path
+                    d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                  />
+                </svg>
+                {{ devicePicker?.loading ? "Loading..." : "Refresh" }}
+              </button>
             </div>
             <div class="card-body card-body-compact">
-              <!-- Device Info Card Compact -->
-              <div v-if="selectedDevice && !showDeviceList" class="device-info-compact">
-                <div
-                  class="device-avatar-compact"
-                  :class="{ online: selectedDevice.isConnected }"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect x="5" y="2" width="14" height="20" rx="2" />
-                    <line x1="12" y1="18" x2="12" y2="18" />
-                  </svg>
-                </div>
-                <div class="device-info-text">
-                  <div class="device-name-compact">
-                    {{ selectedDevice.name || "Unknown" }}
-                    <span v-if="selectedDevice.phone" class="device-phone-inline">
-                      - {{ selectedDevice.phone }}</span
-                    >
-                  </div>
-                  <div
-                    class="device-status-compact"
-                    :class="{ online: selectedDevice.isConnected }"
-                  >
-                    {{ selectedDevice.isConnected ? "● Online" : "● Offline" }}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  class="btn-change-compact"
-                  @click="showDeviceList = true"
-                >
-                  Ganti
-                </button>
-              </div>
-
-              <!-- Device List Compact -->
-              <div v-if="!selectedDevice || showDeviceList" class="device-list-compact">
-                <div v-if="loadingDevices" class="device-loading">
-                  <div class="spinner-small"></div>
-                  <span>Memuat devices...</span>
-                </div>
-                <div v-else-if="availableDevices.length === 0" class="device-empty">
-                  <p>Tidak ada device tersedia</p>
-                </div>
-                <button
-                  v-else
-                  v-for="device in availableDevices"
-                  :key="device.id"
-                  type="button"
-                  class="device-item-compact"
-                  :class="{ online: device.isConnected }"
-                  @click="handleSelectDevice(device.id)"
-                >
-                  <span
-                    >{{ device.name
-                    }}<span v-if="device.phone" class="device-phone-inline">
-                      - {{ device.phone }}</span
-                    ></span
-                  >
-                  <span class="status-dot" :class="{ online: device.isConnected }"></span>
-                </button>
-              </div>
+              <DevicePicker ref="devicePicker" @device-changed="onDeviceChanged" />
             </div>
           </div>
 
@@ -448,282 +409,12 @@
               </svg>
               Penerima
             </h3>
-            <span v-if="recipients.length > 0" class="badge-count"
-              >{{ recipients.length }} dipilih</span
+            <span v-if="recipientsPicker?.recipients?.length > 0" class="badge-count"
+              >{{ recipientsPicker.recipients.length }} dipilih</span
             >
           </div>
           <div class="card-body card-body-compact">
-            <!-- Selected Recipients -->
-            <div v-if="recipients.length > 0" class="selected-recipients">
-              <div class="recipients-chips">
-                <span v-for="(r, i) in recipients" :key="r + i" class="recipient-chip">
-                  <span class="chip-label">{{ chipLabel(r) }}</span>
-                  <button type="button" class="chip-close" @click="removeRecipient(i)">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </span>
-              </div>
-            </div>
-
-            <!-- Add Recipients Tabs -->
-            <div class="recipient-tabs">
-              <button
-                type="button"
-                class="recipient-tab"
-                :class="{ active: activeTab === 'manual' }"
-                @click="activeTab = 'manual'"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0-2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-                Manual
-              </button>
-              <button
-                type="button"
-                class="recipient-tab"
-                :class="{ active: activeTab === 'contacts' }"
-                @click="activeTab = 'contacts'"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                Kontak
-              </button>
-              <button
-                type="button"
-                class="recipient-tab"
-                :class="{ active: activeTab === 'groups' }"
-                @click="activeTab = 'groups'"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-
-                Grup
-              </button>
-              <button
-                type="button"
-                class="recipient-tab"
-                :class="{ active: activeTab === 'labels' }"
-                @click="activeTab = 'labels'"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
-                  />
-                  <line x1="7" y1="7" x2="7.01" y2="7" />
-                </svg>
-                Label
-              </button>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="tab-content">
-              <!-- Manual Tab -->
-              <div v-show="activeTab === 'manual'" class="tab-pane">
-                <div class="input-with-button">
-                  <input
-                    v-model="recipientInput"
-                    @keydown.enter.prevent="addRecipientsFromInput"
-                    placeholder="628123456789 (pisahkan dengan koma untuk banyak nomor)"
-                    class="form-input"
-                  />
-                  <button
-                    type="button"
-                    class="btn-primary"
-                    @click="addRecipientsFromInput"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Tambah
-                  </button>
-                </div>
-              </div>
-
-              <!-- Contacts Tab -->
-              <div v-show="activeTab === 'contacts'" class="tab-pane">
-                <div class="input-with-button">
-                  <select v-model="selectedContactId" class="form-select">
-                    <option value="" disabled>Pilih kontak...</option>
-                    <option v-for="c in contacts" :key="c.id" :value="c.phone">
-                      {{ contactDisplay(c) }}
-                    </option>
-                  </select>
-                  <button
-                    type="button"
-                    class="btn-primary"
-                    @click="addSelectedContact"
-                    :disabled="!selectedContactId"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Tambah
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    @click="loadContacts"
-                    :disabled="loadingContacts"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      :class="{ spinning: loadingContacts }"
-                    >
-                      <path
-                        d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Groups Tab -->
-              <div v-show="activeTab === 'groups'" class="tab-pane">
-                <div class="input-with-button">
-                  <select v-model="selectedGroupId" class="form-select">
-                    <option value="" disabled>Pilih grup...</option>
-                    <option v-for="g in groups" :key="g.value" :value="g.value">
-                      {{ g.label }}
-                    </option>
-                  </select>
-                  <button
-                    type="button"
-                    class="btn-primary"
-                    @click="addSelectedGroup"
-                    :disabled="!selectedGroupId"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Tambah
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    @click="loadGroups"
-                    :disabled="loadingGroups"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      :class="{ spinning: loadingGroups }"
-                    >
-                      <path
-                        d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Labels Tab -->
-              <div v-show="activeTab === 'labels'" class="tab-pane">
-                <div class="input-with-button">
-                  <select v-model="selectedLabelValue" class="form-select">
-                    <option value="" disabled>Pilih label...</option>
-                    <option v-for="l in labels" :key="l.value" :value="l.value">
-                      {{ l.label }}
-                    </option>
-                  </select>
-                  <button
-                    type="button"
-                    class="btn-primary"
-                    @click="addSelectedLabel"
-                    :disabled="!selectedLabelValue"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Tambah
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    @click="loadLabels"
-                    :disabled="loadingLabels"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      :class="{ spinning: loadingLabels }"
-                    >
-                      <path
-                        d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <RecipientsPicker ref="recipientsPicker" />
           </div>
         </div>
       </div>
@@ -737,7 +428,7 @@
           :disabled="!isFormValid || generating"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <path d="M1 12s4-8 11-8 11 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>
           Preview
@@ -996,13 +687,24 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
-import { useDevices } from "../composables/useDevices.js";
-import { useGroups } from "../composables/useGroups.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
 import { getImagesAsBase64 } from "../utils/images.js";
+import { normalizePhoneNumber, isValidPhoneNumber } from "../utils/phone.js";
 import html2pdf from "html2pdf.js";
+import RecipientsPicker from "../components/RecipientsPicker.vue";
+import DevicePicker from "../components/DevicePicker.vue";
 
 const toast = useToast();
+
+// Template ref for DevicePicker
+const devicePicker = ref(null);
+
+// Template ref for RecipientsPicker
+const recipientsPicker = ref(null);
+
+// Computed untuk mendapatkan recipients dari RecipientsPicker
+const recipients = computed(() => recipientsPicker.value?.recipients || []);
+const recipientLabels = computed(() => recipientsPicker.value?.recipientLabels || {});
 
 // 🆕 Fungsi helper untuk mengubah string menjadi Title Case
 const toTitleCase = (str) => {
@@ -1014,16 +716,6 @@ const toTitleCase = (str) => {
     .join(" ");
 };
 
-// 🆕 Use device composable
-const {
-  selectedDeviceId,
-  selectedDevice,
-  availableDevices,
-  loading: loadingDevices,
-  loadDevices,
-  selectDevice,
-} = useDevices();
-
 const form = ref({
   studentName: "",
   courseName: "",
@@ -1034,13 +726,11 @@ const form = ref({
   tutorComment: "",
   recipientPhone: "",
   deviceId: "",
-  // 🆕 New fields
-  rating: 5, // Default 5 bintang
-  reportBy: "", // Laporan dibuat oleh
-  selectedComments: [], // Array untuk menyimpan checkbox yang dipilih
+  rating: 5,
+  reportBy: "",
+  selectedComments: [],
 });
 
-// 🆕 LocalStorage keys (PINDAH KE SINI - setelah form didefinisikan)
 const STORAGE_KEYS = {
   STUDENT_NAME: "monthlyFeedback_studentName",
   COURSE_NAME: "monthlyFeedback_courseName",
@@ -1050,10 +740,9 @@ const STORAGE_KEYS = {
   REPORT_BY: "monthlyFeedback_reportBy",
   RATING: "monthlyFeedback_rating",
   SELECTED_COMMENTS: "monthlyFeedback_selectedComments",
-  CUSTOM_COMMENTS: "monthlyFeedback_customComments", // 🔥 TAMBAH: Key untuk menyimpan teks custom comments
+  CUSTOM_COMMENTS: "monthlyFeedback_customComments",
 };
 
-// 🆕 Fungsi untuk load data dari localStorage
 const loadSavedData = () => {
   try {
     const savedStudentName = localStorage.getItem(STORAGE_KEYS.STUDENT_NAME);
@@ -1064,7 +753,7 @@ const loadSavedData = () => {
     const savedReportBy = localStorage.getItem(STORAGE_KEYS.REPORT_BY);
     const savedRating = localStorage.getItem(STORAGE_KEYS.RATING);
     const savedSelectedComments = localStorage.getItem(STORAGE_KEYS.SELECTED_COMMENTS);
-    const savedCustomComments = localStorage.getItem(STORAGE_KEYS.CUSTOM_COMMENTS); // 🔥 TAMBAH: Load custom comments
+    const savedCustomComments = localStorage.getItem(STORAGE_KEYS.CUSTOM_COMMENTS);
 
     if (savedStudentName) form.value.studentName = savedStudentName;
     if (savedCourseName) form.value.courseName = savedCourseName;
@@ -1074,36 +763,26 @@ const loadSavedData = () => {
     if (savedReportBy) form.value.reportBy = savedReportBy;
     if (savedRating) form.value.rating = parseInt(savedRating);
 
-    // Load selected comments
     if (savedSelectedComments) {
       try {
         form.value.selectedComments = JSON.parse(savedSelectedComments);
-      } catch (e) {
-        // console.error("Error parsing saved selected comments:", e);
-      }
+      } catch (e) {}
     }
 
-    // 🔥 TAMBAH: Load custom comments text
     if (savedCustomComments) {
       try {
         const customCommentsData = JSON.parse(savedCustomComments);
-        // Restore teks custom comments ke commentCategories
         commentCategories.value.custom.forEach((comment) => {
           const savedComment = customCommentsData.find((c) => c.id === comment.id);
           if (savedComment && savedComment.text) {
             comment.text = savedComment.text;
           }
         });
-      } catch (e) {
-        // console.error("Error parsing saved custom comments:", e);
-      }
+      } catch (e) {}
     }
-  } catch (e) {
-    // console.error("Error loading saved data:", e);
-  }
+  } catch (e) {}
 };
 
-// 🆕 Fungsi untuk save data ke localStorage
 const saveDataToStorage = () => {
   try {
     if (form.value.studentName) {
@@ -1128,7 +807,6 @@ const saveDataToStorage = () => {
       localStorage.setItem(STORAGE_KEYS.RATING, form.value.rating.toString());
     }
 
-    // Save selected comments
     if (form.value.selectedComments && form.value.selectedComments.length > 0) {
       localStorage.setItem(
         STORAGE_KEYS.SELECTED_COMMENTS,
@@ -1136,23 +814,18 @@ const saveDataToStorage = () => {
       );
     }
 
-    // 🔥 TAMBAH: Save custom comments text ke localStorage
     const customComments = commentCategories.value.custom
-      .filter((comment) => comment.text && comment.text.trim()) // Hanya simpan yang ada isinya
+      .filter((comment) => comment.text && comment.text.trim())
       .map((comment) => ({ id: comment.id, text: comment.text }));
 
     if (customComments.length > 0) {
       localStorage.setItem(STORAGE_KEYS.CUSTOM_COMMENTS, JSON.stringify(customComments));
     } else {
-      // Hapus dari localStorage jika tidak ada custom comments
       localStorage.removeItem(STORAGE_KEYS.CUSTOM_COMMENTS);
     }
-  } catch (e) {
-    // console.error("Error saving data:", e);
-  }
+  } catch (e) {}
 };
 
-// 🆕 Fungsi untuk clear saved data
 const clearSavedData = () => {
   try {
     Object.values(STORAGE_KEYS).forEach((key) => {
@@ -1166,17 +839,13 @@ const clearSavedData = () => {
     form.value.reportBy = "";
     form.value.rating = 5;
     form.value.selectedComments = [];
-    // Reset custom comments text
     commentCategories.value.custom.forEach((comment) => {
       comment.text = "";
     });
     toast.success("Data tersimpan berhasil dihapus");
-  } catch (e) {
-    // console.error("Error clearing saved data:", e);
-  }
+  } catch (e) {}
 };
 
-// 🆕 Watch untuk auto-save saat user mengisi form (PINDAH KE SINI)
 watch(() => form.value.studentName, saveDataToStorage);
 watch(() => form.value.courseName, saveDataToStorage);
 watch(() => form.value.month, saveDataToStorage);
@@ -1186,34 +855,6 @@ watch(() => form.value.reportBy, saveDataToStorage);
 watch(() => form.value.rating, saveDataToStorage);
 watch(() => form.value.selectedComments, saveDataToStorage, { deep: true });
 
-// 🆕 Computed untuk device list (devices yang tidak dipilih)
-const otherDevices = computed(() => {
-  if (!selectedDeviceId.value) {
-    return availableDevices.value;
-  }
-  // Jika hanya ada 1 device dan sudah dipilih, jangan tampilkan list
-  if (availableDevices.value.length === 1) {
-    return [];
-  }
-  // Tampilkan devices lain yang tidak dipilih
-  return availableDevices.value.filter((d) => d.id !== selectedDeviceId.value);
-});
-
-// 🆕 Fungsi untuk handle select device
-const handleSelectDevice = (deviceId) => {
-  selectDevice(deviceId);
-  form.value.deviceId = deviceId;
-  showDeviceList.value = false; // Hide device list after selection
-};
-
-// 🆕 Fungsi untuk handle change device
-const handleChangeDevice = () => {
-  selectDevice(null);
-  form.value.deviceId = "";
-  showDeviceList.value = true; // Show device list when changing device
-};
-
-// 🆕 Data checkbox komentar
 const commentCategories = ref({
   kehadiran: [
     {
@@ -1295,34 +936,27 @@ const commentCategories = ref({
   ],
 });
 
-// 🆕 Helper untuk replace nama di komentar
 const replaceNameInComment = (text, studentName) => {
-  // Replace placeholder nama dengan nama siswa yang sebenarnya (Title Case)
   const formattedName = toTitleCase(studentName);
   return text.replace(/M\. Alghifari Setyawan/g, formattedName);
 };
 
-// 🆕 Computed untuk nama siswa yang sudah diformat
 const formattedStudentName = computed(() => {
   return toTitleCase(form.value.studentName);
 });
 
-// 🆕 Computed untuk reportBy yang sudah diformat (Title Case)
 const formattedReportBy = computed(() => {
   return toTitleCase(form.value.reportBy);
 });
 
-// 🆕 Computed untuk mendapatkan komentar yang dipilih dengan nama yang sudah diganti
 const selectedCommentsText = computed(() => {
   if (!form.value.selectedComments || form.value.selectedComments.length === 0) {
     return "";
   }
 
-  // Ambil maksimal 3 komentar pertama
   const selectedIds = form.value.selectedComments.slice(0, 3);
   const comments = [];
 
-  // Loop semua kategori untuk mencari komentar yang dipilih
   Object.values(commentCategories.value).forEach((category) => {
     category.forEach((comment) => {
       if (selectedIds.includes(comment.id)) {
@@ -1339,14 +973,11 @@ const selectedCommentsText = computed(() => {
   return comments.join("\n\n");
 });
 
-// 🆕 Toggle checkbox
 const toggleComment = (commentId) => {
   const index = form.value.selectedComments.indexOf(commentId);
   if (index > -1) {
-    // Remove if already selected
     form.value.selectedComments.splice(index, 1);
   } else {
-    // Add if not selected (max 3)
     if (form.value.selectedComments.length < 3) {
       form.value.selectedComments.push(commentId);
     } else {
@@ -1355,13 +986,11 @@ const toggleComment = (commentId) => {
   }
 };
 
-// 🆕 Update custom comment text
 const updateCustomComment = (commentId, text) => {
   const category = commentCategories.value.custom;
   const comment = category.find((c) => c.id === commentId);
   if (comment) {
     comment.text = text;
-    // 🔥 TAMBAH: Panggil saveDataToStorage() agar teks tersimpan ke localStorage
     saveDataToStorage();
   }
 };
@@ -1374,38 +1003,17 @@ const sending = ref(false);
 const error = ref("");
 const success = ref("");
 
-// 🆕 Send Results & Rate Limit Info
 const sendResults = ref([]);
 const showSendResults = ref(false);
 const rateLimitInfo = ref(null);
-const savedRecipientLabels = ref({}); // 🔥 Simpan copy recipientLabels untuk ditampilkan di hasil
-
-// 🆕 Recipient management
-const recipients = ref([]);
-const activeTab = ref("manual");
-const recipientInput = ref("");
-const recipientLabels = ref({});
-
-// 🆕 Contacts
-const contacts = ref([]);
-const selectedContactId = ref("");
-const loadingContacts = ref(false);
-
-// 🆕 Groups
-const { groups, loadingGroups, loadGroups, ensureFullGroupJid } = useGroups();
-const selectedGroupId = ref("");
-
-// 🆕 Labels
-const labels = ref([]);
-const selectedLabelValue = ref("");
-const loadingLabels = ref(false);
+const savedRecipientLabels = ref({});
 
 const selectedTemplate = computed(() => {
   if (!form.value.courseName || !form.value.month) return null;
   return templates.value.find(
     (t) =>
       t.courseName === form.value.courseName &&
-      Number(t.month) === Number(form.value.month) // 🔥 FIX: gunakan form.value.month bukan t.month
+      Number(t.month) === Number(form.value.month)
   );
 });
 
@@ -1417,219 +1025,24 @@ const availableMonths = computed(() => {
     .sort((a, b) => a - b);
 });
 
-// 🆕 Helper functions untuk recipients
-const chipLabel = (r) => recipientLabels.value[r] || r;
-
-// 🔥 Helper untuk mendapatkan display name dari recipient (untuk hasil pengiriman)
 const getRecipientDisplayName = (recipient) => {
-  // Cek di savedRecipientLabels dulu (karena recipientLabels sudah di-reset setelah kirim)
   if (savedRecipientLabels.value[recipient]) {
     return savedRecipientLabels.value[recipient];
   }
-  // Cek di recipientLabels
   if (recipientLabels.value[recipient]) {
     return recipientLabels.value[recipient];
   }
-  // Jika berupa group JID, format lebih ramah
   if (recipient && recipient.includes("@g.us")) {
     return `Grup: ${recipient.replace("@g.us", "")}`;
   }
-  // Jika berupa label
   if (recipient && recipient.startsWith("label_")) {
     return `Label: ${recipient.replace("label_", "")}`;
   }
-  // Return as-is untuk nomor telepon
   return recipient;
 };
 
-const isValidPhoneNumber = (phone) => {
-  const cleaned = String(phone).replace(/\D/g, "");
-  if (!cleaned.startsWith("62")) return false;
-  if (cleaned.length < 10 || cleaned.length > 15) return false;
-  return true;
-};
-
-const addRecipientsFromInput = () => {
-  if (!recipientInput.value) return;
-
-  const items = recipientInput.value
-    .split(/[\s,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const validNumbers = [];
-  const invalidNumbers = [];
-
-  items.forEach((item) => {
-    if (isValidPhoneNumber(item)) {
-      validNumbers.push(item);
-    } else {
-      invalidNumbers.push(item);
-    }
-  });
-
-  if (validNumbers.length > 0) {
-    const set = new Set([...recipients.value, ...validNumbers]);
-    recipients.value = Array.from(set);
-  }
-
-  if (validNumbers.length > 0 && invalidNumbers.length > 0) {
-    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-    toast.error(
-      `${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(", ")}`
-    );
-  } else if (validNumbers.length > 0) {
-    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-  } else if (invalidNumbers.length > 0) {
-    toast.error(
-      `Nomor tidak valid: ${invalidNumbers.join(
-        ", "
-      )}. Format harus: 62xxx (minimal 10 digit)`
-    );
-  }
-
-  recipientInput.value = "";
-};
-
-const removeRecipient = (index) => {
-  recipients.value.splice(index, 1);
-};
-
-const contactLabelNames = (c) => {
-  try {
-    const arr = (c?.ContactLabel || [])
-      .map((x) => x?.label?.name)
-      .filter((n) => n && !String(n).startsWith("device_"));
-    return arr.join(", ");
-  } catch {
-    return "";
-  }
-};
-
-const contactDisplay = (c) => {
-  const name = `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.phone || "-";
-  const labelNames = contactLabelNames(c);
-  return labelNames ? `${name} (${c.phone}) - [${labelNames}]` : `${name} (${c.phone})`;
-};
-
-const loadContacts = async () => {
-  try {
-    loadingContacts.value = true;
-    const deviceId = selectedDeviceId.value || localStorage.getItem("device_selected_id");
-    const res = await userApi.get("/contacts", { params: deviceId ? { deviceId } : {} });
-    contacts.value = Array.isArray(res?.data) ? res.data : [];
-  } catch (e) {
-    toast.error(e?.response?.data?.message || e?.message || "Gagal memuat kontak");
-  } finally {
-    loadingContacts.value = false;
-  }
-};
-
-const addSelectedContact = () => {
-  if (!selectedContactId.value) return;
-  if (!recipients.value.includes(selectedContactId.value)) {
-    recipients.value.push(selectedContactId.value);
-    const found = contacts.value.find((c) => c.phone === selectedContactId.value);
-    if (found) {
-      const labelNames = contactLabelNames(found);
-      const firstName = found.firstName || "";
-      const lastName = found.lastName || "";
-      const labelPart = labelNames ? ` [${labelNames}]` : "";
-      recipientLabels.value[
-        selectedContactId.value
-      ] = `Kontak: ${firstName} ${lastName}${labelPart}`;
-    }
-  }
-  selectedContactId.value = "";
-};
-
-const addSelectedGroup = async () => {
-  if (!selectedGroupId.value) return;
-
-  const groupValue = selectedGroupId.value;
-
-  if (!recipients.value.includes(groupValue)) {
-    recipients.value.push(groupValue);
-    const found = groups.value.find((g) => g.value === groupValue);
-    if (found) {
-      recipientLabels.value[groupValue] = "Group: " + found.label;
-    }
-  }
-  selectedGroupId.value = "";
-};
-
-const mapLabels = (items) => {
-  const arr = Array.isArray(items) ? items : [];
-  return arr
-    .map((it) => {
-      if (typeof it === "string") {
-        const name = it;
-        return { value: "label_" + name, label: name };
-      }
-      const name = it.name || it.label || it.title || "";
-      const slug = it.slug || "";
-      const value = "label_" + (slug || name);
-      return name ? { value, label: name } : null;
-    })
-    .filter(Boolean);
-};
-
-const deriveLabelsFromContacts = () => {
-  const names = new Set();
-  (contacts.value || []).forEach((c) => {
-    (c.ContactLabel || []).forEach((cl) => {
-      const n = cl?.label?.name;
-      if (n && !String(n).startsWith("device_")) names.add(n);
-    });
-  });
-  return Array.from(names);
-};
-
-const loadLabels = async () => {
-  try {
-    loadingLabels.value = true;
-    const deviceId = selectedDeviceId.value || localStorage.getItem("device_selected_id");
-    const res = await userApi.get("/contacts/labels", {
-      params: deviceId ? { deviceId } : {},
-    });
-    const data = res?.data;
-    let list = Array.isArray(data?.labels)
-      ? data.labels
-      : Array.isArray(data)
-      ? data
-      : [];
-    if (!Array.isArray(list) || list.length === 0) {
-      if (!contacts.value || contacts.value.length === 0) {
-        await loadContacts();
-      }
-      list = deriveLabelsFromContacts();
-    }
-    labels.value = mapLabels(list);
-  } catch (_) {
-    if (!contacts.value || contacts.value.length === 0) {
-      await loadContacts().catch(() => {});
-    }
-    const list = deriveLabelsFromContacts();
-    labels.value = mapLabels(list);
-  } finally {
-    loadingLabels.value = false;
-  }
-};
-
-const addSelectedLabel = () => {
-  if (!selectedLabelValue.value) return;
-  const val = selectedLabelValue.value;
-  if (!recipients.value.includes(val)) {
-    recipients.value.push(val);
-    const found = labels.value.find((l) => l.value === val);
-    if (found) {
-      recipientLabels.value[val] = "Label: " + found.label;
-    }
-  }
-  selectedLabelValue.value = "";
-};
-
 const isFormValid = computed(() => {
+  const deviceId = devicePicker.value?.selectedDeviceId;
   return (
     form.value.studentName &&
     form.value.courseName &&
@@ -1638,9 +1051,9 @@ const isFormValid = computed(() => {
     form.value.referralLink &&
     form.value.rating &&
     form.value.reportBy &&
-    form.value.selectedComments.length > 0 && // 🔥 Ganti validasi dari tutorComment ke selectedComments
+    form.value.selectedComments.length > 0 &&
     recipients.value.length > 0 &&
-    selectedDeviceId.value &&
+    deviceId &&
     selectedTemplate.value
   );
 });
@@ -1651,7 +1064,7 @@ const previewData = computed(() => {
   const durationText = form.value.duration || "Bulan ke-" + form.value.month;
 
   return {
-    studentName: formattedStudentName.value, // 🔥 Gunakan nama yang sudah diformat
+    studentName: formattedStudentName.value,
     courseName: form.value.courseName,
     month: form.value.month,
     duration: durationText,
@@ -1665,12 +1078,11 @@ const previewData = computed(() => {
     tutorComment: form.value.tutorComment,
     recipients: recipients.value,
     rating: form.value.rating,
-    reportBy: formattedReportBy.value, // 🔥 UPDATE: Gunakan reportBy yang sudah diformat (Title Case)
+    reportBy: formattedReportBy.value,
     selectedComments: selectedCommentsText.value,
   };
 });
 
-// 🆕 Format reset time untuk rate limit
 const formatResetTime = (resetTime) => {
   if (!resetTime) return "-";
   try {
@@ -1691,7 +1103,6 @@ const loadTemplates = async () => {
     const { data } = await userApi.get("/algorithmics/monthly-templates");
     templates.value = data.templates || [];
 
-    // Extract unique courses
     const uniqueCourses = [...new Set(templates.value.map((t) => t.courseName))].sort();
     courses.value = uniqueCourses;
   } catch (e) {
@@ -1704,7 +1115,6 @@ const onCourseChange = () => {
 };
 
 const onMonthChange = () => {
-  // Auto-fill duration jika kosong
   if (!form.value.duration && form.value.month) {
     form.value.duration = "Bulan ke-" + form.value.month;
   }
@@ -1716,24 +1126,22 @@ const handleSubmit = async () => {
     return;
   }
 
-  // Generate preview dulu
   showPreview.value = true;
 };
 
 const handleGenerateAndSend = async () => {
   if (!previewData.value) return;
 
-  // Validasi device
-  if (!form.value.deviceId) {
+  const deviceId = devicePicker.value?.selectedDeviceId;
+  if (!deviceId) {
     error.value = "Silakan pilih device WhatsApp terlebih dahulu";
     toast.error("Silakan pilih device WhatsApp terlebih dahulu");
     return;
   }
 
-  // 🆕 Validasi recipients
   if (recipients.value.length === 0) {
-    error.value = "Silakan tambahkan minimal satu penerima";
-    toast.error("Silakan tambahkan minimal satu penerima");
+    error.value = "Silakan pilih minimal satu penerima";
+    toast.error("Silakan pilih minimal satu penerima");
     return;
   }
 
@@ -1741,12 +1149,12 @@ const handleGenerateAndSend = async () => {
   success.value = "";
   sending.value = true;
 
-  // 🆕 Reset send results
   sendResults.value = [];
   rateLimitInfo.value = null;
 
+  savedRecipientLabels.value = { ...recipientLabels.value };
+
   try {
-    // 🔥 FIX: Gunakan selectedCommentsText sebagai tutorComment agar backend bisa memproses
     const payload = {
       studentName: formattedStudentName.value,
       courseName: previewData.value.courseName,
@@ -1761,23 +1169,20 @@ const handleGenerateAndSend = async () => {
       referralLink: previewData.value.referralLink,
       tutorComment: selectedCommentsText.value,
       recipients: recipients.value,
-      deviceId: form.value.deviceId,
+      deviceId: deviceId,
       rating: previewData.value.rating,
       reportBy: previewData.value.reportBy,
     };
 
     const { data } = await userApi.post("/algorithmics/monthly-feedback/send", payload);
 
-    // 🆕 Capture send results dari response
     if (data.results && Array.isArray(data.results)) {
-      // 🔥 FIX: Backend returns status: 'success'/'failed', not success: true/false
       sendResults.value = data.results.map((r) => ({
         recipient: r.recipient,
         success: r.status === "success",
         error: r.error,
       }));
     } else {
-      // Fallback jika backend tidak mengembalikan results detail
       sendResults.value = recipients.value.map((r) => ({
         recipient: r,
         success: true,
@@ -1787,7 +1192,6 @@ const handleGenerateAndSend = async () => {
     const successCount = sendResults.value.filter((r) => r.success).length;
     const failedCount = sendResults.value.filter((r) => !r.success).length;
 
-    // 🆕 Capture rate limit info dari response
     if (data.rateLimit) {
       rateLimitInfo.value = data.rateLimit;
     }
@@ -1800,16 +1204,10 @@ const handleGenerateAndSend = async () => {
       toast.warning(`Terkirim: ${successCount}, Gagal: ${failedCount}`);
     }
 
-    // 🆕 Show results modal
     showSendResults.value = true;
 
-    // 🔥 Simpan copy recipientLabels sebelum reset untuk ditampilkan di hasil
-    savedRecipientLabels.value = { ...recipientLabels.value };
-
-    // Reset form data
     form.value.duration = "";
-    recipients.value = [];
-    recipientLabels.value = {};
+    recipientsPicker.value?.resetRecipients();
 
     showPreview.value = false;
   } catch (e) {
@@ -1818,13 +1216,10 @@ const handleGenerateAndSend = async () => {
     error.value = errorMsg;
     toast.error(errorMsg);
 
-    // 🆕 Capture rate limit info even on error
     if (e?.response?.data?.rateLimit) {
       rateLimitInfo.value = e.response.data.rateLimit;
     }
 
-    // 🆕 Show partial results if available
-    // 🔥 FIX: Juga konversi format status dari backend
     if (e?.response?.data?.results && Array.isArray(e.response.data.results)) {
       sendResults.value = e.response.data.results.map((r) => ({
         recipient: r.recipient,
@@ -1845,13 +1240,10 @@ const handleDownloadPDF = async () => {
 
   generating.value = true;
   try {
-    // Clone the template element
     const element = pdfTemplate.value.$el.cloneNode(true);
 
-    // Wait for images to load
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Replace all images with base64 (using PNG for transparency support)
     const images = element.querySelectorAll("img");
     const imagePromises = Array.from(images).map(async (img) => {
       try {
@@ -1869,24 +1261,20 @@ const handleDownloadPDF = async () => {
               canvas.height = tempImg.naturalHeight || tempImg.height;
 
               if (canvas.width === 0 || canvas.height === 0) {
-                // console.warn("Invalid image dimensions:", src);
                 resolve();
                 return;
               }
 
               const ctx = canvas.getContext("2d");
 
-              // Set transparent background instead of white/black
               ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-              // Draw image
               ctx.drawImage(tempImg, 0, 0);
 
-              // Use PNG for icons (supports transparency), JPEG for photos
               const isIcon =
                 img.classList.contains("icon-img") ||
                 img.classList.contains("icon-img-small") ||
-                img.classList.contains("icon-img-inline") || // 🔥 TAMBAH: Deteksi icon-img-inline (icon kado)
+                img.classList.contains("icon-img-inline") ||
                 img.classList.contains("icon-img-2");
               const base64 = isIcon
                 ? canvas.toDataURL("image/png", 1.0)
@@ -1899,27 +1287,23 @@ const handleDownloadPDF = async () => {
               img.style.background = "transparent";
               resolve();
             } catch (error) {
-              // console.error("Error converting image:", error);
               resolve();
             }
           };
 
           tempImg.onerror = () => {
-            // console.warn("Failed to load image:", src);
             resolve();
           };
 
           tempImg.src = src;
         });
-      } catch (error) {
-        // console.error("Error processing image:", error);
-      }
+      } catch (error) {}
     });
 
     await Promise.all(imagePromises);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const studentNameClean = formattedStudentName.value.replace(/\s+/g, "_"); // 🔥 Gunakan nama yang sudah diformat
+    const studentNameClean = formattedStudentName.value.replace(/\s+/g, "_");
     const monthNum = previewData.value.month;
     const fileName = "Feedback_" + studentNameClean + "_Bulan" + monthNum + ".pdf";
 
@@ -1964,64 +1348,20 @@ const handleDownloadPDF = async () => {
     await html2pdf().set(opt).from(element).save();
     toast.success("PDF berhasil didownload!");
   } catch (e) {
-    // console.error("Error generating PDF:", e);
     toast.error("Gagal generate PDF: " + (e.message || "Unknown error"));
   } finally {
     generating.value = false;
   }
 };
 
-const showDeviceList = ref(false);
+const onDeviceChanged = () => {
+  recipientsPicker.value?.resetRecipients();
+  toast.success("Device berhasil diganti. Data kontak, grup, dan label telah di-refresh.");
+};
 
 onMounted(async () => {
-  await Promise.allSettled([
-    loadTemplates(),
-    loadDevices(),
-    loadGroups(),
-    loadContacts(),
-    loadLabels(),
-  ]);
-
-  // 🆕 Load saved data from localStorage
   loadSavedData();
-
-  // Auto-select device if available
-  if (selectedDeviceId.value) {
-    form.value.deviceId = selectedDeviceId.value;
-  }
-});
-
-// Watch for device changes
-watch(selectedDeviceId, (newDeviceId) => {
-  if (newDeviceId) {
-    form.value.deviceId = newDeviceId;
-  }
-});
-
-// 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
-watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
-  if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
-    // ✅ Dispatch custom event untuk Dashboard.vue
-    window.dispatchEvent(new Event("deviceChanged"));
-
-    // Clear recipients ketika ganti device
-    recipients.value = [];
-    recipientLabels.value = {};
-    selectedContactId.value = "";
-    selectedGroupId.value = "";
-    selectedLabelValue = "";
-
-    // Auto-refresh semua data (termasuk GROUPS!)
-    await Promise.allSettled([
-      loadGroups({ force: true }), // 🔥 Tambahkan force: true untuk memaksa reload
-      loadContacts(),
-      loadLabels(),
-    ]);
-
-    toast.success(
-      "Device berhasil diganti. Data grup, kontak, dan label telah di-refresh."
-    );
-  }
+  loadTemplates();
 });
 </script>
 
@@ -2120,7 +1460,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   padding: 24px;
 }
 
-/* 🆕 Device Selector Styles */
 /* Button Refresh Header */
 .btn-refresh-header {
   display: flex;
@@ -2154,330 +1493,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 
 .btn-refresh-header svg.spinning {
   animation: spin 1s linear infinite;
-}
-
-/* Device Info Card */
-.device-info-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  border: 2px solid;
-  transition: all 0.3s;
-}
-
-.device-info-card.connected {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-color: #86efac;
-}
-
-.device-info-card.disconnected {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border-color: #fca5a5;
-}
-
-.device-avatar {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.3s;
-}
-
-.device-info-card.connected .device-avatar {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-}
-
-.device-info-card.disconnected .device-avatar {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.device-avatar svg {
-  width: 32px;
-  height: 32px;
-  color: white;
-}
-
-.status-indicator {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 16px;
-  height: 16px;
-  background: #ef4444;
-  border: 3px solid white;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.status-indicator.online {
-  background: #10b981;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
-.device-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.device-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.device-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.device-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.device-status.online {
-  color: #059669;
-}
-
-.device-status svg {
-  width: 8px;
-  height: 8px;
-}
-
-.device-divider {
-  color: #cbd5e1;
-}
-
-.device-id {
-  color: #64748b;
-}
-
-.btn-change-device {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: white;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  color: #475569;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.btn-change-device:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-}
-
-.btn-change-device svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Device Selector Empty State */
-.device-selector-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  margin-bottom: 24px;
-}
-
-.empty-icon {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-
-.empty-icon svg {
-  width: 32px;
-  height: 32px;
-  color: #4338ca;
-}
-
-.empty-text {
-  text-align: center;
-}
-
-.empty-text h4 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.empty-text p {
-  margin: 0;
-  color: #64748b;
-  font-size: 14px;
-}
-
-/* Device List */
-.device-list {
-  margin-top: 24px;
-}
-
-.device-list .form-label {
-  margin-bottom: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #475569;
-}
-
-.device-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.device-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-  width: 100%;
-}
-
-.device-item:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.device-item.active {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #3b82f6;
-}
-
-.device-item.connected {
-  border-color: #86efac;
-}
-
-.device-item.disconnected {
-  border-color: #fca5a5;
-  opacity: 0.7;
-}
-
-.device-item-avatar {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.device-item.connected .device-item-avatar {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-}
-
-.device-item.disconnected .device-item-avatar {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-}
-
-.device-item-avatar svg {
-  width: 22px;
-  height: 22px;
-  color: #4338ca;
-}
-
-.device-item.connected .device-item-avatar svg {
-  color: #059669;
-}
-
-.device-item.disconnected .device-item-avatar svg {
-  color: #dc2626;
-}
-
-.device-item-status {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 12px;
-  height: 12px;
-  background: #ef4444;
-  border: 2px solid white;
-  border-radius: 50%;
-}
-
-.device-item-status.online {
-  background: #10b981;
-}
-
-.device-item-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.device-item-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.device-item-status-text {
-  font-size: 12px;
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.device-item-status-text.online {
-  color: #059669;
 }
 
 /* Form Elements */
@@ -3017,60 +2032,10 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   height: 16px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .wrapper {
-    padding: 0 16px;
-  }
-
-  .form-layout {
-    grid-template-columns: 1fr !important;
-  }
-
-  .form-row,
-  .auto-filled-grid,
-  .preview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .device-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-section {
-    flex-direction: column;
-  }
-
-  .preview-modal {
-    width: 95%;
-    max-height: 95vh;
-  }
-
-  .device-info-card {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .btn-change-device {
-    width: 100%;
-    justify-content: center;
-  }
-
-  /* 🆕 Rating stars responsive */
-  .rating-stars .star {
-    font-size: 28px;
-  }
-
-  /* 🆕 Comment checkboxes responsive */
-  .comment-checkboxes {
-    max-height: 300px;
-  }
-}
-
-/* 🆕 Two Column Layout */
+/* Two Column Layout */
 .form-layout {
   display: grid;
-  grid-template-columns: 38fr 62fr; /* Kiri lebih kecil (38%), Kanan lebih lebar (62%) */
+  grid-template-columns: 38fr 62fr;
   gap: 20px;
   align-items: start;
 }
@@ -3081,7 +2046,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   gap: 16px;
 }
 
-/* 🆕 Full Height Card for Comments */
+/* Full Height Card for Comments */
 .card-full-height {
   height: 100%;
   display: flex;
@@ -3099,7 +2064,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   max-height: none;
 }
 
-/* 🆕 Selected Count Badge */
+/* Selected Count Badge */
 .selected-count-badge {
   padding: 4px 10px;
   background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
@@ -3109,13 +2074,13 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   font-weight: 600;
 }
 
-/* 🆕 Recipients Section - Full Width */
+/* Recipients Section - Full Width */
 .recipients-section {
   width: 100%;
   margin-top: 4px;
 }
 
-/* 🆕 Compact Card Styles */
+/* Compact Card Styles */
 .card-compact {
   margin-bottom: 0;
 }
@@ -3148,7 +2113,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   font-weight: 600;
 }
 
-/* 🆕 Compact Form Elements */
+/* Compact Form Elements */
 .form-group-compact {
   margin-bottom: 12px;
 }
@@ -3175,144 +2140,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   margin-top: 4px;
 }
 
-/* 🆕 Device Info Compact */
-.device-info-compact {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-}
-
-.device-avatar-compact {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.device-avatar-compact.online {
-  background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
-}
-
-.device-avatar-compact svg {
-  width: 20px;
-  height: 20px;
-  color: white;
-}
-
-.device-info-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.device-name-compact {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.device-phone-inline {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.device-status-compact {
-  font-size: 11px;
-  color: #dc2626;
-  font-weight: 500;
-  margin-top: 2px;
-}
-
-.device-status-compact.online {
-  color: #059669;
-}
-
-.btn-change-compact {
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btn-change-compact:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-}
-
-/* 🆕 Device List Compact */
-.device-list-compact {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.device-item-compact {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-  width: 100%;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1e293b;
-}
-
-.device-item-compact:hover {
-  background: #f8fafc;
-  border-color: #3b82f6;
-}
-
-.device-item-compact.online {
-  border-color: #86efac;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: #ef4444;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot.online {
-  background: #10b981;
-}
-
-/* 🆕 Auto-filled Compact */
-/* .auto-filled-compact {
-  margin-top: 12px;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-} */
-
+/* Auto-filled Compact */
 .auto-info {
   display: flex;
   gap: 8px;
@@ -3330,124 +2158,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   font-weight: 500;
 }
 
-/* 🆕 Recipient Tabs Compact */
-.recipient-tabs-compact {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
-  padding: 4px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.recipient-tabs-compact button {
-  flex: 1;
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: capitalize;
-}
-
-.recipient-tabs-compact button:hover {
-  color: #3b82f6;
-  background: white;
-}
-
-.recipient-tabs-compact button.active {
-  background: white;
-  color: #3b82f6;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* 🆕 Tab Content Compact */
-.tab-content-compact {
-  margin-bottom: 12px;
-}
-
-.recipient-input-compact {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.recipient-input-compact .form-input,
-.recipient-input-compact .form-select {
-  flex: 1;
-}
-
-.btn-add-compact {
-  width: 40px;
-  height: auto;
-  min-height: 40px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-add-compact:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-/* 🆕 Recipients Chips Compact */
-.recipients-chips-compact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-height: 120px;
-  overflow-y: auto;
-  padding: 8px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.chip-compact {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #475569;
-  font-weight: 500;
-  max-width: 100%;
-}
-
-.chip-compact button {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 0;
-  font-size: 16px;
-  line-height: 1;
-  transition: color 0.2s;
-  flex-shrink: 0;
-}
-
-.chip-compact button:hover {
-  color: #ef4444;
-}
-
-/* 🆕 Action Buttons Compact */
+/* Action Buttons Compact */
 .action-buttons-compact {
   display: flex;
   gap: 10px;
@@ -3505,13 +2216,10 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   height: 16px;
 }
 
-/* 🆕 Alert Compact */
+/* Alert Compact */
 .alert-compact {
   padding: 10px 14px;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid;
 }
 
 .alert-compact.alert-success {
@@ -3526,173 +2234,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   border-color: #fca5a5;
 }
 
-/* 🆕 Recipient Tabs Styling */
-.recipient-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e2e8f0;
-  overflow-x: auto;
-}
-
-.recipient-tabs button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  margin-bottom: -10px;
-  text-transform: capitalize;
-}
-
-.recipient-tabs button:hover {
-  color: #3b82f6;
-  background: #f8fafc;
-  border-radius: 10px 10px 0 0;
-}
-
-.recipient-tabs button.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
-  font-weight: 600;
-}
-
-/* Tab Content */
-.manual-recipient,
-.contacts-recipient,
-.groups-recipient,
-.labels-recipient {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  margin-bottom: 20px;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.manual-recipient .form-group,
-.contacts-recipient .form-group,
-.groups-recipient .form-group,
-.labels-recipient .form-group {
-  flex: 1;
-  margin: 0;
-}
-
-.manual-recipient button,
-.contacts-recipient button,
-.groups-recipient button,
-.labels-recipient button {
-  padding: 12px 18px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.manual-recipient button:hover:not(:disabled),
-.contacts-recipient button:hover:not(:disabled),
-.groups-recipient button:hover:not(:disabled),
-.labels-recipient button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.manual-recipient button:disabled,
-.contacts-recipient button:disabled,
-.groups-recipient button:disabled,
-.labels-recipient button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Recipients List */
-.recipients-list {
-  margin-top: 24px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.recipients-list h4 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #475569;
-}
-
-.recipients-list ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.recipients-list li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
-  color: #475569;
-  font-weight: 500;
-}
-
-.recipients-list li button {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-  font-size: 12px;
-}
-
-.recipients-list li button:hover {
-  color: #ef4444;
-}
-
-.recipients-list:empty::after {
-  content: "Belum ada penerima yang dipilih";
-  display: block;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 14px;
-}
-
-/* 🆕 Rating Stars */
+/* Rating Stars */
 .rating-stars {
   display: flex;
   gap: 8px;
@@ -3705,13 +2247,19 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;
+  pointer-events: auto;
+}
+
+.rating-stars .star.filled {
+  color: #fbbf24;
+  text-shadow: 0 2px 6px rgba(251, 191, 36, 0.35);
 }
 
 .rating-stars .star:hover {
   text-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
 }
 
-/* 🆕 Selected Count */
+/* Selected Count */
 .selected-count {
   font-size: 12px;
   color: #64748b;
@@ -3719,7 +2267,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   font-weight: 500;
 }
 
-/* 🆕 Comment Checkboxes */
+/* Comment Checkboxes */
 .comment-checkboxes {
   flex: 1;
   overflow-y: auto;
@@ -3802,7 +2350,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   font-weight: 500;
 }
 
-/* 🆕 Custom Comment */
+/* Custom Comment */
 .custom-textarea-inline {
   flex: 1;
   font-size: 12px;
@@ -3831,7 +2379,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   color: #94a3b8;
 }
 
-/* 🆕 Custom Textarea Wrapper */
+/* Custom Textarea Wrapper */
 .custom-textarea-wrapper {
   display: flex;
   flex-direction: column;
@@ -3849,43 +2397,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   color: #ef4444;
 }
 
-/* 🆕 Selected Comments Preview */
-.selected-comments-preview {
-  margin-top: 16px;
-  padding: 12px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
-  border-radius: 8px;
-}
-
-.selected-comments-preview .form-label {
-  margin-bottom: 8px;
-  color: #075985;
-  font-weight: 600;
-}
-
-.preview-text {
-  font-size: 13px;
-  color: #0c4a6e;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  max-height: 200px;
-  overflow-y: auto;
-  padding: 8px;
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #bae6fd;
-}
-
-/* 🆕 Selected Count */
-.selected-count {
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-/* 🆕 Badge Count (untuk header recipients) */
+/* Badge Count (untuk header recipients) */
 .badge-count {
   padding: 6px 12px;
   background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
@@ -3896,215 +2408,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   border: 1px solid #93c5fd;
 }
 
-/* 🆕 Selected Recipients */
-.selected-recipients {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.recipients-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.recipient-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
-  color: #475569;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.recipient-chip:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.chip-label {
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chip-close {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-}
-
-.chip-close:hover {
-  color: #ef4444;
-}
-
-.chip-close svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* 🆕 Recipient Tabs (modern dengan icon) */
-.recipient-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e2e8f0;
-  overflow-x: auto;
-}
-
-.recipient-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  margin-bottom: -10px;
-}
-
-.recipient-tab:hover {
-  color: #3b82f6;
-  background: #f8fafc;
-  border-radius: 10px 10px 0 0;
-}
-
-.recipient-tab.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
-  font-weight: 600;
-}
-
-.recipient-tab svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* 🆕 Tab Content */
-.tab-content {
-  margin-top: 16px;
-}
-
-.tab-pane {
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 🆕 Input with Button */
-.input-with-button {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.input-with-button .form-input,
-.input-with-button .form-select {
-  flex: 1;
-}
-
-.btn-primary,
-.btn-secondary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 18px;
-  border: 1.5px solid;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border-color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #475569;
-  border-color: #cbd5e1;
-  padding: 12px;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  transform: translateY(-1px);
-}
-
-.btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary svg,
-.btn-secondary svg {
-  width: 18px;
-  height: 18px;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 🆕 Comment Checkboxes */
-
-/* 🆕 Clear Data Button */
+/* Clear Data Button */
 .btn-clear-data {
   display: flex;
   align-items: center;
@@ -4132,7 +2436,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   height: 14px;
 }
 
-/* 🆕 Button Send with Loading */
+/* Button Send with Loading */
 .btn-send {
   position: relative;
   min-width: 160px;
@@ -4159,63 +2463,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   font-weight: 600;
 }
 
-/* 🆕 Sending Overlay */
-.sending-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.sending-content {
-  text-align: center;
-  color: white;
-}
-
-.sending-spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 16px;
-}
-
-.sending-progress {
-  width: 100%;
-  max-width: 300px;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-top: 16px;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 100%;
-  background: white;
-  animation: progress 2s linear infinite;
-}
-
-@keyframes progress {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-/* 🆕 Results Modal */
+/* Results Modal */
 .results-modal {
   background: white;
   border-radius: 20px;
@@ -4507,8 +2755,39 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   color: #dc2626;
 }
 
-/* Responsive for Results Modal */
+/* Responsive */
 @media (max-width: 768px) {
+  .wrapper {
+    padding: 0 16px;
+  }
+
+  .form-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-row,
+  .auto-filled-grid,
+  .preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-section {
+    flex-direction: column;
+  }
+
+  .preview-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .rating-stars .star {
+    font-size: 28px;
+  }
+
+  .comment-checkboxes {
+    max-height: 300px;
+  }
+
   .results-summary {
     grid-template-columns: 1fr;
   }
@@ -4523,4 +2802,3 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   }
 }
 </style>
-```
