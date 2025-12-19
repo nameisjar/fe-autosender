@@ -1,13 +1,11 @@
 export function normalizePhoneNumber(phone) {
   if (!phone) return "";
 
-  // Remove all non-digit characters except leading +
-  let cleaned = phone.toString().replace(/[^\d+]/g, "");
+  // Convert to string
+  let cleaned = phone.toString();
 
-  // Handle +62 format
-  if (cleaned.startsWith("+62")) {
-    cleaned = cleaned.substring(1);
-  }
+  // Remove all non-digit characters (spaces, dashes, parentheses, plus sign, etc.)
+  cleaned = cleaned.replace(/[^\d]/g, "");
 
   // Handle 08xx format -> 628xx
   if (cleaned.startsWith("08")) {
@@ -15,7 +13,7 @@ export function normalizePhoneNumber(phone) {
   }
 
   // Handle 8xx format -> 628xx (sometimes users just type 812...)
-  if (cleaned.startsWith("8")) {
+  if (cleaned.startsWith("8") && !cleaned.startsWith("62")) {
     cleaned = "62" + cleaned;
   }
 

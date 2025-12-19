@@ -103,8 +103,9 @@ export function useRecipients() {
   function addRecipientsFromInput() {
     if (!recipientInput.value) return;
 
+    // Split only by comma, not by space (to allow formats like "+62 (812) 215-24-351")
     const items = recipientInput.value
-      .split(/[\s,]+/)
+      .split(/,/)
       .map((s) => s.trim())
       .filter(Boolean);
 
