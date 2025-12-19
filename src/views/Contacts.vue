@@ -262,7 +262,19 @@
                 </div>
               </td>
               <td class="col-phone">
-                <div class="phone-text">{{ contact.phone }}</div>
+                <div class="phone-wrapper">
+                  <div class="phone-text">{{ contact.phone }}</div>
+                  <button 
+                    class="btn-copy-phone" 
+                    @click="copyToClipboard(contact.phone)"
+                    title="Salin nomor"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
               </td>
               <td class="col-labels">
                 <div
@@ -274,10 +286,6 @@
                     :key="label"
                     class="label-chip-table"
                   >
-                    <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                      <line x1="7" y1="7" x2="7.01" y2="7"/>
-                    </svg> -->
                     {{ label }}
                   </div>
                 </div>
@@ -446,9 +454,7 @@
               <input
                 v-model="form.phone"
                 type="tel"
-                placeholder="628123456789"
-                pattern="628[0-9]{8,12}"
-                title="Format: 628xxxxxxxxx (dimulai dengan 628, panjang 11-15 digit)"
+                placeholder="Contoh: 0812-3456-7890 atau +62 812 3456 7890"
                 required
               />
               <small class="help-text">
@@ -462,7 +468,7 @@
                   <line x1="12" y1="16" x2="12" y2="12" />
                   <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
-                Format WhatsApp Indonesia: 628xxxxxxxxx (tanpa +, dimulai dengan 628)
+                Format: 08... atau +62... (Spasi, strip, dan kurung otomatis dihapus)
               </small>
             </div>
             <div class="form-group span-2">
@@ -762,10 +768,10 @@ const fetchDevices = async () => {
 
 const onDeviceChange = () => {
   localStorage.setItem("device_selected_id", selectedDeviceId.value);
-  
+
   // Dispatch custom event untuk same-tab communication
-  window.dispatchEvent(new Event('deviceChanged'));
-  
+  window.dispatchEvent(new Event("deviceChanged"));
+
   page.value = 1; // reset
   loadContacts();
 };
@@ -885,21 +891,32 @@ const editContact = (contact) => {
   labelInput.value = filteredContactLabels(contact).join(", ");
 };
 
-// New: Phone number validation function
-const validatePhoneNumber = (phone) => {
-  // Remove all spaces, dashes, and other non-digit characters
-  const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, "");
-
-  // Check if number starts with 628 and has proper length (11-15 digits total)
-  // 628 + 8-12 digits = 11-15 total digits
-  const whatsappPattern = /^628\d{8,12}$/;
-
-  return whatsappPattern.test(cleanPhone);
+// New: Format phone number (auto-convert 08 -> 628)
+const formatPhoneNumber = (phone) => {
+  let clean = String(phone || "").replace(/[\s\-\(\)\+]/g, "");
+  if (clean.startsWith("0")) {
+    clean = "62" + clean.slice(1);
+  } else if (clean.startsWith("8")) {
+    clean = "62" + clean;
+  }
+  return clean;
 };
 
-// New: Format phone number for display
-const formatPhoneNumber = (phone) => {
-  return phone.replace(/[\s\-\(\)\+]/g, "");
+// New: Phone number validation function
+const validatePhoneNumber = (phone) => {
+  const formatted = formatPhoneNumber(phone);
+  // Validasi umum: 10-15 digit angka, harus diawali 62
+  return /^62\d{8,15}$/.test(formatted);
+};
+
+// New: Copy to clipboard
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success("Nomor disalin ke clipboard");
+  } catch (err) {
+    toast.error("Gagal menyalin nomor");
+  }
 };
 
 const saveContact = async () => {
@@ -911,7 +928,7 @@ const saveContact = async () => {
   // Validate phone number format
   if (!validatePhoneNumber(form.value.phone)) {
     toast.error(
-      "Format nomor tidak valid. Gunakan format WhatsApp Indonesia yang dimulai dengan 628 (contoh: 628123456789)"
+      "Format nomor tidak valid. Pastikan nomor terdiri dari 10-15 digit angka."
     );
     return;
   }
@@ -1106,14 +1123,8 @@ const exportContactsFile = async () => {
   exportBusy.value = true;
   err.value = "";
   try {
-    const apiBase =
-      (import.meta.env && import.meta.env.VITE_API_BASE_URL) ||
-      (window.location.port === "5173"
-        ? "http://localhost:3000"
-        : window.location.origin);
-    const url = `${apiBase}/contacts/export-contacts`;
-
-    const response = await userApi.get(url, {
+    // Use relative path; baseURL is handled by userApi (API_BASE)
+    const response = await userApi.get("/contacts/export-contacts", {
       params: { deviceId: selectedDeviceId.value },
       responseType: "blob",
     });
@@ -1592,19 +1603,23 @@ onMounted(async () => {
 
 /* Table Columns */
 .contacts-table .col-name {
-  min-width: 220px;
+  width: 30%;
+  min-width: 200px;
 }
 
 .contacts-table .col-phone {
-  min-width: 160px;
+  width: 25%;
+  min-width: 180px;
 }
 
 .contacts-table .col-labels {
+  width: 35%;
   min-width: 200px;
 }
 
 .contacts-table .col-actions {
-  width: 100px;
+  width: 10%;
+  min-width: 100px;
   text-align: center;
 }
 
@@ -1648,11 +1663,45 @@ onMounted(async () => {
 }
 
 /* Phone Text */
+.phone-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .phone-text {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: #475569;
   font-size: 13px;
   font-weight: 500;
+}
+
+.btn-copy-phone {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #94a3b8;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0; /* Hidden by default */
+}
+
+.contact-row:hover .btn-copy-phone {
+  opacity: 1; /* Show on hover */
+}
+
+.btn-copy-phone:hover {
+  background-color: #f1f5f9;
+  color: #3b82f6;
+}
+
+.btn-copy-phone svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* Labels in Table */

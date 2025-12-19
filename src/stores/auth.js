@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
-import { userApi } from '../api/http.js';
-import { clearDeviceApiKeyCache } from '../api/http.js';
+import { userApi, clearDeviceAccessTokenCache } from '../api/http.js';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({ me: null }),
@@ -25,8 +24,8 @@ export const useAuthStore = defineStore('auth', {
             // Clear user state
             this.me = null;
             
-            // 🔐 Clear device API key cache dari memory
-            clearDeviceApiKeyCache();
+            // 🔐 Clear device access token cache from memory
+            clearDeviceAccessTokenCache();
             
             // 🧹 Clear localStorage (except device selection for faster re-login)
             localStorage.removeItem('token');

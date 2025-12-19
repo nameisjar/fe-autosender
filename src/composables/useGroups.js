@@ -251,7 +251,7 @@ const setupGroupSocketListeners = (deviceId) => {
 // Listen for device changes to clear groups
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
-    if (e.key === 'device_selected_id' || e.key === 'device_api_key') {
+    if (e.key === 'device_selected_id') {
       clearGroups();
     }
   });

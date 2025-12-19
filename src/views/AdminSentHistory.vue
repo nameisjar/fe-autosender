@@ -695,6 +695,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { userApi, deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import { mediaUrl } from "../utils/mediaUrl.js";
 
 const toast = useToast();
 
@@ -1106,19 +1107,6 @@ const deleteAllSent = async () => {
     }
   };
   showConfirm.value = true;
-};
-
-const mediaUrl = (p) => {
-  if (!p) return "";
-
-  // Get API base URL from environment
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-
-  // Remove leading slash if present to avoid double slashes
-  const cleanPath = p.startsWith("/") ? p.slice(1) : p;
-
-  // Construct full URL with API base
-  return `${API_BASE}/${cleanPath}`;
 };
 
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || "");

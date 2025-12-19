@@ -4,7 +4,13 @@ import axios from 'axios';
 // Fall back to Vite proxy in dev, or current origin in prod.
 const API_BASE =
     (import.meta.env && import.meta.env.VITE_API_BASE_URL) ||
-    (import.meta.env && import.meta.env.DEV ? '' : window.location.origin);
+    (import.meta.env && import.meta.env.DEV
+        ? ''
+        : typeof window !== 'undefined'
+          ? window.location.origin
+          : '');
+
+export { API_BASE };
 
 // Lightweight global request scheduler to avoid bursts across all API instances
 const MIN_INTERVAL_MS = Number(
@@ -73,8 +79,12 @@ async function maybeRetry(err, instance) {
 export const userApi = axios.create({ baseURL: API_BASE });
 
 userApi.interceptors.request.use(async (config) => {
-    // space out requests globally
-    await scheduler.schedule();
+    // Optimasi: Hanya throttle request non-GET (POST, PUT, DELETE)
+    // Request GET (baca data) dibiarkan langsung jalan agar UI responsif
+    if (config.method && config.method.toLowerCase() !== 'get') {
+        await scheduler.schedule();
+    }
+
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
@@ -97,52 +107,9 @@ userApi.interceptors.response.use(
     },
 );
 
+// NOTE: internal FE uses /api as token-only (device access token).
+// FE must NOT send X-Forwardin-Key-Device or call /api-external.
 export const deviceApi = axios.create({ baseURL: API_BASE + '/api' });
-
-// 🆕 Cache untuk API key per session (dalam memory, tidak di localStorage)
-const deviceApiKeyCache = new Map();
-
-// Helper to fetch device detail and get API key securely
-async function fetchDeviceApiKey(deviceId) {
-    if (!deviceId) {
-        console.error('[fetchDeviceApiKey] No deviceId provided');
-        return null;
-    }
-    
-    // Check memory cache first
-    if (deviceApiKeyCache.has(deviceId)) {
-        // console.log('[fetchDeviceApiKey] Using cached API key for device:', deviceId);
-        return deviceApiKeyCache.get(deviceId);
-    }
-    
-    // console.log('[fetchDeviceApiKey] Fetching API key for device:', deviceId);
-    
-    // Fetch from backend
-    const paths = [
-        `/devices/${encodeURIComponent(deviceId)}`,
-    ];
-    
-    for (const p of paths) {
-        try {
-            // console.log('[fetchDeviceApiKey] Trying path:', p);
-            const { data } = await userApi.get(p);
-            
-            if (data && data.apiKey) {
-                // console.log('[fetchDeviceApiKey] ✅ API key found for device:', deviceId);
-                // ✅ Cache in memory only (not localStorage)
-                deviceApiKeyCache.set(deviceId, data.apiKey);
-                return data.apiKey;
-            } else {
-                // console.warn('[fetchDeviceApiKey] ⚠️ Response has no apiKey:', data);
-            }
-        } catch (error) {
-            // console.warn('[fetchDeviceApiKey] Failed to fetch from path:', p, error?.response?.status || error?.message);
-        }
-    }
-    
-    console.error('[fetchDeviceApiKey] ❌ Could not retrieve API key for device:', deviceId);
-    return null;
-}
 
 // Cache device access token (in-memory) per deviceId
 const deviceAccessTokenCache = new Map();
@@ -184,27 +151,22 @@ async function fetchDeviceAccessToken(deviceId) {
     return null;
 }
 
-// 🆕 Clear API key cache (called on logout or device change)
-export function clearDeviceApiKeyCache() {
-    deviceApiKeyCache.clear();
+// Clear device access token cache (called on logout or device change)
+export function clearDeviceAccessTokenCache() {
     deviceAccessTokenCache.clear();
 }
 
-// Enhanced deviceApi interceptor - Session-based approach
+// Enhanced deviceApi interceptor - token-only approach
 deviceApi.interceptors.request.use(async (config) => {
-    await scheduler.schedule();
-    
-    // 🆕 Get deviceId from localStorage (only ID, not API key)
-    const deviceId = localStorage.getItem('device_selected_id');
-    
-    if (deviceId) {
-        // 🔐 Fetch API key securely from backend (cached in memory)
-        const apiKey = await fetchDeviceApiKey(deviceId);
-        if (apiKey) {
-            config.headers['X-Forwardin-Key-Device'] = apiKey;
-        }
+    // Optimasi: Hanya throttle request non-GET untuk device API juga
+    if (config.method && config.method.toLowerCase() !== 'get') {
+        await scheduler.schedule();
+    }
 
-        // NEW: attach device access token for /api
+    const deviceId = localStorage.getItem('device_selected_id');
+
+    if (deviceId) {
+        // Attach device access token
         const dat = await fetchDeviceAccessToken(deviceId);
         if (dat) {
             config.headers.Authorization = `Bearer ${dat}`;
@@ -219,10 +181,10 @@ deviceApi.interceptors.request.use(async (config) => {
                 if (current && current.id) {
                     localStorage.setItem('device_selected_id', current.id);
                     localStorage.setItem('device_selected_name', current.name || '');
-                    
-                    const apiKey = await fetchDeviceApiKey(current.id);
-                    if (apiKey) {
-                        config.headers['X-Forwardin-Key-Device'] = apiKey;
+
+                    const dat = await fetchDeviceAccessToken(current.id);
+                    if (dat) {
+                        config.headers.Authorization = `Bearer ${dat}`;
                     }
                 }
             }
@@ -230,7 +192,7 @@ deviceApi.interceptors.request.use(async (config) => {
             console.error('Error auto-selecting device:', err);
         }
     }
-    
+
     return config;
 });
 
@@ -240,13 +202,13 @@ deviceApi.interceptors.response.use(
         if (err && err.response && err.response.status === 401) {
             // console.warn('Device API unauthorized. Device session may be closed.');
             
-            // 🔐 Clear memory cache (not localStorage)
+            // Clear memory cache (not localStorage)
             const deviceId = localStorage.getItem('device_selected_id');
             if (deviceId) {
-                deviceApiKeyCache.delete(deviceId);
+                deviceAccessTokenCache.delete(deviceId);
             }
             
-            // 🔔 Notify app that device session is closed
+            // Notify app that device session is closed
             try {
                 window.dispatchEvent(new CustomEvent('wa:device-session-closed', {
                     detail: { deviceId }
@@ -265,4 +227,4 @@ deviceApi.interceptors.response.use(
     },
 );
 
-export default { userApi, deviceApi, clearDeviceApiKeyCache };
+export default { userApi, deviceApi, clearDeviceAccessTokenCache };

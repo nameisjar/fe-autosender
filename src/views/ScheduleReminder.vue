@@ -32,8 +32,8 @@
           <button
             type="button"
             class="btn-refresh-header"
-            @click="loadDevices"
-            :disabled="loadingDevices"
+            @click="devicePicker?.loadDevices()"
+            :disabled="devicePicker?.loading"
             title="Refresh device list"
           >
             <svg
@@ -41,85 +41,17 @@
               fill="none"
               stroke="currentColor"
               stroke-width="2"
-              :class="{ spinning: loadingDevices }"
+              :class="{ spinning: devicePicker?.loading }"
             >
               <path
                 d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
               />
             </svg>
-            {{ loadingDevices ? "Loading..." : "Refresh" }}
+            {{ devicePicker?.loading ? "Loading..." : "Refresh" }}
           </button>
         </div>
         <div class="card-body">
-          <!-- Device Info Compact -->
-          <div v-if="selectedDevice && !showDeviceList" class="device-info-compact">
-            <div
-              class="device-avatar-compact"
-              :class="{ online: selectedDevice.isConnected }"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect x="5" y="2" width="14" height="20" rx="2" />
-                <line x1="12" y1="18" x2="12" y2="18" />
-              </svg>
-            </div>
-            <div class="device-info-text">
-              <div class="device-name-compact">
-                {{ selectedDevice.name || "Unknown" }}
-                <span v-if="selectedDevice.phone" class="device-phone-inline">
-                  - {{ selectedDevice.phone }}</span
-                >
-              </div>
-              <div
-                class="device-status-compact"
-                :class="{ online: selectedDevice.isConnected }"
-              >
-                {{ selectedDevice.isConnected ? "● Online" : "● Offline" }}
-              </div>
-            </div>
-            <button
-              type="button"
-              class="btn-change-compact"
-              @click="showDeviceList = true"
-            >
-              Ganti
-            </button>
-          </div>
-
-          <!-- Device List Compact -->
-          <div v-if="!selectedDevice || showDeviceList" class="device-list-compact">
-            <div v-if="loadingDevices" class="device-loading">
-              <div class="spinner-small"></div>
-              <span>Memuat devices...</span>
-            </div>
-            <div v-else-if="availableDevices.length === 0" class="device-empty">
-              <p>Tidak ada device tersedia</p>
-            </div>
-            <button
-              v-else
-              v-for="device in availableDevices"
-              :key="device.id"
-              type="button"
-              class="device-item-compact"
-              :class="{ online: device.isConnected }"
-              @click="handleSelectDevice(device.id)"
-            >
-              <span class="device-item-label">
-                {{ device.name
-                }}<span v-if="device.phone" class="device-phone-inline">
-                  - {{ device.phone }}</span
-                >
-              </span>
-              <span class="status-dot" :class="{ online: device.isConnected }"></span>
-            </button>
-          </div>
+          <DevicePicker ref="devicePicker" @device-changed="onDeviceChanged" />
         </div>
       </div>
 
@@ -339,7 +271,7 @@
                     stroke-width="2"
                   >
                     <path
-                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2h12a2 2 0 0 0 2-2V8z"
                     />
                     <polyline points="14 2 14 8 20 8" />
                     <line x1="16" y1="13" x2="8" y2="13" />
@@ -382,254 +314,12 @@
             </svg>
             Penerima
           </h3>
-          <span class="badge-count" v-if="recipients.length > 0"
-            >{{ recipients.length }} dipilih</span
+          <span class="badge-count" v-if="recipientsPicker?.recipients?.length > 0"
+            >{{ recipientsPicker.recipients.length }} dipilih</span
           >
         </div>
         <div class="card-body">
-          <!-- Selected Recipients -->
-          <div v-if="recipients.length > 0" class="selected-recipients">
-            <div class="recipients-chips">
-              <span v-for="(r, i) in recipients" :key="r + i" class="recipient-chip">
-                <span class="chip-label">{{ chipLabel(r) }}</span>
-                <button type="button" class="chip-close" @click="removeRecipient(i)">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </span>
-            </div>
-          </div>
-
-          <!-- Add Recipients Tabs -->
-          <div class="recipient-tabs">
-            <button
-              type="button"
-              class="recipient-tab"
-              :class="{ active: activeTab === 'manual' }"
-              @click="activeTab = 'manual'"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              Manual
-            </button>
-            <button
-              type="button"
-              class="recipient-tab"
-              :class="{ active: activeTab === 'contacts' }"
-              @click="activeTab = 'contacts'"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              Kontak
-            </button>
-            <button
-              type="button"
-              class="recipient-tab"
-              :class="{ active: activeTab === 'groups' }"
-              @click="activeTab = 'groups'"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              Grup
-            </button>
-            <button
-              type="button"
-              class="recipient-tab"
-              :class="{ active: activeTab === 'labels' }"
-              @click="activeTab = 'labels'"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path
-                  d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
-                />
-                <line x1="7" y1="7" x2="7.01" y2="7" />
-              </svg>
-              Label
-            </button>
-          </div>
-
-          <!-- Tab Content -->
-          <div class="tab-content">
-            <!-- Manual Tab -->
-            <div v-show="activeTab === 'manual'" class="tab-pane">
-              <div class="input-with-button">
-                <input
-                  v-model="recipientInput"
-                  @keydown.enter.prevent="addRecipientsFromInput"
-                  placeholder="628123456789 (pisahkan dengan koma untuk banyak nomor)"
-                  class="form-input"
-                />
-                <button type="button" class="btn-primary" @click="addRecipientsFromInput">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Tambah
-                </button>
-              </div>
-            </div>
-
-            <!-- Contacts Tab -->
-            <div v-show="activeTab === 'contacts'" class="tab-pane">
-              <div class="input-with-button">
-                <select v-model="selectedContactId" class="form-select">
-                  <option value="" disabled>Pilih kontak...</option>
-                  <option v-for="c in filteredContacts" :key="c.id" :value="c.phone">
-                    {{ contactDisplay(c) }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  class="btn-primary"
-                  @click="addSelectedContact"
-                  :disabled="!selectedContactId"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Tambah
-                </button>
-                <button
-                  type="button"
-                  class="btn-secondary"
-                  @click="loadContacts"
-                  :disabled="loadingContacts"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    :class="{ spinning: loadingContacts }"
-                  >
-                    <path
-                      d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Groups Tab -->
-            <div v-show="activeTab === 'groups'" class="tab-pane">
-              <div class="input-with-button">
-                <select v-model="selectedGroupId" class="form-select">
-                  <option value="" disabled>Pilih grup...</option>
-                  <option v-for="g in groups" :key="g.value" :value="g.value">
-                    {{ g.label }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  class="btn-primary"
-                  @click="addSelectedGroup"
-                  :disabled="!selectedGroupId"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Tambah
-                </button>
-                <button
-                  type="button"
-                  class="btn-secondary"
-                  @click="loadGroups"
-                  :disabled="loadingGroups"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    :class="{ spinning: loadingContacts }"
-                  >
-                    <path
-                      d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Labels Tab -->
-            <div v-show="activeTab === 'labels'" class="tab-pane">
-              <div class="input-with-button">
-                <select v-model="selectedLabelValue" class="form-select">
-                  <option value="" disabled>Pilih label...</option>
-                  <option v-for="l in filteredLabels" :key="l.value" :value="l.value">
-                    {{ l.label }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  class="btn-primary"
-                  @click="addSelectedLabel"
-                  :disabled="!selectedLabelValue"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Tambah
-                </button>
-                <button
-                  type="button"
-                  class="btn-secondary"
-                  @click="loadLabels"
-                  :disabled="loadingLabels"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    :class="{ spinning: loadingContacts }"
-                  >
-                    <path
-                      d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+          <RecipientsPicker ref="recipientsPicker" />
         </div>
       </div>
 
@@ -690,46 +380,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
-import { deviceApi, userApi } from "../api/http.js";
-import { useGroups } from "../composables/useGroups.js";
-import { useDevices } from "../composables/useDevices.js";
+import { ref, computed } from "vue";
+import { deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import RecipientsPicker from "../components/RecipientsPicker.vue";
+import DevicePicker from "../components/DevicePicker.vue";
 import {
   convertToServerTime,
-  formatLocalTime,
   isValidDateTime,
   calculateEstimatedCount,
 } from "../utils/datetime.js";
 
 const toast = useToast();
 
-// Device management
-const {
-  selectedDeviceId,
-  selectedDevice,
-  availableDevices,
-  loading: loadingDevices,
-  loadDevices,
-  selectDevice,
-} = useDevices();
-
-const ensureDeviceId = async () => {
-  let deviceId = localStorage.getItem("device_selected_id");
-  if (deviceId) return deviceId;
-  try {
-    const { data } = await userApi.get("/devices");
-    const devices = Array.isArray(data) ? data : [];
-    const current = devices.find((d) => d.status === "open") || devices[0];
-    if (current) {
-      if (current.id) localStorage.setItem("device_selected_id", current.id);
-      if (current.name) localStorage.setItem("device_selected_name", current.name);
-      if (current.apiKey) localStorage.setItem("device_api_key", current.apiKey);
-      return current.id || "";
-    }
-  } catch (_) {}
-  return "";
-};
+// Template refs
+const devicePicker = ref(null);
+const recipientsPicker = ref(null);
 
 const form = ref({
   name: "",
@@ -741,8 +407,6 @@ const form = ref({
   endDate: "",
 });
 
-const recipients = ref([]);
-const recipientInput = ref("");
 const mediaFile = ref(null);
 const mediaPreview = ref("");
 
@@ -757,176 +421,6 @@ const mediaName = computed(() => mediaFile.value?.name || "");
 const loading = ref(false);
 const msg = ref("");
 const err = ref("");
-
-const { groups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups } = useGroups();
-const selectedGroupId = ref("");
-const recipientLabels = ref({});
-
-const contacts = ref([]);
-const selectedContactId = ref("");
-const loadingContacts = ref(false);
-const contactSearch = ref("");
-const filteredContacts = computed(() => {
-  const q = contactSearch.value.toLowerCase();
-  if (!q) return contacts.value;
-  return contacts.value.filter((c) =>
-    [c.firstName, c.lastName, c.phone]
-      .filter(Boolean)
-      .some((v) => String(v).toLowerCase().includes(q))
-  );
-});
-
-const labels = ref([]);
-const selectedLabelValue = ref("");
-const loadingLabels = ref(false);
-const labelSearch = ref("");
-const filteredLabels = computed(() => {
-  const q = labelSearch.value.toLowerCase();
-  if (!q) return labels.value;
-  return labels.value.filter((l) => l.label.toLowerCase().includes(q));
-});
-
-const mapLabels = (items) => {
-  const arr = Array.isArray(items) ? items : [];
-  return arr
-    .map((it) => {
-      if (typeof it === "string") {
-        const name = it;
-        return { value: `label_${name}`, label: name };
-      }
-      const name = it.name || it.label || it.title || "";
-      const slug = it.slug || "";
-      const value = `label_${slug || name}`;
-      return name ? { value, label: name } : null;
-    })
-    .filter(Boolean);
-};
-
-const deriveLabelsFromContacts = () => {
-  const names = new Set();
-  (contacts.value || []).forEach((c) => {
-    (c.ContactLabel || []).forEach((cl) => {
-      const n = cl?.label?.name;
-      if (n && !String(n).startsWith("device_")) names.add(n);
-    });
-  });
-  return Array.from(names);
-};
-
-const loadLabels = async () => {
-  try {
-    loadingLabels.value = true;
-    const deviceId = (await ensureDeviceId()) || undefined;
-    const res = await userApi.get("/contacts/labels", {
-      params: deviceId ? { deviceId } : {},
-    });
-    const data = res?.data;
-    let list = Array.isArray(data?.labels)
-      ? data.labels
-      : Array.isArray(data)
-      ? data
-      : [];
-    if (!Array.isArray(list) || list.length === 0) {
-      if (!contacts.value || contacts.value.length === 0) {
-        await loadContacts().catch(() => {});
-      }
-      list = deriveLabelsFromContacts();
-    }
-    labels.value = mapLabels(list);
-  } catch (_) {
-    if (!contacts.value || contacts.value.length === 0) {
-      await loadContacts().catch(() => {});
-    }
-    const list = deriveLabelsFromContacts();
-    labels.value = mapLabels(list);
-  } finally {
-    loadingLabels.value = false;
-  }
-};
-
-const loadContacts = async () => {
-  try {
-    loadingContacts.value = true;
-    err.value = "";
-    const deviceId = (await ensureDeviceId()) || undefined;
-    const res = await userApi.get("/contacts", { params: deviceId ? { deviceId } : {} });
-    contacts.value = Array.isArray(res?.data) ? res.data : [];
-  } catch (e) {
-    toast.error(e?.response?.data?.message || e?.message || "Gagal memuat kontak");
-  } finally {
-    loadingContacts.value = false;
-  }
-};
-
-const addSelectedGroup = async () => {
-  if (!selectedGroupId.value) return;
-  const fullJid = await ensureFullGroupJid(selectedGroupId.value);
-  if (!fullJid) return;
-  if (!recipients.value.includes(fullJid)) {
-    recipients.value.push(fullJid);
-    const found = groups.value.find((g) => g.value === selectedGroupId.value);
-    if (found) recipientLabels.value[fullJid] = `Group: ${found.label}`;
-  }
-  selectedGroupId.value = "";
-};
-
-const handleSyncGroups = async () => {
-  try {
-    err.value = "";
-    await syncGroups();
-    toast.success("Grup berhasil disinkronkan dari WhatsApp");
-  } catch (e) {
-    toast.error(e?.message || "Gagal sinkronisasi grup");
-  }
-};
-
-const contactLabelNames = (c) => {
-  try {
-    const arr = (c?.ContactLabel || [])
-      .map((x) => x?.label?.name)
-      .filter((n) => n && !String(n).startsWith("device_"));
-    return arr.join(", ");
-  } catch {
-    return "";
-  }
-};
-const contactDisplay = (c) => {
-  const name = `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.phone || "-";
-  const labels = contactLabelNames(c);
-  return labels ? `${name} (${c.phone}) — [${labels}]` : `${name} (${c.phone})`;
-};
-
-const addSelectedContact = () => {
-  if (!selectedContactId.value) return;
-  if (!recipients.value.includes(selectedContactId.value)) {
-    recipients.value.push(selectedContactId.value);
-    const found = contacts.value.find((c) => c.phone === selectedContactId.value);
-    if (found) {
-      const labels = contactLabelNames(found);
-      recipientLabels.value[selectedContactId.value] = `Kontak: ${found.firstName} ${
-        found.lastName || ""
-      }${labels ? " [" + labels + "]" : ""}`;
-    }
-  }
-  selectedContactId.value = "";
-};
-
-const addSelectedLabel = () => {
-  if (!selectedLabelValue.value) return;
-  const val = selectedLabelValue.value;
-  if (!recipients.value.includes(val)) {
-    recipients.value.push(val);
-    const found = labels.value.find((l) => l.value === val);
-    if (found) recipientLabels.value[val] = `Label: ${found.label}`;
-  }
-  selectedLabelValue.value = "";
-};
-
-const chipLabel = (r) => recipientLabels.value[r] || r;
-
-loadGroups().catch(() => {});
-loadContacts().catch(() => {});
-loadLabels().catch(() => {});
 
 function onFile(e) {
   const file = e.target.files?.[0];
@@ -945,76 +439,8 @@ function removeMedia() {
   if (input) input.value = "";
 }
 
-// ✅ Fungsi validasi nomor telepon
-function isValidPhoneNumber(phone) {
-  // Nomor harus berupa string yang hanya mengandung digit
-  const cleaned = String(phone).replace(/\D/g, "");
-
-  // Nomor harus dimulai dengan 62 dan minimal 10 digit (62 + 8 digit)
-  // Format yang valid: 628xxx (minimal) hingga 62xxxxxxxxxxxxxx
-  if (!cleaned.startsWith("62")) {
-    return false;
-  }
-
-  // Panjang minimal 10 digit (62 + 8 digit nomor)
-  // Panjang maksimal 15 digit (standar internasional)
-  if (cleaned.length < 10 || cleaned.length > 15) {
-    return false;
-  }
-
-  return true;
-}
-
-function addRecipientsFromInput() {
-  if (!recipientInput.value) return;
-
-  const items = recipientInput.value
-    .split(/[\s,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  // ✅ Validasi setiap nomor sebelum ditambahkan
-  const validNumbers = [];
-  const invalidNumbers = [];
-
-  items.forEach((item) => {
-    if (isValidPhoneNumber(item)) {
-      validNumbers.push(item);
-    } else {
-      invalidNumbers.push(item);
-    }
-  });
-
-  // Tambahkan nomor valid ke recipients
-  if (validNumbers.length > 0) {
-    const set = new Set([...recipients.value, ...validNumbers]);
-    recipients.value = Array.from(set);
-  }
-
-  // Tampilkan notifikasi
-  if (validNumbers.length > 0 && invalidNumbers.length > 0) {
-    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-    toast.error(
-      `${invalidNumbers.length} nomor tidak valid: ${invalidNumbers.join(", ")}`
-    );
-  } else if (validNumbers.length > 0) {
-    toast.success(`${validNumbers.length} nomor berhasil ditambahkan`);
-  } else if (invalidNumbers.length > 0) {
-    toast.error(
-      `Nomor tidak valid: ${invalidNumbers.join(
-        ", "
-      )}. Format harus: 62xxx (minimal 10 digit)`
-    );
-  }
-
-  recipientInput.value = "";
-}
-
-function removeRecipient(index) {
-  recipients.value.splice(index, 1);
-}
-
 const validationError = computed(() => {
+  if (!devicePicker.value?.selectedDeviceId) return "Pilih device terlebih dahulu";
   if (!form.value.name) return "Nama wajib diisi";
   if (!form.value.message) return "Pesan wajib diisi";
   if (!form.value.startDate || !form.value.endDate) return "Rentang tanggal wajib diisi";
@@ -1026,9 +452,11 @@ const validationError = computed(() => {
   if (start > end) return "Tanggal mulai harus sebelum tanggal selesai";
   if (!form.value.interval || Number(form.value.interval) <= 0)
     return "Interval harus lebih dari 0";
-  if (recipients.value.length === 0) return "Minimal satu penerima";
-  const hasAll = recipients.value.includes("all");
-  const hasLabel = recipients.value.some((r) => r.startsWith("label"));
+
+  const recipients = recipientsPicker.value?.recipients || [];
+  if (recipients.length === 0) return "Minimal satu penerima";
+  const hasAll = recipients.includes("all");
+  const hasLabel = recipients.some((r) => r.startsWith("label"));
   if (hasAll && hasLabel) return "Tidak boleh mencampur all dan label_* dalam penerima";
   return "";
 });
@@ -1052,8 +480,7 @@ async function submit() {
 
   loading.value = true;
   try {
-    // Gunakan deviceId dari device selector
-    const deviceId = selectedDeviceId.value || (await ensureDeviceId());
+    const deviceId = devicePicker.value?.selectedDeviceId;
     if (!deviceId) {
       toast.error("Device tidak ditemukan atau belum login WhatsApp");
       loading.value = false;
@@ -1062,6 +489,7 @@ async function submit() {
 
     const startDateISO = convertToServerTime(form.value.startDate);
     const endDateISO = convertToServerTime(form.value.endDate);
+    const recipients = recipientsPicker.value?.recipients || [];
 
     if (!mediaFile.value) {
       await deviceApi.post("/messages/broadcasts/scheduled", {
@@ -1072,8 +500,8 @@ async function submit() {
         interval: form.value.interval,
         startDate: startDateISO,
         endDate: endDateISO,
-        recipients: recipients.value,
-        deviceId, // Kirim deviceId
+        recipients: recipients,
+        deviceId,
       });
     } else {
       const fd = new FormData();
@@ -1084,8 +512,8 @@ async function submit() {
       fd.append("interval", String(form.value.interval));
       fd.append("startDate", startDateISO);
       fd.append("endDate", endDateISO);
-      fd.append("deviceId", deviceId); // Kirim deviceId
-      recipients.value.forEach((r) => fd.append("recipients", r));
+      fd.append("deviceId", deviceId);
+      recipients.forEach((r) => fd.append("recipients", r));
       fd.append("media", mediaFile.value);
 
       await deviceApi.post("/messages/broadcasts/scheduled", fd);
@@ -1099,65 +527,27 @@ async function submit() {
     form.value.recurrence = "daily";
     form.value.startDate = "";
     form.value.endDate = "";
-    recipients.value = [];
+    recipientsPicker.value?.resetRecipients();
     mediaFile.value = null;
     mediaPreview.value = "";
   } catch (e) {
     toast.error(
-      "Gagal membuat jadwal broadcast berulang. Pastikan WhatsApp sudah terhubung" ||
-        e?.response?.data?.message ||
+      e?.response?.data?.message ||
         e?.response?.data?.error ||
-        e?.message
+        e?.message ||
+        "Gagal membuat jadwal broadcast berulang. Pastikan WhatsApp sudah terhubung"
     );
   } finally {
     loading.value = false;
   }
 }
 
-const otherDevices = computed(() =>
-  availableDevices.value.filter((device) => device.id !== selectedDeviceId.value)
-);
-
-function handleChangeDevice() {
-  selectedDeviceId.value = "";
+function onDeviceChanged() {
+  recipientsPicker.value?.resetRecipients();
+  toast.success(
+    "Device berhasil diganti. Data kontak, grup, dan label telah di-refresh."
+  );
 }
-
-function handleSelectDevice(deviceId) {
-  selectDevice(deviceId);
-  showDeviceList.value = false; // 🔥 Tutup device list setelah memilih
-}
-
-const activeTab = ref("manual");
-const showDeviceList = ref(false);
-
-// Load devices on mount
-loadDevices().catch(() => {});
-
-// 🆕 Watch selectedDeviceId untuk auto-refresh data ketika device berubah
-watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
-  if (newDeviceId && oldDeviceId && newDeviceId !== oldDeviceId) {
-    // ✅ Dispatch custom event untuk Dashboard.vue
-    window.dispatchEvent(new Event("deviceChanged"));
-
-    // Clear recipients ketika ganti device
-    recipients.value = [];
-    recipientLabels.value = {};
-    selectedContactId.value = "";
-    selectedGroupId.value = "";
-    selectedLabelValue.value = "";
-
-    // Auto-refresh semua data (termasuk GROUPS dengan force!)
-    await Promise.allSettled([
-      loadGroups({ force: true }), // 🔥 Tambahkan force: true untuk memaksa reload
-      loadContacts(),
-      loadLabels(),
-    ]);
-
-    toast.success(
-      "Device berhasil diganti. Data kontak, grup, dan label telah di-refresh."
-    );
-  }
-});
 </script>
 
 <style scoped>
@@ -1165,14 +555,14 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   box-sizing: border-box;
 }
 
-/* Base Styles - Konsisten dengan menu Broadcast */
+/* Base Styles */
 .wrapper {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
-/* Page Header - Konsisten dengan Broadcast */
+/* Page Header */
 .page-header {
   margin-bottom: 32px;
 }
@@ -1247,8 +637,11 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   color: #3b82f6;
 }
 
-/* 🆕 Device Selector Styles */
-/* Button Refresh Header */
+.card-body {
+  padding: 24px;
+}
+
+/* Device Selector Styles */
 .btn-refresh-header {
   display: flex;
   align-items: center;
@@ -1279,7 +672,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   height: 16px;
 }
 
-/* Device Info Compact */
 .device-info-compact {
   display: flex;
   align-items: center;
@@ -1360,7 +752,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   border-color: #cbd5e1;
 }
 
-/* Device List Compact */
 .device-list-compact {
   display: flex;
   flex-direction: column;
@@ -1443,8 +834,7 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   background: #10b981;
 }
 
-/* End Device Selector Styles */
-
+/* Badges */
 .badge-optional {
   padding: 6px 12px;
   background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
@@ -1463,84 +853,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   font-size: 13px;
   font-weight: 600;
   border: 1px solid #93c5fd;
-}
-
-.badge-connected {
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #15803d;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid #86efac;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.badge-connected svg {
-  width: 14px;
-  height: 14px;
-}
-
-.badge-disconnected {
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid #fca5a5;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.badge-disconnected svg {
-  width: 14px;
-  height: 14px;
-}
-
-.device-selector-wrapper {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.device-select {
-  flex: 1;
-}
-
-.btn-refresh {
-  padding: 12px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  border: 1.5px solid #cbd5e1;
-  border-radius: 10px;
-  color: #475569;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  transform: translateY(-1px);
-}
-
-.btn-refresh:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-refresh svg {
-  width: 18px;
-  height: 18px;
-}
-
-.card-body {
-  padding: 24px;
 }
 
 /* Form Elements */
@@ -1779,211 +1091,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   height: 18px;
 }
 
-/* Recipients */
-.selected-recipients {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.recipients-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.recipient-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
-  color: #475569;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.recipient-chip:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.chip-label {
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chip-close {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-}
-
-.chip-close:hover {
-  color: #ef4444;
-}
-
-.chip-close svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Recipient Tabs */
-.recipient-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e2e8f0;
-  overflow-x: auto;
-}
-
-.recipient-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  margin-bottom: -10px;
-}
-
-.recipient-tab:hover {
-  color: #3b82f6;
-  background: #f8fafc;
-  border-radius: 10px 10px 0 0;
-}
-
-.recipient-tab.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
-  font-weight: 600;
-}
-
-.recipient-tab svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Tab Content */
-.tab-content {
-  margin-top: 16px;
-}
-
-.tab-pane {
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.input-with-button {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.input-with-button .form-input,
-.input-with-button .form-select {
-  flex: 1;
-}
-
-.btn-primary,
-.btn-secondary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 18px;
-  border: 1.5px solid;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border-color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #475569;
-  border-color: #cbd5e1;
-  padding: 12px;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  transform: translateY(-1px);
-}
-
-.btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary svg,
-.btn-secondary svg {
-  width: 18px;
-  height: 18px;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Info Section */
 .info-section {
   display: flex;
@@ -2099,6 +1206,19 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
   height: 20px;
 }
 
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .wrapper {
@@ -2134,24 +1254,6 @@ watch(selectedDeviceId, async (newDeviceId, oldDeviceId) => {
 
   .upload-label {
     padding: 32px 20px;
-  }
-
-  .recipient-tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .input-with-button {
-    flex-wrap: wrap;
-  }
-
-  .input-with-button .form-input,
-  .input-with-button .form-select {
-    flex: 1 1 100%;
-  }
-
-  .btn-primary {
-    flex: 1;
   }
 
   .form-actions {

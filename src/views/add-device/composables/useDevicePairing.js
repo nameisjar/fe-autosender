@@ -1,6 +1,7 @@
 import { onUnmounted, ref, watch } from "vue";
 import QRCode from "qrcode";
 import { cache } from "../../../utils/cache.js";
+import { API_BASE } from "../../../api/http.js";
 
 const MIN_RETRY_INTERVAL = 2000;
 
@@ -72,7 +73,6 @@ export function useDevicePairing({
     asciiQr.value = "";
 
     const token = localStorage.getItem("token") || "";
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
     const sseUrl = `${API_BASE}/tutors/sessions/create-sse`;
 
     try {

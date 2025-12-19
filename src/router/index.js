@@ -5,7 +5,7 @@ import AddDevice from '../views/AddDevice.vue';
 import ScheduleFeedback from '../views/ScheduleFeedback.vue';
 import ScheduleReminder from '../views/ScheduleReminder.vue';
 import ReminderAlgo from '../views/ReminderAlgo.vue';
-import SentHistory from '../views/SentHistory.vue';
+// import SentHistory from '../views/SentHistory.vue';
 import Templates from '../views/Templates.vue';
 import MonthlyTemplates from '../views/MonthlyTemplates.vue';
 import MonthlyFeedback from '../views/MonthlyFeedback.vue';
@@ -16,7 +16,7 @@ import Schedules from '../views/Schedules.vue';
 import Broadcasts from '../views/Broadcasts.vue';
 import Contacts from '../views/Contacts.vue';
 import Groups from '../views/Groups.vue';
-import { userApi } from '../api/http.js';
+import { useAuthStore } from '../stores/auth.js';
 
 const routes = [
     { path: '/login', name: 'login', component: Login },
@@ -26,7 +26,6 @@ const routes = [
         children: [
             { path: '', redirect: '/add-device' },
             { path: 'add-device', name: 'add-device', component: AddDevice },
-            { path: 'pairing', redirect: { name: 'add-device' } },
             { path: 'contacts', name: 'contacts', component: Contacts },
             { path: 'groups', name: 'groups', component: Groups },
             { path: 'schedule-feedback', name: 'schedule-feedback', component: ScheduleFeedback },
@@ -41,12 +40,7 @@ const routes = [
                 component: MonthlyFeedback,
             },
             // keep legacy paths but protect as admin-only
-            {
-                path: 'sent-history',
-                name: 'sent-history',
-                component: SentHistory,
-                meta: { requiresAdmin: true },
-            },
+            // removed: legacy 'sent-history' (admin-only)
             {
                 path: 'templates',
                 name: 'templates',
@@ -99,16 +93,22 @@ router.beforeEach(async (to, _from, next) => {
     }
 
     if (to.meta && to.meta.requiresAdmin) {
-        try {
-            const { data } = await userApi.get('/tutors/me');
-            const roleName = (data?.privilege?.name || '').toLowerCase();
-            const isAdmin = roleName === 'admin' || roleName === 'super admin';
-            if (!isAdmin) {
-                next({ name: 'add-device' });
-                return;
-            }
-        } catch (_) {
+        const auth = useAuthStore();
+
+        // Optimasi: Gunakan data dari store jika sudah ada
+        if (!auth.me) {
+            await auth.fetchMe();
+        }
+
+        // Jika user tidak ditemukan (misal token expired), lempar ke login
+        if (!auth.me) {
             next({ name: 'login' });
+            return;
+        }
+
+        // Cek apakah admin menggunakan getter store
+        if (!auth.isAdmin) {
+            next({ name: 'add-device' });
             return;
         }
     }

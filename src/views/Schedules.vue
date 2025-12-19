@@ -650,6 +650,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { deviceApi, userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import { mediaUrl } from "../utils/mediaUrl.js";
 
 const toast = useToast();
 
@@ -1333,12 +1334,10 @@ const fetchDevices = async () => {
 };
 
 const ensureDeviceKeyValid = () => {
-  const key = localStorage.getItem("device_api_key");
   const selId = localStorage.getItem("device_selected_id");
-  if (!key || !selId) return false;
-  const ok = devices.value.some((d) => d.id === selId && d.apiKey === key);
+  if (!selId) return false;
+  const ok = devices.value.some((d) => d.id === selId);
   if (!ok) {
-    localStorage.removeItem("device_api_key");
     localStorage.removeItem("device_selected_id");
     localStorage.removeItem("device_selected_name");
     selectedDeviceId.value = "";
@@ -1350,7 +1349,6 @@ const pickDefaultDevice = () => {
   if (!devices.value.length) return;
   const current = devices.value.find((d) => d.status === "open") || devices.value[0];
   if (current) {
-    localStorage.setItem("device_api_key", current.apiKey);
     localStorage.setItem("device_selected_id", current.id);
     localStorage.setItem("device_selected_name", current.name || "");
     selectedDeviceId.value = current.id;
@@ -1359,31 +1357,17 @@ const pickDefaultDevice = () => {
 
 const onDeviceChange = () => {
   const dev = devices.value.find((d) => d.id === selectedDeviceId.value);
-  if (dev && dev.apiKey) {
-    localStorage.setItem("device_api_key", dev.apiKey);
+  if (dev) {
     localStorage.setItem("device_selected_id", dev.id);
     localStorage.setItem("device_selected_name", dev.name || "");
 
-    // ✅ Dispatch custom event untuk Dashboard.vue
+    // Dispatch custom event untuk Dashboard.vue
     window.dispatchEvent(new Event("deviceChanged"));
 
     load();
     loadContacts();
     loadGroupNames(); // Reload group names when device changes
   }
-};
-
-const mediaUrl = (p) => {
-  if (!p) return "";
-
-  // Get API base URL from environment
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-
-  // Remove leading slash if present to avoid double slashes
-  const cleanPath = p.startsWith("/") ? p.slice(1) : p;
-
-  // Construct full URL with API base
-  return `${API_BASE}/${cleanPath}`;
 };
 
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || "");

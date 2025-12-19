@@ -26,9 +26,10 @@
       <div class="row" v-else-if="targetType === 'group'">
         <label class="field grow">
           <span>Group</span>
+          <input v-model="groupSearch" placeholder="Cari grup..." style="margin-bottom: 5px;" />
           <select v-model="selectedGroupId">
             <option value="" disabled>Pilih group</option>
-            <option v-for="g in groups" :key="g.value" :value="g.value">{{ g.label }}</option>
+            <option v-for="g in filteredGroups" :key="g.value" :value="g.value">{{ g.label }}</option>
           </select>
         </label>
         <button class="btn outline" @click="loadGroups" :disabled="loadingGroups">{{ loadingGroups ? 'Memuat...' : 'Muat Ulang Grup' }}</button>
@@ -120,6 +121,7 @@ const messageMode = ref('text'); // 'text' | 'media'
 const phone = ref('');
 const groups = ref([]); // { value, label }
 const selectedGroupId = ref('');
+const groupSearch = ref('');
 
 const contacts = ref([]); // { value: phone, label: 'Name (phone)', labels: string[] }
 const selectedContacts = ref([]);
@@ -147,6 +149,12 @@ const acceptByType = computed(() => {
     case 'video': return 'video/*';
     default: return '*/*';
   }
+});
+
+const filteredGroups = computed(() => {
+  const q = groupSearch.value.toLowerCase();
+  if (!q) return groups.value;
+  return groups.value.filter((g) => g.label.toLowerCase().includes(q));
 });
 
 // prefer full group id/jid when available; append @g.us if missing

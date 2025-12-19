@@ -7,7 +7,7 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { useGroups } from "./composables/useGroups.js";
 import { useDevices } from "./composables/useDevices.js";
-import { clearDeviceApiKeyCache, userApi } from "./api/http.js";
+import { clearDeviceAccessTokenCache, userApi } from "./api/http.js";
 import ToastContainer from "./components/ToastContainer.vue";
 import { setToastInstance } from "./composables/useToast.js";
 
@@ -21,7 +21,7 @@ function handleDeviceSessionClosed(event) {
   // console.warn("Device session closed:", deviceId);
 
   // Clear cache untuk device yang disconnect
-  clearDeviceApiKeyCache();
+  clearDeviceAccessTokenCache();
 
   // Reload devices untuk update status
   loadDevices().catch(() => {});
@@ -33,7 +33,7 @@ function handleDeviceChanged(event) {
   // console.log('Device changed:', deviceId, deviceName);
 
   // Clear old cache, akan di-fetch ulang saat request berikutnya
-  clearDeviceApiKeyCache();
+  clearDeviceAccessTokenCache();
 }
 
 async function ensureDefaultDeviceSelected() {
@@ -44,7 +44,6 @@ async function ensureDefaultDeviceSelected() {
     const list = Array.isArray(data) ? data : [];
     const dev = list.find((d) => d.status === "open") || list[0];
     if (dev) {
-      if (dev.apiKey) localStorage.setItem("device_api_key", dev.apiKey);
       localStorage.setItem("device_selected_id", dev.id);
       localStorage.setItem("device_selected_name", dev.name || "");
     }
@@ -52,6 +51,11 @@ async function ensureDefaultDeviceSelected() {
 }
 
 onMounted(async () => {
+  // One-time cleanup: legacy key (token-only now)
+  try {
+    localStorage.removeItem("device_api_key");
+  } catch (_) {}
+
   // Setup toast instance
   if (toastContainer.value) {
     setToastInstance(toastContainer.value);
