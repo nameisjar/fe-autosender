@@ -324,11 +324,14 @@ const handleDeviceChange = async () => {
 };
 
 onMounted(() => {
+  // 🆕 Listen kedua event (legacy dan canonical)
   window.addEventListener("deviceChanged", handleDeviceChange);
+  window.addEventListener("device:changed", handleDeviceChange);
 });
 
 onUnmounted(() => {
   window.removeEventListener("deviceChanged", handleDeviceChange);
+  window.removeEventListener("device:changed", handleDeviceChange);
 });
 
 // Expose methods and state to parent via defineExpose

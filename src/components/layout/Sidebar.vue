@@ -324,10 +324,11 @@
 </template>
 
 <script setup>
-import { onMounted, computed, ref, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, computed, ref, onUnmounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../../stores/auth.js";
 import { useGroups } from "../../composables/useGroups.js";
+import { useDevices } from "../../composables/useDevices.js";
 import { deviceApi } from "../../api/http.js";
 import { listenToDeviceStatus } from "../../api/socket.js";
 
@@ -341,86 +342,169 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 const { clearGroups } = useGroups();
+
+// 🆕 Gunakan useDevices untuk mendapatkan data devices (shared state)
+const { devices, selectedDevice, loadDevices } = useDevices();
 
 const profilePictureUrl = ref(null);
 const selectedDeviceId = ref(localStorage.getItem("device_selected_id"));
 const isFetchingProfile = ref(false);
+const currentDeviceStatus = ref(null);
+const initialLoadDone = ref(false);
+let isCheckingStatus = false;
 let cleanupSocketListener = null;
+let retryCount = 0;
+let retryInterval = null;
 
 onMounted(async () => {
   await auth.fetchMe();
-  await fetchProfilePicture();
+
+  // First check device status before fetching profile
+  await checkDeviceStatusAndFetchProfile();
+  initialLoadDone.value = true;
 
   // Listen to storage events for cross-tab changes
   window.addEventListener("storage", handleStorageChange);
-
-  // Legacy event (some views still emit this)
   window.addEventListener("deviceChanged", handleDeviceChange);
-
-  // Canonical event (emitted by useDevices)
   window.addEventListener("device:changed", handleDeviceChangedCanonical);
+  window.addEventListener("user:logged-in", handleUserLoggedIn);
+  window.addEventListener("devices:loaded", handleDevicesLoaded);
 
-  // 🆕 Listen to device status changes (WhatsApp connection)
+  // Listen to device status changes (WhatsApp connection)
   setupDeviceStatusListener();
+
+  // Retry mechanism: jika foto profil belum muncul setelah mount
+  if (!profilePictureUrl.value) {
+    retryFetchProfile();
+  }
 });
+
+// Retry fetch profile dengan interval (max 2 kali)
+const retryFetchProfile = () => {
+  if (retryInterval) clearInterval(retryInterval);
+
+  retryCount = 0;
+  retryInterval = setInterval(async () => {
+    retryCount++;
+
+    if (retryCount > 2 || profilePictureUrl.value) {
+      clearInterval(retryInterval);
+      retryInterval = null;
+      return;
+    }
+
+    const deviceId = localStorage.getItem("device_selected_id");
+    if (!deviceId) return;
+
+    await checkDeviceStatusAndFetchProfile();
+  }, 1500);
+};
+
+// Watch route changes - hanya untuk navigasi dari login
+watch(
+  () => route.path,
+  async (newPath, oldPath) => {
+    if (oldPath === "/login" && newPath !== "/login") {
+      setTimeout(() => checkDeviceStatusAndFetchProfile(), 1000);
+    }
+  }
+);
+
+// 🆕 Watch devices dari useDevices (shared state) - lebih efisien
+watch(
+  () => devices.value,
+  () => {
+    // Ketika devices berubah, cek ulang status dan fetch profile
+    checkDeviceStatusAndFetchProfile();
+  },
+  { deep: true }
+);
 
 const me = computed(() => auth.me);
 const isAdmin = computed(() => auth.isAdmin);
 
-// 🆕 Setup listener untuk status device (ketika WhatsApp terhubung)
-const setupDeviceStatusListener = () => {
+// 🆕 Optimized: Gunakan data dari useDevices (shared state) bukan request baru
+const checkDeviceStatusAndFetchProfile = async () => {
+  if (isCheckingStatus) return;
+  isCheckingStatus = true;
+
   const deviceId = localStorage.getItem("device_selected_id");
   if (!deviceId) {
     profilePictureUrl.value = null;
+    currentDeviceStatus.value = null;
+    isCheckingStatus = false;
     return;
   }
 
-  if (cleanupSocketListener) {
-    cleanupSocketListener();
-  }
+  try {
+    // 🆕 Gunakan data dari useDevices (sudah di-cache) bukan request baru
+    let device = devices.value?.find?.((d) => String(d.id) === String(deviceId));
 
-  cleanupSocketListener = listenToDeviceStatus(deviceId, (status) => {
-    // Normalize status to string
-    const s = String(status || "").toLowerCase();
-
-    // Jika device status berubah menjadi 'open' (WhatsApp terhubung)
-    if (s === "open") {
-      setTimeout(() => {
-        fetchProfilePicture();
-      }, 2000);
-      return;
+    // Jika devices belum ter-load, load dulu
+    if (!device && devices.value.length === 0) {
+      await loadDevices();
+      device = devices.value?.find?.((d) => String(d.id) === String(deviceId));
     }
 
-    // Jika device logout/terputus
-    if (
-      s === "close" ||
-      s === "closed" ||
-      s === "logged_out" ||
-      s === "disconnected"
-    ) {
-      profilePictureUrl.value = null;
+    if (device) {
+      currentDeviceStatus.value = device.status;
 
-      // Notify the rest of the app to refresh device status + clear caches
+      if (String(device.status).toLowerCase() === "open") {
+        await fetchProfilePicture();
+      } else {
+        profilePictureUrl.value = null;
+      }
+    } else {
+      currentDeviceStatus.value = null;
+      profilePictureUrl.value = null;
+    }
+  } catch (error) {
+    currentDeviceStatus.value = null;
+    profilePictureUrl.value = null;
+  } finally {
+    isCheckingStatus = false;
+  }
+};
+
+// Setup listener untuk status device
+const setupDeviceStatusListener = () => {
+  const deviceId = localStorage.getItem("device_selected_id");
+  if (!deviceId) return;
+
+  if (cleanupSocketListener) cleanupSocketListener();
+
+  cleanupSocketListener = listenToDeviceStatus(deviceId, (status) => {
+    const s = String(status || "").toLowerCase();
+    currentDeviceStatus.value = s;
+
+    if (s === "open") {
+      setTimeout(() => fetchProfilePicture(), 2000);
+    } else if (["close", "closed", "logged_out", "disconnected"].includes(s)) {
+      profilePictureUrl.value = null;
       try {
         window.dispatchEvent(
-          new CustomEvent("wa:device-session-closed", {
-            detail: { deviceId },
-          })
+          new CustomEvent("wa:device-session-closed", { detail: { deviceId } })
         );
       } catch (_) {}
     }
   });
 };
 
-// Fungsi untuk mengambil foto profil WhatsApp
+// Fetch foto profil WhatsApp
 const fetchProfilePicture = async () => {
-  // Prevent multiple simultaneous requests
   if (isFetchingProfile.value) return;
 
   const deviceId = localStorage.getItem("device_selected_id");
   if (!deviceId) {
+    profilePictureUrl.value = null;
+    return;
+  }
+
+  const status = String(currentDeviceStatus.value || "").toLowerCase();
+  if (status && status !== "open") {
     profilePictureUrl.value = null;
     return;
   }
@@ -431,11 +515,8 @@ const fetchProfilePicture = async () => {
     const { data } = await deviceApi.get("/messages/get-profile", {
       params: { recipient: "me", resolution: "high" },
     });
-    if (data && data.profilePictureUrl) {
-      profilePictureUrl.value = data.profilePictureUrl;
-    } else {
-      profilePictureUrl.value = null;
-    }
+
+    profilePictureUrl.value = data?.profilePictureUrl || null;
   } catch (error) {
     profilePictureUrl.value = null;
   } finally {
@@ -443,53 +524,60 @@ const fetchProfilePicture = async () => {
   }
 };
 
-// Handler untuk storage event (cross-tab communication)
+// Event handlers
 const handleStorageChange = (event) => {
-  if (event.key === "device_selected_id") {
-    const newDeviceId = event.newValue;
-    if (newDeviceId !== selectedDeviceId.value) {
-      selectedDeviceId.value = newDeviceId;
-      fetchProfilePicture();
-      // 🆕 Setup listener untuk device baru
-      setupDeviceStatusListener();
-    }
-  }
-};
-
-// Handler untuk custom event (same-tab communication)
-const handleDeviceChange = () => {
-  const currentDeviceId = localStorage.getItem("device_selected_id");
-  if (currentDeviceId !== selectedDeviceId.value) {
-    selectedDeviceId.value = currentDeviceId;
-    fetchProfilePicture();
-    // 🆕 Setup listener untuk device baru
+  if (event.key === "device_selected_id" && event.newValue !== selectedDeviceId.value) {
+    selectedDeviceId.value = event.newValue;
+    checkDeviceStatusAndFetchProfile();
     setupDeviceStatusListener();
   }
 };
 
-// Canonical event handler: ensure we update selectedDeviceId and refresh profile/avatar
+const handleDeviceChange = () => {
+  const currentDeviceId = localStorage.getItem("device_selected_id");
+  if (currentDeviceId !== selectedDeviceId.value) {
+    selectedDeviceId.value = currentDeviceId;
+    checkDeviceStatusAndFetchProfile();
+    setupDeviceStatusListener();
+  }
+};
+
 function handleDeviceChangedCanonical(event) {
   const { deviceId } = event.detail || {};
-  const currentDeviceId =
-    deviceId || localStorage.getItem("device_selected_id");
+  const currentDeviceId = deviceId || localStorage.getItem("device_selected_id");
 
   if (currentDeviceId !== selectedDeviceId.value) {
     selectedDeviceId.value = currentDeviceId;
   }
 
-  fetchProfilePicture();
+  checkDeviceStatusAndFetchProfile();
   setupDeviceStatusListener();
 }
 
-// Cleanup saat component unmount
+const handleUserLoggedIn = () => {
+  setTimeout(() => {
+    checkDeviceStatusAndFetchProfile();
+    setupDeviceStatusListener();
+  }, 1500);
+};
+
+const handleDevicesLoaded = () => {
+  checkDeviceStatusAndFetchProfile();
+  setupDeviceStatusListener();
+};
+
+// Cleanup
 onUnmounted(() => {
   window.removeEventListener("storage", handleStorageChange);
   window.removeEventListener("deviceChanged", handleDeviceChange);
   window.removeEventListener("device:changed", handleDeviceChangedCanonical);
+  window.removeEventListener("user:logged-in", handleUserLoggedIn);
+  window.removeEventListener("devices:loaded", handleDevicesLoaded);
 
-  // 🆕 Cleanup socket listener
-  if (cleanupSocketListener) {
-    cleanupSocketListener();
+  if (cleanupSocketListener) cleanupSocketListener();
+  if (retryInterval) {
+    clearInterval(retryInterval);
+    retryInterval = null;
   }
 });
 

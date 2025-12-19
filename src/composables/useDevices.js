@@ -1,10 +1,14 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { userApi } from '../api/http.js';
+import { listenToDeviceStatus, connectSocket } from '../api/socket.js';
 
 // 🔄 Inisialisasi dari localStorage
 const devices = ref([]);
 const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
 const loading = ref(false);
+
+// 🆕 Track socket listeners untuk cleanup
+let socketCleanups = [];
 
 export function useDevices() {
   const loadDevices = async () => {
@@ -20,6 +24,8 @@ export function useDevices() {
         const deviceExists = devices.value.find((d) => String(d.id) === String(savedDeviceId));
         if (deviceExists) {
           selectedDeviceId.value = String(savedDeviceId);
+          // 🆕 Setup socket listeners setelah load devices
+          setupSocketListeners();
           return;
         }
       }
@@ -36,12 +42,70 @@ export function useDevices() {
         localStorage.removeItem('device_selected_id');
         localStorage.removeItem('device_selected_name');
       }
+
+      // 🆕 Setup socket listeners setelah load devices
+      setupSocketListeners();
     } catch (error) {
       console.error('Error loading devices:', error);
       devices.value = [];
     } finally {
       loading.value = false;
     }
+  };
+
+  // 🆕 Setup socket listeners untuk semua devices
+  const setupSocketListeners = () => {
+    // Cleanup existing listeners first
+    cleanupSocketListeners();
+
+    // Connect socket
+    connectSocket();
+
+    // Listen to status changes for ALL devices
+    devices.value.forEach((device) => {
+      const cleanup = listenToDeviceStatus(device.id, (newStatus) => {
+        // console.log(`[useDevices] Device ${device.id) status changed to: ${newStatus}`);
+        
+        // Update device status in the devices array
+        const deviceIndex = devices.value.findIndex((d) => String(d.id) === String(device.id));
+        if (deviceIndex !== -1) {
+          devices.value[deviceIndex] = {
+            ...devices.value[deviceIndex],
+            status: newStatus,
+          };
+          
+          // Trigger reactivity by reassigning array
+          devices.value = [...devices.value];
+        }
+
+        // 🆕 Jika device yang berubah adalah device yang sedang dipilih dan statusnya close
+        if (String(device.id) === String(selectedDeviceId.value)) {
+          const normalizedStatus = String(newStatus || '').toLowerCase();
+          if (normalizedStatus === 'close' || normalizedStatus === 'closed' || normalizedStatus === 'disconnected') {
+            // Emit event untuk memberitahu komponen lain
+            try {
+              window.dispatchEvent(
+                new CustomEvent('wa:device-session-closed', {
+                  detail: { deviceId: device.id, status: newStatus },
+                })
+              );
+            } catch (_) {}
+          }
+        }
+      });
+      
+      socketCleanups.push(cleanup);
+    });
+  };
+
+  // 🆕 Cleanup socket listeners
+  const cleanupSocketListeners = () => {
+    socketCleanups.forEach((cleanup) => {
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+    });
+    socketCleanups = [];
   };
 
   const selectDevice = (deviceId) => {
@@ -81,7 +145,7 @@ export function useDevices() {
     return devices.value.map((d) => ({
       id: d.id,
       name: d.name || 'Unknown Device',
-      phone: d.phone || '', // 🆕 Tambahkan nomor WhatsApp
+      phone: d.phone || '',
       status: d.status || 'unknown',
       isConnected: d.status === 'open',
     }));
@@ -111,6 +175,8 @@ export function useDevices() {
 
   onUnmounted(() => {
     window.removeEventListener('wa:device-session-closed', handleDeviceSessionClosed);
+    // 🆕 Cleanup socket listeners saat unmount
+    cleanupSocketListeners();
   });
 
   return {

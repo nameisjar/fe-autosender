@@ -4,6 +4,12 @@ import { useToast } from "./useToast.js";
 import { useGroups } from "./useGroups.js";
 import { userApi } from "../api/http.js";
 
+// 🆕 Shared state untuk contacts dan labels (di luar fungsi agar persistent)
+const contacts = ref([]);
+const loadingContacts = ref(false);
+const labels = ref([]);
+const loadingLabels = ref(false);
+
 export function useRecipients() {
   const toast = useToast();
   const recipients = ref([]);
@@ -22,10 +28,8 @@ export function useRecipients() {
     return groups.value.filter((g) => g.label.toLowerCase().includes(q));
   });
 
-  // Contacts
-  const contacts = ref([]);
+  // Contacts (🆕 menggunakan shared state)
   const selectedContactId = ref("");
-  const loadingContacts = ref(false);
   const contactSearch = ref("");
   
   const filteredContacts = computed(() => {
@@ -38,10 +42,8 @@ export function useRecipients() {
     );
   });
 
-  // Labels
-  const labels = ref([]);
+  // Labels (🆕 menggunakan shared state)
   const selectedLabelValue = ref("");
-  const loadingLabels = ref(false);
   const labelSearch = ref("");
   
   const filteredLabels = computed(() => {
@@ -211,9 +213,14 @@ export function useRecipients() {
       const res = await userApi.get("/contacts", {
         params: deviceId ? { deviceId } : {},
       });
-      contacts.value = Array.isArray(res?.data) ? res.data : [];
+      // 🆕 Fix: Backend returns { data: [...], metadata: {...} }
+      const responseData = res?.data;
+      contacts.value = Array.isArray(responseData?.data) 
+        ? responseData.data 
+        : Array.isArray(responseData) 
+          ? responseData 
+          : [];
     } catch (e) {
-      // Silent fail or toast
       console.error("Failed to load contacts", e);
     } finally {
       loadingContacts.value = false;
@@ -268,6 +275,9 @@ export function useRecipients() {
     selectedContactId.value = "";
     selectedGroupId.value = "";
     selectedLabelValue.value = "";
+    // 🆕 Clear contacts dan labels saat device berubah agar di-load ulang
+    contacts.value = [];
+    labels.value = [];
   };
 
   return {

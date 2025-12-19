@@ -85,12 +85,13 @@
           <th>Nomor WhatsApp</th>
           <th>Status</th>
           <th>Kontak & Grup</th>
+          <th>Total Pesan</th>
           <th class="text-center">Aksi</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="filteredDevices.length === 0 && searchQuery" class="no-results-row">
-          <td colspan="5">
+          <td colspan="6">
             <div class="no-results-message">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8" />
@@ -226,6 +227,43 @@
             </div>
           </td>
 
+          <td data-label="Total Pesan">
+            <div class="message-stats-cell">
+              <template v-if="messageStats[d.id]">
+                <span class="feature-badge feature-sent" :title="`${messageStats[d.id].sent} pesan terkirim`">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 2L11 13" />
+                    <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                  </svg>
+                  {{ messageStats[d.id].sent }} Terkirim
+                </span>
+                <span class="feature-badge feature-scheduled" :title="`${messageStats[d.id].scheduled} pesan terjadwal`">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  {{ messageStats[d.id].scheduled }} Terjadwal
+                </span>
+              </template>
+              <template v-else>
+                <span class="feature-badge feature-loading">
+                  <svg
+                    class="spin-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                    />
+                  </svg>
+                  Memuat...
+                </span>
+              </template>
+            </div>
+          </td>
+
           <td data-label="Aksi" class="text-center">
             <button
               class="btn-delete-table"
@@ -312,6 +350,7 @@
 defineProps({
   devices: { type: Array, default: () => [] },
   deviceStats: { type: Object, default: () => ({}) },
+  messageStats: { type: Object, default: () => ({}) },
   deleting: { type: Boolean, default: false },
 
   isTutor: { type: Boolean, default: false },
@@ -637,6 +676,24 @@ defineEmits([
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #94a3b8;
+}
+
+.message-stats-cell {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.feature-badge.feature-sent {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.feature-badge.feature-scheduled {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
 }
 
 .btn-delete-table {

@@ -33,6 +33,7 @@
       <DeviceListTable
         :devices="devices"
         :deviceStats="deviceStats"
+        :messageStats="messageStats"
         :deleting="deleting"
         :isTutor="isTutor"
         :tutorReachedLimit="tutorReachedLimit"
@@ -170,8 +171,8 @@ const prevPage = () => {
   if (currentPage.value > 1) currentPage.value--;
 };
 
-// ------- Device stats (contacts/groups) -------
-const { deviceStats, fetchDeviceStats, fetchAllDeviceStats } = useDeviceStats({
+// ------- Device stats (contacts/groups + messages) -------
+const { deviceStats, messageStats, fetchDeviceStats, fetchAllDeviceStats, fetchAllMessageStats } = useDeviceStats({
   userApi,
   toast,
 });
@@ -310,14 +311,18 @@ onMounted(async () => {
     } catch (_) {}
   }
   await loadDevices().catch(() => {});
-  await fetchAllDeviceStats();
+  // 🆕 Pass devices.value ke fetchAllDeviceStats
+  await fetchAllDeviceStats(devices.value);
+  await fetchAllMessageStats();
 });
 
 watch(
   () => devices.value,
-  async () => {
+  async (newDevices) => {
     // keep stats fresh for connected devices
-    await fetchAllDeviceStats();
+    // 🆕 Pass newDevices ke fetchAllDeviceStats
+    await fetchAllDeviceStats(newDevices);
+    await fetchAllMessageStats();
   }
 );
 

@@ -90,6 +90,12 @@ const login = async () => {
       password: password.value,
     });
     localStorage.setItem("token", data.accessToken);
+    
+    // 🆕 Emit event untuk memberitahu komponen lain bahwa user baru login
+    try {
+      window.dispatchEvent(new CustomEvent("user:logged-in"));
+    } catch (_) {}
+    
     router.push("/");
   } catch (e) {
     error.value =

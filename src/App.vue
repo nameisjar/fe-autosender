@@ -18,7 +18,6 @@ const toastContainer = ref(null);
 // 🔔 Handle device session closed event
 function handleDeviceSessionClosed(event) {
   const { deviceId } = event.detail || {};
-  // console.warn("Device session closed:", deviceId);
 
   // Clear cache untuk device yang disconnect
   clearDeviceAccessTokenCache();
@@ -30,10 +29,23 @@ function handleDeviceSessionClosed(event) {
 // 🔔 Handle device changed event
 function handleDeviceChanged(event) {
   const { deviceId, deviceName } = event.detail || {};
-  // console.log('Device changed:', deviceId, deviceName);
 
   // Clear old cache, akan di-fetch ulang saat request berikutnya
   clearDeviceAccessTokenCache();
+}
+
+// 🆕 Handle user logged in event
+async function handleUserLoggedIn() {
+  // Load devices dan auto-select setelah login
+  await loadDevices().catch(() => {});
+  
+  // Load groups
+  loadGroups().catch(() => {});
+  
+  // Emit event untuk memberitahu Sidebar bahwa devices sudah ter-load
+  setTimeout(() => {
+    window.dispatchEvent(new CustomEvent("devices:loaded"));
+  }, 500);
 }
 
 async function ensureDefaultDeviceSelected() {
@@ -61,6 +73,11 @@ onMounted(async () => {
     setToastInstance(toastContainer.value);
   }
 
+  // 🔔 Setup event listeners (selalu setup, tidak hanya jika ada token)
+  window.addEventListener("wa:device-session-closed", handleDeviceSessionClosed);
+  window.addEventListener("device:changed", handleDeviceChanged);
+  window.addEventListener("user:logged-in", handleUserLoggedIn);
+
   const token = localStorage.getItem("token");
   if (!token) return; // skip auto-calls on login page
 
@@ -69,16 +86,13 @@ onMounted(async () => {
 
   // Load groups
   loadGroups().catch(() => {});
-
-  // 🔔 Setup event listeners
-  window.addEventListener("wa:device-session-closed", handleDeviceSessionClosed);
-  window.addEventListener("device:changed", handleDeviceChanged);
 });
 
 onUnmounted(() => {
   // 🧹 Cleanup event listeners
   window.removeEventListener("wa:device-session-closed", handleDeviceSessionClosed);
   window.removeEventListener("device:changed", handleDeviceChanged);
+  window.removeEventListener("user:logged-in", handleUserLoggedIn);
 });
 </script>
 
