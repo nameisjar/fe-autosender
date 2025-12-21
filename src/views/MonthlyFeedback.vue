@@ -428,7 +428,7 @@
           :disabled="!isFormValid || generating"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-8 11-8 11 8-11 8-11-8-11-8z" />
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>
           Preview
@@ -1356,7 +1356,9 @@ const handleDownloadPDF = async () => {
 
 const onDeviceChanged = () => {
   recipientsPicker.value?.resetRecipients();
-  toast.success("Device berhasil diganti. Data kontak, grup, dan label telah di-refresh.");
+  toast.success(
+    "Device berhasil diganti. Data kontak, grup, dan label telah di-refresh."
+  );
 };
 
 onMounted(async () => {

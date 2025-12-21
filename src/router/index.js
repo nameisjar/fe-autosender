@@ -11,6 +11,7 @@ import MonthlyTemplates from '../views/MonthlyTemplates.vue';
 import MonthlyFeedback from '../views/MonthlyFeedback.vue';
 import AdminTutors from '../views/AdminTutors.vue';
 import AdminSentHistory from '../views/AdminSentHistory.vue';
+import AdminMonitoring from '../views/AdminMonitoring.vue';
 import SendMessage from '../views/SendMessage.vue';
 import Schedules from '../views/Schedules.vue';
 import Broadcasts from '../views/Broadcasts.vue';
@@ -58,6 +59,12 @@ const routes = [
                 path: 'admin/sent-history',
                 name: 'admin-sent-history',
                 component: AdminSentHistory,
+                meta: { requiresAdmin: true },
+            },
+            {
+                path: 'admin/monitoring',
+                name: 'admin-monitoring',
+                component: AdminMonitoring,
                 meta: { requiresAdmin: true },
             },
             {
