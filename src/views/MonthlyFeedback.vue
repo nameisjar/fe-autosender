@@ -685,7 +685,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { userApi } from "../api/http.js";
+import { userApi, deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
 import { getImagesAsBase64 } from "../utils/images.js";
@@ -1169,12 +1169,12 @@ const handleGenerateAndSend = async () => {
       referralLink: previewData.value.referralLink,
       tutorComment: selectedCommentsText.value,
       recipients: recipients.value,
-      deviceId: deviceId,
+      // deviceId tidak perlu - sudah dari token deviceApi
       rating: previewData.value.rating,
       reportBy: previewData.value.reportBy,
     };
 
-    const { data } = await userApi.post("/algorithmics/monthly-feedback/send", payload);
+    const { data } = await deviceApi.post("/messages/monthly-feedback/send", payload);
 
     if (data.results && Array.isArray(data.results)) {
       sendResults.value = data.results.map((r) => ({

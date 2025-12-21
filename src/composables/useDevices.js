@@ -7,6 +7,10 @@ const devices = ref([]);
 const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
 const loading = ref(false);
 
+// 🆕 Device health state
+const deviceHealthCache = ref({});
+const healthLoading = ref({});
+
 // 🆕 Track socket listeners untuk cleanup
 let socketCleanups = [];
 
@@ -148,8 +152,94 @@ export function useDevices() {
       phone: d.phone || '',
       status: d.status || 'unknown',
       isConnected: d.status === 'open',
+      // 🆕 Health info from cache
+      health: deviceHealthCache.value[d.id] || null,
     }));
   });
+
+  // 🆕 Fetch device health status
+  const fetchDeviceHealth = async (deviceId) => {
+    if (!deviceId) return null;
+    
+    try {
+      healthLoading.value[deviceId] = true;
+      const { data } = await userApi.get(`/devices/${deviceId}/health`);
+      deviceHealthCache.value[deviceId] = data;
+      return data;
+    } catch (error) {
+      console.error(`Error fetching health for device ${deviceId}:`, error);
+      return null;
+    } finally {
+      healthLoading.value[deviceId] = false;
+    }
+  };
+
+  // 🆕 Fetch device signals history
+  const fetchDeviceSignals = async (deviceId, limit = 20) => {
+    if (!deviceId) return [];
+    
+    try {
+      const { data } = await userApi.get(`/devices/${deviceId}/signals`, {
+        params: { limit }
+      });
+      return data.signals || [];
+    } catch (error) {
+      console.error(`Error fetching signals for device ${deviceId}:`, error);
+      return [];
+    }
+  };
+
+  // 🆕 Pause device manually
+  const pauseDevice = async (deviceId, reason = 'Manual pause') => {
+    if (!deviceId) return false;
+    
+    try {
+      const { data } = await userApi.post(`/devices/${deviceId}/pause`, { reason });
+      // Refresh health cache
+      await fetchDeviceHealth(deviceId);
+      return data;
+    } catch (error) {
+      console.error(`Error pausing device ${deviceId}:`, error);
+      throw error;
+    }
+  };
+
+  // 🆕 Resume device manually
+  const resumeDevice = async (deviceId) => {
+    if (!deviceId) return false;
+    
+    try {
+      const { data } = await userApi.post(`/devices/${deviceId}/resume`);
+      // Refresh health cache
+      await fetchDeviceHealth(deviceId);
+      return data;
+    } catch (error) {
+      console.error(`Error resuming device ${deviceId}:`, error);
+      throw error;
+    }
+  };
+
+  // 🆕 Get selected device health
+  const selectedDeviceHealth = computed(() => {
+    if (!selectedDeviceId.value) return null;
+    return deviceHealthCache.value[selectedDeviceId.value] || null;
+  });
+
+  // 🆕 Health status badge info
+  const getHealthBadge = (deviceId) => {
+    const health = deviceHealthCache.value[deviceId];
+    if (!health) return { label: '-', color: 'gray', icon: '' };
+    
+    const statusMap = {
+      healthy: { label: 'Healthy', color: 'green', icon: '' },
+      warning: { label: 'Warning', color: 'yellow', icon: '' },
+      critical: { label: 'Critical', color: 'red', icon: '' },
+      paused: { label: 'Paused', color: 'gray', icon: '' },
+      banned: { label: 'Banned', color: 'red', icon: '' },
+    };
+    
+    return statusMap[health.healthStatus] || { label: 'Unknown', color: 'gray', icon: '' };
+  };
 
   // 🆕 Method untuk clear device selection
   const clearDevice = () => {
@@ -188,5 +278,14 @@ export function useDevices() {
     loadDevices,
     selectDevice,
     clearDevice,
+    // 🆕 Health management
+    deviceHealthCache,
+    healthLoading,
+    fetchDeviceHealth,
+    fetchDeviceSignals,
+    pauseDevice,
+    resumeDevice,
+    selectedDeviceHealth,
+    getHealthBadge,
   };
 }
