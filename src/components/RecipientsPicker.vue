@@ -318,8 +318,8 @@ const handleDeviceChange = async () => {
   resetRecipients();
   await Promise.allSettled([
     loadGroups({ force: true }),
-    loadContacts(),
-    loadLabels(),
+    loadContacts(null, { force: true }),
+    loadLabels(null, { force: true }),
   ]);
 };
 

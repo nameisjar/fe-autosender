@@ -10,6 +10,10 @@ const loadingContacts = ref(false);
 const labels = ref([]);
 const loadingLabels = ref(false);
 
+// 🔧 Track device untuk auto-reload saat device berubah
+let lastContactsDeviceId = null;
+let lastLabelsDeviceId = null;
+
 export function useRecipients() {
   const toast = useToast();
   const recipients = ref([]);
@@ -206,10 +210,16 @@ export function useRecipients() {
     return "";
   };
 
-  const loadContacts = async (deviceIdOverride) => {
+  const loadContacts = async (deviceIdOverride, { force = false } = {}) => {
     try {
-      loadingContacts.value = true;
       const deviceId = deviceIdOverride || (await ensureDeviceId()) || undefined;
+      
+      // 🔧 Skip jika sudah ada data dan device sama (kecuali force)
+      if (!force && contacts.value.length > 0 && lastContactsDeviceId === deviceId) {
+        return;
+      }
+      
+      loadingContacts.value = true;
       const res = await userApi.get("/contacts", {
         params: deviceId ? { deviceId } : {},
       });
@@ -220,6 +230,9 @@ export function useRecipients() {
         : Array.isArray(responseData) 
           ? responseData 
           : [];
+      
+      // 🔧 Track device yang sudah di-load
+      lastContactsDeviceId = deviceId;
     } catch (e) {
       console.error("Failed to load contacts", e);
     } finally {
@@ -227,10 +240,16 @@ export function useRecipients() {
     }
   };
 
-  const loadLabels = async (deviceIdOverride) => {
+  const loadLabels = async (deviceIdOverride, { force = false } = {}) => {
     try {
-      loadingLabels.value = true;
       const deviceId = deviceIdOverride || (await ensureDeviceId()) || undefined;
+      
+      // 🔧 Skip jika sudah ada data dan device sama (kecuali force)
+      if (!force && labels.value.length > 0 && lastLabelsDeviceId === deviceId) {
+        return;
+      }
+      
+      loadingLabels.value = true;
       const res = await userApi.get("/contacts/labels", {
         params: deviceId ? { deviceId } : {},
       });
@@ -243,17 +262,21 @@ export function useRecipients() {
       
       if (!Array.isArray(list) || list.length === 0) {
         if (!contacts.value || contacts.value.length === 0) {
-          await loadContacts(deviceId).catch(() => {});
+          await loadContacts(deviceId, { force }).catch(() => {});
         }
         list = deriveLabelsFromContacts();
       }
       labels.value = mapLabels(list);
+      
+      // 🔧 Track device yang sudah di-load
+      lastLabelsDeviceId = deviceId;
     } catch (_) {
       if (!contacts.value || contacts.value.length === 0) {
-        await loadContacts(deviceIdOverride).catch(() => {});
+        await loadContacts(deviceIdOverride, { force }).catch(() => {});
       }
       const list = deriveLabelsFromContacts();
       labels.value = mapLabels(list);
+      lastLabelsDeviceId = deviceIdOverride || lastContactsDeviceId;
     } finally {
       loadingLabels.value = false;
     }
@@ -268,16 +291,17 @@ export function useRecipients() {
     }
   };
 
-  // Reset function when device changes
+  // Reset function when device changes or form submitted
   const resetRecipients = () => {
     recipients.value = [];
     recipientLabels.value = {};
     selectedContactId.value = "";
     selectedGroupId.value = "";
     selectedLabelValue.value = "";
-    // 🆕 Clear contacts dan labels saat device berubah agar di-load ulang
-    contacts.value = [];
-    labels.value = [];
+    // 🔧 Reset device tracking agar data di-reload saat dibutuhkan
+    // JANGAN clear contacts/labels agar dropdown tidak kosong
+    lastContactsDeviceId = null;
+    lastLabelsDeviceId = null;
   };
 
   return {
