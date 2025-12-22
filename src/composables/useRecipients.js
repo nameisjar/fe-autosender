@@ -1,13 +1,18 @@
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { normalizePhoneNumber, isValidPhoneNumber } from "../utils/phone.js";
 import { useToast } from "./useToast.js";
 import { useGroups } from "./useGroups.js";
 import { userApi } from "../api/http.js";
+import { debounce } from "../utils/debounce.js";
 
 // 🆕 Shared state untuk contacts dan labels (di luar fungsi agar persistent)
-const contacts = ref([]);
+const contacts = ref([]); // Initial 100 contacts for dropdown
+const searchedContacts = ref([]); // Server-side search results
+const isSearchingContacts = ref(false); // Flag for server-side search mode
 const loadingContacts = ref(false);
-const labels = ref([]);
+const labels = ref([]); // Initial 100 labels for dropdown
+const searchedLabels = ref([]); // Server-side search results for labels
+const isSearchingLabels = ref(false); // Flag for server-side search mode
 const loadingLabels = ref(false);
 
 // 🔧 Track device untuk auto-reload saat device berubah
@@ -22,49 +27,181 @@ export function useRecipients() {
   const activeTab = ref("manual");
 
   // Groups
-  const { groups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups } = useGroups();
+  const { groups, searchedGroups, isSearchingGroups, loadingGroups, loadGroups, ensureFullGroupJid, syncGroups, searchGroupsOnServer } = useGroups();
   const selectedGroupId = ref("");
   const groupSearch = ref("");
 
+  // 🆕 Hybrid approach for groups: show searched results if searching, otherwise show initial groups
   const filteredGroups = computed(() => {
     const q = groupSearch.value.toLowerCase();
-    if (!q) return groups.value;
+    
+    // If no search query, show initial groups
+    if (!q) {
+      isSearchingGroups.value = false;
+      return groups.value;
+    }
+    
+    // If we have server-side search results, use them
+    if (isSearchingGroups.value && searchedGroups.value.length > 0) {
+      return searchedGroups.value;
+    }
+    
+    // While waiting for server response, filter locally from initial groups
     return groups.value.filter((g) => g.label.toLowerCase().includes(q));
+  });
+
+  // 🆕 Watch groupSearch and trigger server-side search
+  watch(groupSearch, (newQuery) => {
+    if (!newQuery) {
+      isSearchingGroups.value = false;
+    } else {
+      searchGroupsOnServer(newQuery);
+    }
   });
 
   // Contacts (🆕 menggunakan shared state)
   const selectedContactId = ref("");
   const contactSearch = ref("");
   
+  // 🆕 Hybrid approach: show searched results if searching, otherwise show initial contacts
   const filteredContacts = computed(() => {
     const q = contactSearch.value.toLowerCase();
-    if (!q) return contacts.value;
+    
+    // If no search query, show initial contacts
+    if (!q) {
+      isSearchingContacts.value = false;
+      return contacts.value;
+    }
+    
+    // If we have server-side search results, use them
+    if (isSearchingContacts.value && searchedContacts.value.length > 0) {
+      return searchedContacts.value;
+    }
+    
+    // While waiting for server response, filter locally from initial contacts
     return contacts.value.filter((c) => {
-      // Search in firstName, lastName, phone
       const basicMatch = [c.firstName, c.lastName, c.phone]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
-
       if (basicMatch) return true;
-
-      // Also search in labels
       const labelMatch = (c.ContactLabel || [])
         .map((cl) => cl?.label?.name)
         .filter(Boolean)
         .some((name) => String(name).toLowerCase().includes(q));
-
       return labelMatch;
     });
+  });
+
+  // 🆕 Server-side search function with debounce
+  const searchContactsOnServer = debounce(async (query) => {
+    if (!query || query.length < 2) {
+      isSearchingContacts.value = false;
+      searchedContacts.value = [];
+      return;
+    }
+    
+    try {
+      loadingContacts.value = true;
+      const deviceId = await ensureDeviceId();
+      
+      const res = await userApi.get("/contacts", {
+        params: {
+          ...(deviceId ? { deviceId } : {}),
+          q: query,
+          pageSize: 50,
+        },
+      });
+      
+      const responseData = res?.data;
+      searchedContacts.value = Array.isArray(responseData?.data)
+        ? responseData.data
+        : Array.isArray(responseData)
+          ? responseData
+          : [];
+      isSearchingContacts.value = true;
+    } catch (e) {
+      console.error("Failed to search contacts", e);
+    } finally {
+      loadingContacts.value = false;
+    }
+  }, 300);
+
+  // 🆕 Watch contactSearch and trigger server-side search
+  watch(contactSearch, (newQuery) => {
+    if (!newQuery) {
+      isSearchingContacts.value = false;
+      searchedContacts.value = [];
+    } else {
+      searchContactsOnServer(newQuery);
+    }
   });
 
   // Labels (🆕 menggunakan shared state)
   const selectedLabelValue = ref("");
   const labelSearch = ref("");
   
+  // 🆕 Hybrid approach for labels: show searched results if searching, otherwise show initial labels
   const filteredLabels = computed(() => {
     const q = labelSearch.value.toLowerCase();
-    if (!q) return labels.value;
+    
+    // If no search query, show initial labels
+    if (!q) {
+      isSearchingLabels.value = false;
+      return labels.value;
+    }
+    
+    // If we have server-side search results, use them
+    if (isSearchingLabels.value && searchedLabels.value.length > 0) {
+      return searchedLabels.value;
+    }
+    
+    // While waiting for server response, filter locally from initial labels
     return labels.value.filter((l) => l.label.toLowerCase().includes(q));
+  });
+
+  // 🆕 Server-side search function for labels with debounce
+  const searchLabelsOnServer = debounce(async (query) => {
+    if (!query || query.length < 2) {
+      isSearchingLabels.value = false;
+      searchedLabels.value = [];
+      return;
+    }
+    
+    try {
+      loadingLabels.value = true;
+      const deviceId = await ensureDeviceId();
+      
+      const res = await userApi.get("/contacts/labels", {
+        params: {
+          ...(deviceId ? { deviceId } : {}),
+          q: query,
+          pageSize: 50,
+        },
+      });
+      
+      const data = res?.data;
+      const labelList = Array.isArray(data?.labels)
+        ? data.labels
+        : Array.isArray(data)
+          ? data
+          : [];
+      searchedLabels.value = mapLabels(labelList);
+      isSearchingLabels.value = true;
+    } catch (e) {
+      console.error("Failed to search labels", e);
+    } finally {
+      loadingLabels.value = false;
+    }
+  }, 300);
+
+  // 🆕 Watch labelSearch and trigger server-side search
+  watch(labelSearch, (newQuery) => {
+    if (!newQuery) {
+      isSearchingLabels.value = false;
+      searchedLabels.value = [];
+    } else {
+      searchLabelsOnServer(newQuery);
+    }
   });
 
   // --- Helpers ---
@@ -231,15 +368,21 @@ export function useRecipients() {
       }
       
       loadingContacts.value = true;
+      
+      // 🆕 Hybrid approach: Load only initial 50 contacts for dropdown
+      // Server-side search will be used when user types in search box
       const res = await userApi.get("/contacts", {
-        params: deviceId ? { deviceId } : {},
+        params: {
+          ...(deviceId ? { deviceId } : {}),
+          pageSize: 50,
+        },
       });
-      // 🆕 Fix: Backend returns { data: [...], metadata: {...} }
+      
       const responseData = res?.data;
-      contacts.value = Array.isArray(responseData?.data) 
-        ? responseData.data 
-        : Array.isArray(responseData) 
-          ? responseData 
+      contacts.value = Array.isArray(responseData?.data)
+        ? responseData.data
+        : Array.isArray(responseData)
+          ? responseData
           : [];
       
       // 🔧 Track device yang sudah di-load
@@ -261,8 +404,13 @@ export function useRecipients() {
       }
       
       loadingLabels.value = true;
+      
+      // 🆕 Hybrid approach: Load only initial 50 labels for dropdown
       const res = await userApi.get("/contacts/labels", {
-        params: deviceId ? { deviceId } : {},
+        params: {
+          ...(deviceId ? { deviceId } : {}),
+          pageSize: 50,
+        },
       });
       const data = res?.data;
       let list = Array.isArray(data?.labels)

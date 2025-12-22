@@ -7,7 +7,9 @@ import { cache } from '../utils/cache.js';
 import { debounce } from '../utils/debounce.js';
 
 // Singleton state (module-scoped)
-const groupsState = ref([]); // { value, label, meta }
+const groupsState = ref([]); // { value, label, meta } - Initial 50 groups
+const searchedGroupsState = ref([]); // 🆕 Server-side search results
+const isSearchingGroupsState = ref(false); // 🆕 Flag for server-side search mode
 const loadingState = ref(false);
 const errorState = ref('');
 let inFlight = null;
@@ -56,14 +58,18 @@ const debouncedLoadGroups = debounce(async ({ force = false } = {}) => {
   return loadGroupsInternal({ force });
 }, 500); // 500ms debounce
 
-const fetchGroupsFromDatabase = async () => {
+const fetchGroupsFromDatabase = async (options = {}) => {
   const deviceId = getDeviceId();
   if (!deviceId) {
     throw new Error('Device ID tidak ditemukan. Silakan pilih device terlebih dahulu.');
   }
 
   try {
-    const res = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
+    const { q, pageSize = 50 } = options;
+    const params = { pageSize };
+    if (q) params.q = q;
+    
+    const res = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`, { params });
     const payload = res?.data;
     
     if (!payload?.status) {
@@ -74,7 +80,7 @@ const fetchGroupsFromDatabase = async () => {
     const list = Array.isArray(payload?.data) ? payload.data : [];
     const mappedGroups = mapGroups(list);
     
-    return mappedGroups;
+    return { groups: mappedGroups, metadata: payload?.metadata };
   } catch (error) {
     throw error;
   }
@@ -116,7 +122,7 @@ const loadGroupsInternal = async ({ force = false } = {}) => {
   
   inFlight = (async () => {
     try {
-      const data = await fetchGroupsFromDatabase();
+      const { groups: data } = await fetchGroupsFromDatabase({ pageSize: 50 });
       groupsState.value = data;
       
       // ✅ Save to cache
@@ -248,6 +254,26 @@ const setupGroupSocketListeners = (deviceId) => {
   socketCleanups.push(cleanup1, cleanup2, cleanup3);
 };
 
+// 🆕 Server-side search function for groups with debounce
+const searchGroupsOnServer = debounce(async (query) => {
+  if (!query || query.length < 2) {
+    isSearchingGroupsState.value = false;
+    searchedGroupsState.value = [];
+    return;
+  }
+  
+  try {
+    loadingState.value = true;
+    const { groups } = await fetchGroupsFromDatabase({ q: query, pageSize: 50 });
+    searchedGroupsState.value = groups;
+    isSearchingGroupsState.value = true;
+  } catch (e) {
+    console.error("Failed to search groups", e);
+  } finally {
+    loadingState.value = false;
+  }
+}, 300);
+
 // Listen for device changes to clear groups
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
@@ -263,6 +289,8 @@ if (typeof window !== 'undefined') {
 
 export function useGroups() {
   const groups = groupsState;
+  const searchedGroups = searchedGroupsState; // 🆕
+  const isSearchingGroups = isSearchingGroupsState; // 🆕
   const loading = loadingState;
   const error = errorState;
 
@@ -401,6 +429,8 @@ export function useGroups() {
 
   return {
     groups,
+    searchedGroups, // 🆕
+    isSearchingGroups, // 🆕
     loadingGroups: loading,
     errGroups: error,
     loadGroups,
@@ -410,5 +440,6 @@ export function useGroups() {
     syncGroups,
     joinGroup,
     leaveGroup,
+    searchGroupsOnServer, // 🆕
   };
 }
