@@ -39,11 +39,22 @@ export function useRecipients() {
   const filteredContacts = computed(() => {
     const q = contactSearch.value.toLowerCase();
     if (!q) return contacts.value;
-    return contacts.value.filter((c) =>
-      [c.firstName, c.lastName, c.phone]
+    return contacts.value.filter((c) => {
+      // Search in firstName, lastName, phone
+      const basicMatch = [c.firstName, c.lastName, c.phone]
         .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q))
-    );
+        .some((v) => String(v).toLowerCase().includes(q));
+
+      if (basicMatch) return true;
+
+      // Also search in labels
+      const labelMatch = (c.ContactLabel || [])
+        .map((cl) => cl?.label?.name)
+        .filter(Boolean)
+        .some((name) => String(name).toLowerCase().includes(q));
+
+      return labelMatch;
+    });
   });
 
   // Labels (🆕 menggunakan shared state)

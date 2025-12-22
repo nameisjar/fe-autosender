@@ -98,7 +98,7 @@
           <div class="select-wrapper" style="flex: 1">
             <input
               v-model="contactSearch"
-              placeholder="Cari kontak..."
+              placeholder="Cari kontak atau label..."
               class="form-input mb-2"
               style="margin-bottom: 8px"
             />
