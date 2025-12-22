@@ -1239,70 +1239,66 @@ const handleDownloadPDF = async () => {
   if (!previewData.value || !pdfTemplate.value) return;
 
   generating.value = true;
+  
+  // 🔧 Create a separate container for PDF rendering
+  let pdfContainer = null;
+  
   try {
-    const element = pdfTemplate.value.$el.cloneNode(true);
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const images = element.querySelectorAll("img");
-    const imagePromises = Array.from(images).map(async (img) => {
-      try {
-        const src = img.src || img.getAttribute("src");
-        if (!src) return;
-
-        return new Promise((resolve) => {
-          const tempImg = new Image();
-          tempImg.crossOrigin = "Anonymous";
-
-          tempImg.onload = () => {
-            try {
-              const canvas = document.createElement("canvas");
-              canvas.width = tempImg.naturalWidth || tempImg.width;
-              canvas.height = tempImg.naturalHeight || tempImg.height;
-
-              if (canvas.width === 0 || canvas.height === 0) {
-                resolve();
-                return;
-              }
-
-              const ctx = canvas.getContext("2d");
-
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-              ctx.drawImage(tempImg, 0, 0);
-
-              const isIcon =
-                img.classList.contains("icon-img") ||
-                img.classList.contains("icon-img-small") ||
-                img.classList.contains("icon-img-inline") ||
-                img.classList.contains("icon-img-2");
-              const base64 = isIcon
-                ? canvas.toDataURL("image/png", 1.0)
-                : canvas.toDataURL("image/jpeg", 0.95);
-
-              img.src = base64;
-              img.setAttribute("src", base64);
-              img.style.display = "block";
-              img.style.visibility = "visible";
-              img.style.background = "transparent";
-              resolve();
-            } catch (error) {
-              resolve();
-            }
-          };
-
-          tempImg.onerror = () => {
-            resolve();
-          };
-
-          tempImg.src = src;
-        });
-      } catch (error) {}
+    // 🔧 Clone the element and append to a visible but off-screen container
+    const originalElement = pdfTemplate.value.$el;
+    pdfContainer = document.createElement('div');
+    pdfContainer.id = 'pdf-render-container';
+    pdfContainer.style.cssText = `
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 794px;
+      z-index: -9999;
+      background: white;
+      visibility: visible;
+      opacity: 1;
+    `;
+    document.body.appendChild(pdfContainer);
+    
+    // 🔧 Clone and append to container
+    const element = originalElement.cloneNode(true);
+    element.style.cssText = `
+      width: 794px;
+      background: white;
+      display: block;
+    `;
+    pdfContainer.appendChild(element);
+    
+    // 🔧 Copy all styles from original to clone (including scoped styles)
+    const copyComputedStyles = (source, target) => {
+      const sourceStyles = window.getComputedStyle(source);
+      for (let i = 0; i < sourceStyles.length; i++) {
+        const prop = sourceStyles[i];
+        try {
+          target.style.setProperty(prop, sourceStyles.getPropertyValue(prop));
+        } catch (e) {}
+      }
+    };
+    
+    // Apply computed styles to all elements
+    const sourceElements = originalElement.querySelectorAll('*');
+    const targetElements = element.querySelectorAll('*');
+    sourceElements.forEach((src, idx) => {
+      if (targetElements[idx]) {
+        copyComputedStyles(src, targetElements[idx]);
+      }
     });
+    copyComputedStyles(originalElement, element);
 
-    await Promise.all(imagePromises);
+    // Wait for styles to apply
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // 🔧 Get dimensions after styles are applied
+    const elementWidth = element.offsetWidth || 794;
+    const elementHeight = element.scrollHeight || element.offsetHeight || 1123;
+    
+    console.log('PDF dimensions:', { elementWidth, elementHeight });
+    
     const studentNameClean = formattedStudentName.value.replace(/\s+/g, "_");
     const monthNum = previewData.value.month;
     const fileName = "Feedback_" + studentNameClean + "_Bulan" + monthNum + ".pdf";
@@ -1317,39 +1313,39 @@ const handleDownloadPDF = async () => {
       html2canvas: {
         scale: 2,
         useCORS: true,
-        allowTaint: false,
-        logging: false,
+        allowTaint: true,
+        logging: true,
         backgroundColor: "#ffffff",
         scrollY: 0,
         scrollX: 0,
-        windowWidth: 794,
-        windowHeight: 1123,
-        onclone: (clonedDoc) => {
-          const clonedImages = clonedDoc.querySelectorAll("img");
-          clonedImages.forEach((img) => {
-            img.style.display = "block";
-            img.style.visibility = "visible";
-            img.style.background = "transparent";
-          });
-        },
+        width: elementWidth,
+        height: elementHeight,
+        windowWidth: elementWidth,
+        windowHeight: elementHeight,
       },
       jsPDF: {
         unit: "px",
-        format: [794, 1123],
+        format: [elementWidth, elementHeight],
         orientation: "portrait",
         compress: true,
         hotfixes: ["px_scaling"],
       },
       pagebreak: {
-        mode: "avoid-all",
+        mode: ["avoid-all"],
       },
     };
 
     await html2pdf().set(opt).from(element).save();
+    
     toast.success("PDF berhasil didownload!");
   } catch (e) {
+    console.error('PDF generation error:', e);
     toast.error("Gagal generate PDF: " + (e.message || "Unknown error"));
   } finally {
+    // 🔧 Cleanup: remove the PDF container
+    if (pdfContainer && pdfContainer.parentNode) {
+      pdfContainer.parentNode.removeChild(pdfContainer);
+    }
     generating.value = false;
   }
 };

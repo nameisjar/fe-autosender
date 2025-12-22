@@ -315,6 +315,7 @@ const renderStars = (rating) => {
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   margin-bottom: 6px;
+  align-items: stretch;
 }
 
 .yellow-box-half {
@@ -324,6 +325,7 @@ const renderStars = (rating) => {
   padding: 0;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .yellow-box-half.white-bg {
@@ -346,6 +348,11 @@ const renderStars = (rating) => {
   gap: 5px;
   margin-bottom: 0;
   padding: 10px 8px 10px 8px;
+}
+
+/* Only yellow box headers should expand to push content to bottom */
+.yellow-box-half .yellow-header-centered {
+  flex: 1;
 }
 
 .yellow-header-centered h3,
