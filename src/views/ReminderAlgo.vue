@@ -144,94 +144,7 @@
       </div>
 
       <!-- Card 2: Media Upload -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
-            </svg>
-            Media
-          </h3>
-          <span class="badge-optional">Opsional</span>
-        </div>
-        <div class="card-body">
-          <div class="upload-section">
-            <input
-              type="file"
-              @change="onFile"
-              :accept="acceptTypes"
-              class="file-input"
-              id="media-upload"
-            />
-            <label v-if="!mediaFile" for="media-upload" class="upload-label">
-              <div class="upload-icon-wrapper">
-                <svg
-                  class="upload-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              </div>
-              <div class="upload-text">
-                <p class="upload-title">Klik untuk upload media</p>
-                <p class="upload-subtitle">
-                  Mendukung: Gambar, Video, Audio, dan Dokumen
-                </p>
-              </div>
-            </label>
-
-            <!-- Media Preview -->
-            <div v-else class="media-preview-section">
-              <!-- Image Preview -->
-              <div v-if="isImage" class="media-preview image-preview">
-                <img :src="mediaPreview" alt="Preview" />
-              </div>
-
-              <!-- Document Preview -->
-              <div v-else class="media-preview document-preview">
-                <div class="doc-icon-wrapper">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2H6a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                  </svg>
-                </div>
-                <div class="doc-details">
-                  <p class="doc-name">{{ mediaName }}</p>
-                </div>
-              </div>
-
-              <button type="button" class="btn-remove-media" @click="removeMedia">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="3 6 5 6 21 6" />
-                  <path
-                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                  />
-                </svg>
-                Hapus Media
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <MediaUpload v-model="mediaFile" />
 
       <!-- Card 3: Recipients - Menggunakan RecipientsPicker -->
       <div class="card">
@@ -327,6 +240,7 @@ import { deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 import DevicePicker from "../components/DevicePicker.vue";
+import MediaUpload from "../components/MediaUpload.vue";
 import {
   convertToServerTime,
   formatLocalTime,
@@ -349,35 +263,10 @@ const form = ref({
 });
 
 const mediaFile = ref(null);
-const mediaPreview = ref("");
-const acceptTypes =
-  ".png,.jpg,.jpeg,.webp,.gif,.mp4,.mp3,.wav,.pdf,.doc,.docx,.xls,.xlsx,.txt";
-
-const isImage = computed(
-  () => mediaFile.value && mediaFile.value.type?.startsWith("image")
-);
-const mediaName = computed(() => mediaFile.value?.name || "");
 
 const loading = ref(false);
 const msg = ref("");
 const err = ref("");
-
-function onFile(e) {
-  const file = e.target.files?.[0];
-  mediaFile.value = file || null;
-  if (file && file.type?.startsWith("image")) {
-    mediaPreview.value = URL.createObjectURL(file);
-  } else {
-    mediaPreview.value = "";
-  }
-  const input = e.target;
-  if (input) input.value = "";
-}
-
-function removeMedia() {
-  mediaFile.value = null;
-  mediaPreview.value = "";
-}
 
 const estimatedCount = computed(() => {
   return Number(form.value.lessons || 1);
@@ -467,7 +356,6 @@ const submit = async () => {
     form.value.schedule = "";
     recipientsPicker.value?.resetRecipients();
     mediaFile.value = null;
-    mediaPreview.value = "";
   } catch (e) {
     const errorMsg =
       e?.response?.data?.message ||
@@ -710,162 +598,6 @@ function onDeviceChanged() {
   height: 12px;
   flex-shrink: 0;
   color: #94a3b8;
-}
-
-/* Upload Section */
-.upload-section {
-  position: relative;
-}
-
-.file-input {
-  display: none;
-}
-
-.upload-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 48px 32px;
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: #f8fafc;
-}
-
-.upload-label:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
-}
-
-.upload-icon-wrapper {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.upload-icon {
-  width: 32px;
-  height: 32px;
-  color: white;
-}
-
-.upload-text {
-  text-align: center;
-}
-
-.upload-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 6px 0;
-}
-
-.upload-subtitle {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
-/* Media Preview Section */
-.media-preview-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.media-preview {
-  padding: 20px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f8fafc;
-}
-
-.image-preview {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #0f172a;
-  min-height: 200px;
-}
-
-.image-preview img {
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 8px;
-  display: block;
-}
-
-.document-preview {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: #f8fafc;
-}
-
-.doc-icon-wrapper {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.doc-icon-wrapper svg {
-  width: 32px;
-  height: 32px;
-  color: #1e40af;
-}
-
-.doc-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.doc-name {
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 15px;
-}
-
-.btn-remove-media {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  color: #dc2626;
-  border: 1.5px solid #fca5a5;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-remove-media:hover {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  border-color: #f87171;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
-}
-
-.btn-remove-media svg {
-  width: 18px;
-  height: 18px;
 }
 
 /* Info Section */
