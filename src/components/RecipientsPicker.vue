@@ -95,36 +95,18 @@
       <!-- Contacts Tab -->
       <div v-show="activeTab === 'contacts'" class="tab-pane">
         <div class="input-with-button">
-          <div class="select-wrapper" style="flex: 1">
-            <input
-              v-model="contactSearch"
-              placeholder="Cari kontak atau label..."
-              class="form-input mb-2"
-              style="margin-bottom: 8px"
-            />
-            <select v-model="selectedContactId" class="form-select">
-              <option value="" disabled>Pilih kontak...</option>
-              <option
-                v-for="contact in filteredContacts"
-                :key="contact.id"
-                :value="contact.phone"
-              >
-                {{ contactDisplay(contact) }}
-              </option>
-            </select>
-          </div>
-          <button
-            type="button"
-            class="btn-primary"
-            @click="addSelectedContact"
-            :disabled="!selectedContactId"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Tambah
-          </button>
+          <SearchableSelect
+            v-model="selectedContacts"
+            :options="contactOptions"
+            :loading="loadingContacts"
+            :multiple="true"
+            :drop-up="true"
+            placeholder="Cari kontak atau label..."
+            no-results-text="Kontak tidak ditemukan"
+            @search="handleContactSearch"
+            @select="handleContactSelect"
+            @remove="handleContactRemove"
+          />
           <button
             v-if="showRefreshButtons"
             type="button"
@@ -150,36 +132,18 @@
       <!-- Groups Tab -->
       <div v-show="activeTab === 'groups'" class="tab-pane">
         <div class="input-with-button">
-          <div class="select-wrapper" style="flex: 1">
-            <input
-              v-model="groupSearch"
-              placeholder="Cari grup..."
-              class="form-input mb-2"
-              style="margin-bottom: 8px"
-            />
-            <select v-model="selectedGroupId" class="form-select">
-              <option value="" disabled>Pilih grup...</option>
-              <option
-                v-for="group in filteredGroups"
-                :key="group.value"
-                :value="group.value"
-              >
-                {{ group.label }}
-              </option>
-            </select>
-          </div>
-          <button
-            type="button"
-            class="btn-primary"
-            @click="addSelectedGroup"
-            :disabled="!selectedGroupId"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Tambah
-          </button>
+          <SearchableSelect
+            v-model="selectedGroups"
+            :options="groupOptions"
+            :loading="loadingGroups"
+            :multiple="true"
+            :drop-up="true"
+            placeholder="Cari grup..."
+            no-results-text="Grup tidak ditemukan"
+            @search="handleGroupSearch"
+            @select="handleGroupSelect"
+            @remove="handleGroupRemove"
+          />
           <button
             type="button"
             class="btn-secondary"
@@ -204,36 +168,18 @@
       <!-- Labels Tab -->
       <div v-show="activeTab === 'labels'" class="tab-pane">
         <div class="input-with-button">
-          <div class="select-wrapper" style="flex: 1">
-            <input
-              v-model="labelSearch"
-              placeholder="Cari label..."
-              class="form-input mb-2"
-              style="margin-bottom: 8px"
-            />
-            <select v-model="selectedLabelValue" class="form-select">
-              <option value="" disabled>Pilih label...</option>
-              <option
-                v-for="label in filteredLabels"
-                :key="label.value"
-                :value="label.value"
-              >
-                {{ label.label }}
-              </option>
-            </select>
-          </div>
-          <button
-            type="button"
-            class="btn-primary"
-            @click="addSelectedLabel"
-            :disabled="!selectedLabelValue"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Tambah
-          </button>
+          <SearchableSelect
+            v-model="selectedLabels"
+            :options="labelOptions"
+            :loading="loadingLabels"
+            :multiple="true"
+            :drop-up="true"
+            placeholder="Cari label..."
+            no-results-text="Label tidak ditemukan"
+            @search="handleLabelSearch"
+            @select="handleLabelSelect"
+            @remove="handleLabelRemove"
+          />
           <button
             v-if="showRefreshButtons"
             type="button"
@@ -260,8 +206,9 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRecipients } from "../composables/useRecipients.js";
+import SearchableSelect from "./SearchableSelect.vue";
 
 const props = defineProps({
   showRefreshButtons: {
@@ -277,24 +224,18 @@ const {
   activeTab,
   groups,
   loadingGroups,
-  selectedGroupId,
   groupSearch,
   filteredGroups,
   contacts,
-  selectedContactId,
   loadingContacts,
   contactSearch,
   filteredContacts,
   labels,
-  selectedLabelValue,
   loadingLabels,
   labelSearch,
   filteredLabels,
   addRecipientsFromInput,
   removeRecipient,
-  addSelectedGroup,
-  addSelectedContact,
-  addSelectedLabel,
   handleSyncGroups,
   loadGroups,
   loadContacts,
@@ -302,7 +243,132 @@ const {
   resetRecipients,
   chipLabel,
   contactDisplay,
+  ensureFullGroupJid,
 } = useRecipients();
+
+// Transform data for SearchableSelect options
+const contactOptions = computed(() =>
+  filteredContacts.value.map((c) => ({
+    value: c.phone,
+    label: contactDisplay(c),
+    sublabel: c.phone,
+    raw: c,
+  }))
+);
+
+const groupOptions = computed(() =>
+  filteredGroups.value.map((g) => ({
+    value: g.value,
+    label: g.label,
+  }))
+);
+
+const labelOptions = computed(() =>
+  filteredLabels.value.map((l) => ({
+    value: l.value,
+    label: l.label,
+  }))
+);
+
+// Local state for selected items in each SearchableSelect
+const selectedContacts = ref([]);
+const selectedGroups = ref([]);
+const selectedLabels = ref([]);
+
+// Watch recipients changes to sync SearchableSelect states
+watch(recipients, (newRecipients) => {
+  // Sync selectedContacts - keep only contacts that are still in recipients
+  selectedContacts.value = selectedContacts.value.filter(phone => 
+    newRecipients.includes(phone)
+  );
+  
+  // Sync selectedGroups - keep only groups that are still in recipients
+  selectedGroups.value = selectedGroups.value.filter(groupId => {
+    // Check if any recipient matches this group (with or without @g.us suffix)
+    return newRecipients.some(r => 
+      r === groupId || 
+      r === `${groupId}@g.us` || 
+      r.replace('@g.us', '') === groupId
+    );
+  });
+  
+  // Sync selectedLabels - keep only labels that are still in recipients
+  selectedLabels.value = selectedLabels.value.filter(labelVal => 
+    newRecipients.includes(labelVal)
+  );
+}, { deep: true });
+
+// Search handlers - update composable search state
+const handleContactSearch = (query) => {
+  contactSearch.value = query;
+};
+
+const handleGroupSearch = (query) => {
+  groupSearch.value = query;
+};
+
+const handleLabelSearch = (query) => {
+  labelSearch.value = query;
+};
+
+// Selection handlers - add to recipients
+const handleContactSelect = async (option) => {
+  const phone = option.value;
+  if (!recipients.value.includes(phone)) {
+    recipients.value.push(phone);
+    const found = contacts.value.find((c) => c.phone === phone);
+    if (found) {
+      const labelNames = (found.ContactLabel || [])
+        .map((cl) => cl?.label?.name)
+        .filter((n) => n && !String(n).startsWith("device_"))
+        .join(", ");
+      recipientLabels.value[phone] = `Contact: ${found.firstName} ${found.lastName || ""}${labelNames ? " [" + labelNames + "]" : ""}`;
+    }
+  }
+};
+
+const handleGroupSelect = async (option) => {
+  const fullJid = await ensureFullGroupJid(option.value);
+  if (!fullJid) return;
+  if (!recipients.value.includes(fullJid)) {
+    recipients.value.push(fullJid);
+    recipientLabels.value[fullJid] = `Group: ${option.label}`;
+  }
+};
+
+const handleLabelSelect = (option) => {
+  const val = option.value;
+  if (!recipients.value.includes(val)) {
+    recipients.value.push(val);
+    recipientLabels.value[val] = `Label: ${option.label}`;
+  }
+};
+
+// Remove handlers - remove from recipients
+const handleContactRemove = (option) => {
+  const idx = recipients.value.indexOf(option.value);
+  if (idx !== -1) {
+    recipients.value.splice(idx, 1);
+    delete recipientLabels.value[option.value];
+  }
+};
+
+const handleGroupRemove = async (option) => {
+  const fullJid = await ensureFullGroupJid(option.value);
+  const idx = recipients.value.indexOf(fullJid);
+  if (idx !== -1) {
+    recipients.value.splice(idx, 1);
+    delete recipientLabels.value[fullJid];
+  }
+};
+
+const handleLabelRemove = (option) => {
+  const idx = recipients.value.indexOf(option.value);
+  if (idx !== -1) {
+    recipients.value.splice(idx, 1);
+    delete recipientLabels.value[option.value];
+  }
+};
 
 // Load data saat komponen di-mount
 onMounted(async () => {
@@ -455,10 +521,12 @@ defineExpose({
 /* Tab Content */
 .tab-content {
   margin-top: 16px;
+  overflow: visible;
 }
 
 .tab-pane {
   animation: fadeIn 0.2s ease;
+  overflow: visible;
 }
 
 @keyframes fadeIn {
@@ -477,21 +545,15 @@ defineExpose({
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  overflow: visible;
 }
 
-.input-with-button .form-input,
-.input-with-button .form-select {
+.input-with-button > :first-child {
   flex: 1;
 }
 
-.select-wrapper {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Form Elements */
-.form-input,
-.form-select {
+/* Form Elements (for Manual tab) */
+.form-input {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid #e2e8f0;
@@ -502,8 +564,7 @@ defineExpose({
   background: #f8fafc;
 }
 
-.form-input:focus,
-.form-select:focus {
+.form-input:focus {
   outline: none;
   border-color: #3b82f6;
   background: #ffffff;
@@ -590,14 +651,8 @@ defineExpose({
     flex-wrap: wrap;
   }
 
-  .input-with-button .form-input,
-  .input-with-button .form-select,
-  .select-wrapper {
+  .input-with-button > :first-child {
     flex: 1 1 100%;
-  }
-
-  .btn-primary {
-    flex: 1;
   }
 }
 </style>

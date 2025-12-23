@@ -609,7 +609,7 @@ function onDeviceChanged() {
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card-header {
@@ -639,6 +639,7 @@ function onDeviceChanged() {
 
 .card-body {
   padding: 24px;
+  overflow: visible;
 }
 
 /* Device Selector Styles */

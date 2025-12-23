@@ -737,8 +737,9 @@ const loadGroups = async ({ force = false } = {}) => {
   errGroups.value = "";
 
   try {
+    // Load all groups by setting a high pageSize
     const { data } = await userApi.get(
-      `/whatsapp-groups/device/${selectedDeviceId.value}/active`
+      `/whatsapp-groups/device/${selectedDeviceId.value}/active?pageSize=9999`
     );
 
     // console.log('Raw API Response:', data); // Debug log

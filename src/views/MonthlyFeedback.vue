@@ -1415,7 +1415,7 @@ onMounted(async () => {
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card-header {
@@ -1456,6 +1456,7 @@ onMounted(async () => {
 
 .card-body {
   padding: 24px;
+  overflow: visible;
 }
 
 /* Button Refresh Header */

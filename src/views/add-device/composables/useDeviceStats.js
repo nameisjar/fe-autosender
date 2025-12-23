@@ -15,30 +15,40 @@ export function useDeviceStats({ userApi, toast }) {
     }
 
     try {
-      // Contacts: existing endpoint returns array
-      const contactsRes = await userApi.get(`/contacts?deviceId=${deviceId}`);
-      const contactsCount = Array.isArray(contactsRes.data) ? contactsRes.data.length : (contactsRes.data?.data?.length || 0);
+      // Contacts: use metadata.totalContacts for accurate count
+      const contactsRes = await userApi.get(`/contacts?deviceId=${deviceId}&pageSize=1`);
+      const contactsCount = contactsRes.data?.metadata?.totalContacts 
+        || (Array.isArray(contactsRes.data) ? contactsRes.data.length : (contactsRes.data?.data?.length || 0));
 
-      // WhatsApp Groups: controller returns { status: true, data: [...] }
+      // WhatsApp Groups: use metadata.totalGroups or count from data
       let groupsCount = 0;
       try {
         const waGroupsRes = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`);
-        const list = Array.isArray(waGroupsRes.data)
-          ? waGroupsRes.data
-          : Array.isArray(waGroupsRes.data?.data)
-            ? waGroupsRes.data.data
-            : [];
-        groupsCount = list.length;
-      } catch (_) {
-        // Fallback to /all
-        try {
-          const waGroupsRes = await userApi.get(`/whatsapp-groups/device/${deviceId}/all`);
+        // Try metadata first for accurate count
+        if (waGroupsRes.data?.metadata?.totalGroups) {
+          groupsCount = waGroupsRes.data.metadata.totalGroups;
+        } else {
           const list = Array.isArray(waGroupsRes.data)
             ? waGroupsRes.data
             : Array.isArray(waGroupsRes.data?.data)
               ? waGroupsRes.data.data
               : [];
           groupsCount = list.length;
+        }
+      } catch (_) {
+        // Fallback to /all
+        try {
+          const waGroupsRes = await userApi.get(`/whatsapp-groups/device/${deviceId}/all`);
+          if (waGroupsRes.data?.metadata?.totalGroups) {
+            groupsCount = waGroupsRes.data.metadata.totalGroups;
+          } else {
+            const list = Array.isArray(waGroupsRes.data)
+              ? waGroupsRes.data
+              : Array.isArray(waGroupsRes.data?.data)
+                ? waGroupsRes.data.data
+                : [];
+            groupsCount = list.length;
+          }
         } catch (_) {
           groupsCount = 0;
         }

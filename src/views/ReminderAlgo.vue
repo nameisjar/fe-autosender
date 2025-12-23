@@ -203,9 +203,7 @@
                     stroke="currentColor"
                     stroke-width="2"
                   >
-                    <path
-                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2H6a2 2 0 0 0 2-2V8z"
-                    />
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2H6a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
                     <line x1="16" y1="13" x2="8" y2="13" />
                     <line x1="16" y1="17" x2="8" y2="17" />
@@ -428,7 +426,7 @@ const submit = async () => {
   try {
     const scheduleISO = convertToServerTime(form.value.schedule);
     const deviceId = devicePicker.value?.selectedDeviceId;
-    
+
     if (!deviceId) {
       toast.error("Device tidak ditemukan atau belum login");
       loading.value = false;
@@ -549,7 +547,7 @@ function onDeviceChanged() {
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card-header {
@@ -579,6 +577,7 @@ function onDeviceChanged() {
 
 .card-body {
   padding: 24px;
+  overflow: visible;
 }
 
 /* Button Refresh Header */
@@ -1057,4 +1056,4 @@ function onDeviceChanged() {
   }
 }
 </style>
-``` 
+```
