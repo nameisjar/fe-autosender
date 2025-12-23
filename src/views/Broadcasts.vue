@@ -86,11 +86,85 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label"> Pesan <span class="required">*</span> </label>
+            <label class="form-label">
+              Pesan <span class="required">*</span>
+              <button
+                type="button"
+                class="badge-template"
+                @click="applyTemplate('offer-ec')"
+                title="Klik untuk mengisi template penawaran Extra Class"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                Offer EC
+              </button>
+              <button
+                type="button"
+                class="badge-template badge-template-reminder"
+                @click="applyTemplate('reminder-ec')"
+                title="Klik untuk mengisi template pengingat Extra Class"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                Reminder EC
+              </button>
+              <button
+                type="button"
+                class="badge-template badge-template-warning"
+                @click="applyTemplate('reminder-class')"
+                title="Klik untuk mengisi template pengingat siswa belum bergabung ke kelas"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                Reminder Class
+              </button>
+              <button
+                type="button"
+                class="badge-template badge-template-graduation"
+                @click="applyTemplate('invit-grad')"
+                title="Klik untuk mengisi template undangan Graduation"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                  <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                </svg>
+                Invit Grad
+              </button>
+            </label>
             <textarea
               v-model.trim="form.message"
               rows="4"
-              placeholder="Tulis pesan yang akan dikirim ke semua penerima..."
+              placeholder="Tulis pesan yang akan dikirim ke semua penerima...&#10;&#10;💡 Gunakan {{siswa}} untuk nama depan penerima (hanya berlaku untuk kontak)"
               required
               class="form-textarea"
             />
@@ -368,6 +442,38 @@ const devicePicker = ref(null);
 // Template ref for RecipientsPicker
 const recipientsPicker = ref(null);
 
+// Message templates
+const messageTemplates = {
+  "offer-ec": `Selamat pagi Ayah/Bunda, mohon maaf mengganggu waktunya. Saya ingin menginformasikan bahwa sebagai pengganti pertemuan sebelumnya, {{siswa}} telah saya daftarkan ke kelas tambahan atau Extra Class (EC), yang akan diadakan pada hari Minggu pukul 08.00 WIB. Apakah {{siswa}} dapat mengikuti kelas pada waktu tersebut? Terima kasih atas perhatian dan kerjasamanya. 🙏`,
+  "reminder-ec": `Selamat pagi Ayah/Bunda, mohon maaf mengganggu waktunya. Sebagai pengingat, kelas tambahan atau Extra Class (EC) untuk {{siswa}} akan segera dimulai hari ini pukul 08.00 WIB. Mohon bantuan Ayah/Bunda untuk mengingatkan {{siswa}} agar dapat segera bergabung ke Zoom tepat waktu. Terima kasih atas perhatian dan kerja samanya. 🙏`,
+  "reminder-class": `Selamat pagi Ayah/Bunda, mohon maaf mengganggu. Saya ingin menginformasikan bahwa hingga saat ini {{siswa}} belum bergabung ke kelas yang sedang berlangsung. Mohon bantuan Ayah/Bunda untuk mengingatkan {{siswa}} agar dapat segera bergabung ke Zoom. Terima kasih atas perhatian dan kerja samanya. 🙏`,
+  "invit-grad": `Selamat pagi Ayah/Bunda,
+
+Dengan hormat, kami mengundang Ayah/Bunda untuk menghadiri Acara Graduation (to next level) sebagai bentuk apresiasi atas proses belajar yang telah diikuti oleh {{siswa}}.
+
+Acara Graduation akan dilaksanakan pada:
+📅 Hari/Tanggal: Sabtu, 15 Juni 2025
+⏰ Waktu: 09.00 WIB – selesai
+💻 Tempat: Zoom Meeting
+
+Acara ini bertujuan untuk merayakan pencapaian siswa selama mengikuti pembelajaran serta memberikan pengalaman berharga bagi mereka.
+
+Kami sangat berharap kehadiran Ayah/Bunda untuk mendampingi {{siswa}} dalam momen spesial ini.
+
+Terima kasih atas perhatian dan kerja sama Ayah/Bunda. 🙏`,
+};
+
+// Apply template to message textarea
+function applyTemplate(templateId) {
+  const template = messageTemplates[templateId];
+  if (template) {
+    form.value.message = template;
+    toast.success(
+      "Template berhasil diterapkan! Variabel {{siswa}} akan diganti dengan nama depan kontak saat pengiriman."
+    );
+  }
+}
+
 const form = ref({
   name: "",
   delay: 5000,
@@ -441,7 +547,7 @@ const validationError = computed(() => {
   if (!devicePicker.value?.selectedDeviceId) return "Pilih device terlebih dahulu";
   if (!form.value.name) return "Nama wajib diisi";
   if (!form.value.message) return "Pesan wajib diisi";
-  
+
   const recipients = recipientsPicker.value?.recipients || [];
   if (recipients.length === 0) return "Minimal satu penerima";
 
@@ -471,7 +577,10 @@ async function submit() {
       return;
     }
 
-    if (devicePicker.value?.selectedDevice && !devicePicker.value?.selectedDevice.isConnected) {
+    if (
+      devicePicker.value?.selectedDevice &&
+      !devicePicker.value?.selectedDevice.isConnected
+    ) {
       toast.error(
         "Device tidak terhubung. Silakan pilih device lain atau hubungkan kembali WhatsApp."
       );
@@ -719,6 +828,74 @@ function onDeviceChanged() {
 .optional {
   color: #94a3b8;
   font-weight: 400;
+}
+
+/* Template Badge */
+.badge-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  margin-left: 8px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.badge-template:hover {
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+.badge-template:active {
+  transform: translateY(0);
+}
+
+.badge-template svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Reminder EC badge variant - blue/cyan color */
+.badge-template-reminder {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  color: #0369a1;
+  border: 1px solid #38bdf8;
+}
+
+.badge-template-reminder:hover {
+  background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
+  box-shadow: 0 2px 6px rgba(56, 189, 248, 0.3);
+}
+
+/* Reminder Class badge variant - orange/red for urgency */
+.badge-template-warning {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #b91c1c;
+  border: 1px solid #f87171;
+}
+
+.badge-template-warning:hover {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  box-shadow: 0 2px 6px rgba(248, 113, 113, 0.3);
+}
+
+/* Graduation badge variant - purple/violet for celebration */
+.badge-template-graduation {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  color: #7c3aed;
+  border: 1px solid #a78bfa;
+}
+
+.badge-template-graduation:hover {
+  background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+  box-shadow: 0 2px 6px rgba(167, 139, 250, 0.3);
 }
 
 .form-input,
