@@ -706,11 +706,11 @@ const loadGroupNames = async () => {
 
       groupsMap.value = map;
       return; // Success, exit early
-    } catch (primaryError) {
-      console.warn("Primary loadGroupNames from database failed:", primaryError);
+    } catch {
+      // Primary method failed, try fallback
     }
 
-    // 🔄 Fallback 1: Coba dari WhatsApp API (butuh device open)
+    // Fallback 1: Try from WhatsApp API (requires device open)
     try {
       let res;
       try {
@@ -730,13 +730,11 @@ const loadGroupNames = async () => {
       }
       groupsMap.value = map;
       return; // Success, exit early
-    } catch (fallbackError) {
-      console.warn("Fallback loadGroupNames from WhatsApp API failed:", fallbackError);
+    } catch {
+      // Fallback also failed, use last resort
     }
 
-    // 🆘 Fallback 2: Extract dari recipients di broadcast yang sudah loaded
-    // Ini untuk kasih label minimal "Group (xxx)" daripada ID penuh
-    console.log("Using broadcast data as last resort for group names");
+    // Fallback 2: Extract from recipients in loaded broadcasts
     const map = {};
     for (const b of items.value) {
       const recipients = Array.isArray(b.recipients) ? b.recipients : [];
@@ -755,8 +753,8 @@ const loadGroupNames = async () => {
       }
     }
     groupsMap.value = map;
-  } catch (error) {
-    console.error("Critical error in loadGroupNames:", error);
+  } catch {
+    // All methods failed, use empty map
     groupsMap.value = {};
   }
 };

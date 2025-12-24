@@ -1293,11 +1293,9 @@ const handleDownloadPDF = async () => {
     // Wait for styles to apply
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 🔧 Get dimensions after styles are applied
+    // Get dimensions after styles are applied
     const elementWidth = element.offsetWidth || 794;
     const elementHeight = element.scrollHeight || element.offsetHeight || 1123;
-    
-    console.log('PDF dimensions:', { elementWidth, elementHeight });
     
     const studentNameClean = formattedStudentName.value.replace(/\s+/g, "_");
     const monthNum = previewData.value.month;
@@ -1339,7 +1337,6 @@ const handleDownloadPDF = async () => {
     
     toast.success("PDF berhasil didownload!");
   } catch (e) {
-    console.error('PDF generation error:', e);
     toast.error("Gagal generate PDF: " + (e.message || "Unknown error"));
   } finally {
     // 🔧 Cleanup: remove the PDF container

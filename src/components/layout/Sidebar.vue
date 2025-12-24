@@ -204,6 +204,25 @@
           </svg>
           <span>Jadwal Saya</span>
         </router-link>
+        <router-link to="/code-snippets" @click="$emit('close')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+            <polyline
+              points="16 18 22 12 16 6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <polyline
+              points="8 6 2 12 8 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Code Snippets</span>
+        </router-link>
       </div>
 
       <!-- Admin-only menus -->

@@ -404,6 +404,7 @@ onUnmounted(() => {
 defineExpose({
   recipients,
   recipientLabels,
+  contacts,
   loadGroups,
   loadContacts,
   loadLabels,

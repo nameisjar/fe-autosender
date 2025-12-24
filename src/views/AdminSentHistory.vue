@@ -830,8 +830,8 @@ const loadGroupNames = async ({ force = false } = {}) => {
 
     groupNameMap.value = map;
     writeGroupCache(map);
-  } catch (error) {
-    console.error("Error loading group names:", error);
+  } catch {
+    // Silently fail - group names are optional enhancement
   }
 };
 
@@ -963,10 +963,6 @@ const load = async (p = page.value) => {
     const { data } = await userApi.get("/tutors/messages/all", { params });
     rows.value = data.data || [];
     meta.value = data.metadata || meta.value;
-
-    // 🔍 DEBUG: Cek data yang diterima dari API
-    console.log("🔍 Sample data from API:", rows.value.slice(0, 3));
-    console.log("🔍 First row broadcastType:", rows.value[0]?.broadcastType);
   } catch (e) {
     err.value = e?.response?.data?.message || e?.message || "Gagal memuat data";
   } finally {

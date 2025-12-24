@@ -51,9 +51,17 @@ export default defineConfig(({ mode }) => {
         build: {
             rollupOptions: {
                 output: {
-                    manualChunks: undefined,
+                    manualChunks: {
+                        // Vendor chunks for better caching
+                        'vendor-vue': ['vue', 'vue-router', 'pinia'],
+                        'vendor-highlight': ['highlight.js'],
+                        'vendor-utils': ['axios', 'qrcode', 'xlsx'],
+                        'vendor-pdf': ['html2pdf.js'],
+                    },
                 },
             },
+            // Increase warning limit since highlight.js is large
+            chunkSizeWarningLimit: 800,
         },
     };
 });

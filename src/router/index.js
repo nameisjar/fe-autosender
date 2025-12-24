@@ -17,10 +17,14 @@ import Schedules from '../views/Schedules.vue';
 import Broadcasts from '../views/Broadcasts.vue';
 import Contacts from '../views/Contacts.vue';
 import Groups from '../views/Groups.vue';
+import CodeSnippets from '../views/CodeSnippets.vue';
+import SnippetView from '../views/SnippetView.vue';
 import { useAuthStore } from '../stores/auth.js';
 
 const routes = [
     { path: '/login', name: 'login', component: Login },
+    // Public route for viewing shared snippets (no auth required)
+    { path: '/snippet/:token', name: 'snippet-view', component: SnippetView },
     {
         path: '/',
         component: Dashboard,
@@ -39,6 +43,12 @@ const routes = [
                 path: 'monthly-feedback',
                 name: 'monthly-feedback',
                 component: MonthlyFeedback,
+            },
+            // Code Snippets - Accessible by Admin & Tutor
+            {
+                path: 'code-snippets',
+                name: 'code-snippets',
+                component: CodeSnippets,
             },
             // keep legacy paths but protect as admin-only
             // removed: legacy 'sent-history' (admin-only)
@@ -90,12 +100,22 @@ const router = createRouter({
 
 router.beforeEach(async (to, _from, next) => {
     const token = localStorage.getItem('token');
-    if (to.name !== 'login' && !token) {
-        next({ name: 'login' });
+    
+    // Allow public routes without auth
+    const publicRoutes = ['login', 'snippet-view'];
+    if (publicRoutes.includes(to.name)) {
+        // Redirect logged-in users from login page
+        if (to.name === 'login' && token) {
+            next({ name: 'add-device' });
+            return;
+        }
+        next();
         return;
     }
-    if (to.name === 'login' && token) {
-        next({ name: 'add-device' });
+    
+    // Require auth for all other routes
+    if (!token) {
+        next({ name: 'login' });
         return;
     }
 
