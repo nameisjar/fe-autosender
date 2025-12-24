@@ -332,6 +332,7 @@
                     @scroll="syncScroll"
                     @input="updateHighlight"
                     @keydown="handleKeydown"
+                    @beforeinput="handleBeforeInput"
                   ></textarea>
                 </div>
               </div>
@@ -506,6 +507,12 @@ const toast = useToast();
 const codeTextarea = ref(null);
 const codeHighlightRef = ref(null);
 const lineNumbersRef = ref(null);
+
+// Undo/Redo History
+const undoStack = ref([]);
+const redoStack = ref([]);
+const MAX_HISTORY = 100;
+const isUndoRedo = ref(false); // Flag to prevent recording during undo/redo
 
 // State
 const snippets = ref([]);
@@ -848,6 +855,24 @@ const updateHighlight = () => {
   });
 };
 
+// Track last saved time for debounced undo saving
+let lastUndoSaveTime = 0;
+const UNDO_DEBOUNCE_MS = 300;
+
+// Handle before input to save undo state for normal typing
+const handleBeforeInput = (e) => {
+  if (isUndoRedo.value) return;
+  
+  const textarea = e.target;
+  const now = Date.now();
+  
+  // Save to undo stack with debounce (group rapid typing together)
+  if (now - lastUndoSaveTime > UNDO_DEBOUNCE_MS) {
+    saveToUndoStack(textarea);
+    lastUndoSaveTime = now;
+  }
+};
+
 // Indent size based on language
 const indentSize = computed(() => {
   const lang = form.value.language?.toLowerCase() || '';
@@ -876,9 +901,97 @@ const autoClosePairs = {
 // Characters that trigger auto-indent on Enter
 const autoIndentTriggers = ['{', '[', '(', ':'];
 
+// Save state to undo stack
+const saveToUndoStack = (textarea) => {
+  if (isUndoRedo.value) return;
+  
+  const state = {
+    content: textarea.value,
+    selectionStart: textarea.selectionStart,
+    selectionEnd: textarea.selectionEnd,
+  };
+  
+  // Don't save if same as last state
+  if (undoStack.value.length > 0) {
+    const lastState = undoStack.value[undoStack.value.length - 1];
+    if (lastState.content === state.content) return;
+  }
+  
+  undoStack.value.push(state);
+  
+  // Limit stack size
+  if (undoStack.value.length > MAX_HISTORY) {
+    undoStack.value.shift();
+  }
+  
+  // Clear redo stack on new change
+  redoStack.value = [];
+};
+
+// Perform undo
+const performUndo = (textarea) => {
+  if (undoStack.value.length === 0) return false;
+  
+  // Save current state to redo stack
+  redoStack.value.push({
+    content: textarea.value,
+    selectionStart: textarea.selectionStart,
+    selectionEnd: textarea.selectionEnd,
+  });
+  
+  // Limit redo stack
+  if (redoStack.value.length > MAX_HISTORY) {
+    redoStack.value.shift();
+  }
+  
+  // Restore previous state
+  const prevState = undoStack.value.pop();
+  isUndoRedo.value = true;
+  textarea.value = prevState.content;
+  textarea.selectionStart = prevState.selectionStart;
+  textarea.selectionEnd = prevState.selectionEnd;
+  form.value.code = textarea.value;
+  isUndoRedo.value = false;
+  
+  return true;
+};
+
+// Perform redo
+const performRedo = (textarea) => {
+  if (redoStack.value.length === 0) return false;
+  
+  // Save current state to undo stack
+  undoStack.value.push({
+    content: textarea.value,
+    selectionStart: textarea.selectionStart,
+    selectionEnd: textarea.selectionEnd,
+  });
+  
+  // Restore next state
+  const nextState = redoStack.value.pop();
+  isUndoRedo.value = true;
+  textarea.value = nextState.content;
+  textarea.selectionStart = nextState.selectionStart;
+  textarea.selectionEnd = nextState.selectionEnd;
+  form.value.code = textarea.value;
+  isUndoRedo.value = false;
+  
+  return true;
+};
+
+// Apply edit with undo support
+const applyEdit = (textarea, newValue, newSelectionStart, newSelectionEnd) => {
+  saveToUndoStack(textarea);
+  textarea.value = newValue;
+  textarea.selectionStart = newSelectionStart;
+  textarea.selectionEnd = newSelectionEnd !== undefined ? newSelectionEnd : newSelectionStart;
+  form.value.code = textarea.value;
+};
+
 // Insert text with undo support
 const insertText = (textarea, text) => {
-  // Use execCommand for undo support (deprecated but widely supported)
+  saveToUndoStack(textarea);
+  // Use execCommand for native undo support (deprecated but widely supported)
   if (document.execCommand) {
     document.execCommand('insertText', false, text);
   } else {
@@ -899,6 +1012,24 @@ const handleKeydown = (e) => {
   const end = textarea.selectionEnd;
   const value = textarea.value;
   const indent = ' '.repeat(indentSize.value);
+  
+  // Ctrl+Z - Undo
+  if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+    e.preventDefault();
+    if (performUndo(textarea)) {
+      updateHighlight();
+    }
+    return;
+  }
+  
+  // Ctrl+Y or Ctrl+Shift+Z - Redo
+  if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'Z')) {
+    e.preventDefault();
+    if (performRedo(textarea)) {
+      updateHighlight();
+    }
+    return;
+  }
   
   // Tab key - insert indent
   if (e.key === 'Tab') {
@@ -922,8 +1053,8 @@ const handleKeydown = (e) => {
     return;
   }
   
-  // Enter key - auto indent
-  if (e.key === 'Enter') {
+  // Enter key - auto indent (not Ctrl+Enter)
+  if (e.key === 'Enter' && !e.ctrlKey) {
     e.preventDefault();
     
     // Get current line
@@ -961,11 +1092,290 @@ const handleKeydown = (e) => {
     return;
   }
   
-  // Auto-closing brackets
+  // Helper: Get line boundaries
+  const getLineInfo = (pos) => {
+    const lineStart = value.lastIndexOf('\n', pos - 1) + 1;
+    let lineEnd = value.indexOf('\n', pos);
+    if (lineEnd === -1) lineEnd = value.length;
+    return { lineStart, lineEnd, lineContent: value.substring(lineStart, lineEnd) };
+  };
+
+  // Helper: Get full lines for selection
+  const getSelectedLines = () => {
+    const startLine = getLineInfo(start);
+    const endLine = getLineInfo(end);
+    return {
+      start: startLine.lineStart,
+      end: endLine.lineEnd,
+      content: value.substring(startLine.lineStart, endLine.lineEnd)
+    };
+  };
+
+  // Alt+Shift+Down - Duplicate line(s) down
+  if (e.altKey && e.shiftKey && e.key === 'ArrowDown') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    const newText = value.substring(0, lines.end) + '\n' + lines.content + value.substring(lines.end);
+    const newStart = start + lines.content.length + 1;
+    const newEnd = end + lines.content.length + 1;
+    applyEdit(textarea, newText, newStart, newEnd);
+    updateHighlight();
+    return;
+  }
+
+  // Alt+Shift+Up - Duplicate line(s) up
+  if (e.altKey && e.shiftKey && e.key === 'ArrowUp') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    const newText = value.substring(0, lines.start) + lines.content + '\n' + value.substring(lines.start);
+    applyEdit(textarea, newText, start, end);
+    updateHighlight();
+    return;
+  }
+
+  // Alt+Down - Move line(s) down
+  if (e.altKey && !e.shiftKey && e.key === 'ArrowDown') {
+    const lines = getSelectedLines();
+    if (lines.end >= value.length) return; // Already at bottom
+    e.preventDefault();
+    const nextLineEnd = value.indexOf('\n', lines.end + 1);
+    const nextLine = nextLineEnd === -1 
+      ? value.substring(lines.end + 1) 
+      : value.substring(lines.end + 1, nextLineEnd);
+    const actualNextLineEnd = nextLineEnd === -1 ? value.length : nextLineEnd;
+    
+    const newText = value.substring(0, lines.start) + nextLine + '\n' + lines.content + value.substring(actualNextLineEnd);
+    const moveDistance = nextLine.length + 1;
+    applyEdit(textarea, newText, start + moveDistance, end + moveDistance);
+    updateHighlight();
+    return;
+  }
+
+  // Alt+Up - Move line(s) up
+  if (e.altKey && !e.shiftKey && e.key === 'ArrowUp') {
+    const lines = getSelectedLines();
+    if (lines.start === 0) return; // Already at top
+    e.preventDefault();
+    const prevLineStart = value.lastIndexOf('\n', lines.start - 2) + 1;
+    const prevLine = value.substring(prevLineStart, lines.start - 1);
+    
+    const newText = value.substring(0, prevLineStart) + lines.content + '\n' + prevLine + value.substring(lines.end);
+    const moveDistance = prevLine.length + 1;
+    applyEdit(textarea, newText, start - moveDistance, end - moveDistance);
+    updateHighlight();
+    return;
+  }
+
+  // Ctrl+D - Select word under cursor or find next occurrence
+  if (e.ctrlKey && !e.shiftKey && e.key === 'd') {
+    e.preventDefault();
+    
+    if (start === end) {
+      // No selection - select word under cursor
+      const wordChars = /[a-zA-Z0-9_$]/;
+      let wordStart = start;
+      let wordEnd = start;
+      
+      // Find word start
+      while (wordStart > 0 && wordChars.test(value[wordStart - 1])) {
+        wordStart--;
+      }
+      
+      // Find word end
+      while (wordEnd < value.length && wordChars.test(value[wordEnd])) {
+        wordEnd++;
+      }
+      
+      if (wordStart !== wordEnd) {
+        textarea.selectionStart = wordStart;
+        textarea.selectionEnd = wordEnd;
+      }
+    } else {
+      // Has selection - find and select next occurrence
+      const selectedText = value.substring(start, end);
+      const searchStart = end;
+      let nextIndex = value.indexOf(selectedText, searchStart);
+      
+      // If not found after cursor, wrap around and search from beginning
+      if (nextIndex === -1) {
+        nextIndex = value.indexOf(selectedText, 0);
+      }
+      
+      // If found and not the same position
+      if (nextIndex !== -1 && nextIndex !== start) {
+        textarea.selectionStart = nextIndex;
+        textarea.selectionEnd = nextIndex + selectedText.length;
+        
+        // Scroll to make selection visible
+        textarea.blur();
+        textarea.focus();
+      }
+    }
+    return;
+  }
+
+  // Ctrl+Shift+D - Duplicate line down
+  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    const newText = value.substring(0, lines.end) + '\n' + lines.content + value.substring(lines.end);
+    const newStart = start + lines.content.length + 1;
+    const newEnd = end + lines.content.length + 1;
+    applyEdit(textarea, newText, newStart, newEnd);
+    updateHighlight();
+    return;
+  }
+
+  // Ctrl+Shift+K - Delete line
+  if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    const deleteEnd = lines.end < value.length ? lines.end + 1 : lines.end;
+    const deleteStart = lines.start > 0 && lines.end >= value.length ? lines.start - 1 : lines.start;
+    const newText = value.substring(0, deleteStart) + value.substring(deleteEnd);
+    const newPos = Math.min(deleteStart, newText.length);
+    applyEdit(textarea, newText, newPos, newPos);
+    updateHighlight();
+    return;
+  }
+
+  // Ctrl+/ - Toggle comment
+  if (e.ctrlKey && e.key === '/') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    const lineTexts = lines.content.split('\n');
+    const lang = form.value.language.toLowerCase();
+    
+    // Determine comment style
+    let commentPrefix = '// ';
+    if (['python', 'ruby', 'perl', 'bash', 'shell', 'sh'].includes(lang)) {
+      commentPrefix = '# ';
+    } else if (['html', 'xml'].includes(lang)) {
+      commentPrefix = '<!-- ';
+    } else if (['css', 'scss', 'less'].includes(lang)) {
+      commentPrefix = '/* ';
+    } else if (['sql'].includes(lang)) {
+      commentPrefix = '-- ';
+    }
+    
+    // Check if all lines are commented
+    const allCommented = lineTexts.every(line => {
+      const trimmed = line.trimStart();
+      return trimmed === '' || trimmed.startsWith(commentPrefix.trim());
+    });
+    
+    const newLines = lineTexts.map(line => {
+      if (allCommented) {
+        // Uncomment
+        const match = line.match(new RegExp(`^(\\s*)${commentPrefix.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s?`));
+        if (match) {
+          return match[1] + line.substring(match[0].length);
+        }
+        return line;
+      } else {
+        // Comment
+        if (line.trim() === '') return line;
+        const indent = line.match(/^\s*/)[0];
+        return indent + commentPrefix + line.trimStart();
+      }
+    });
+    
+    const newContent = newLines.join('\n');
+    const newText = value.substring(0, lines.start) + newContent + value.substring(lines.end);
+    const lengthDiff = newContent.length - lines.content.length;
+    applyEdit(textarea, newText, start, end + lengthDiff);
+    updateHighlight();
+    return;
+  }
+
+  // Ctrl+L - Select line
+  if (e.ctrlKey && e.key === 'l') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    textarea.selectionStart = lines.start;
+    textarea.selectionEnd = lines.end < value.length ? lines.end + 1 : lines.end;
+    return;
+  }
+
+  // Ctrl+] - Indent line(s)
+  if (e.ctrlKey && e.key === ']') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    const lineTexts = lines.content.split('\n');
+    const newContent = lineTexts.map(line => indent + line).join('\n');
+    const newText = value.substring(0, lines.start) + newContent + value.substring(lines.end);
+    const lengthDiff = newContent.length - lines.content.length;
+    applyEdit(textarea, newText, start + indentSize.value, end + lengthDiff);
+    updateHighlight();
+    return;
+  }
+
+  // Ctrl+[ - Outdent line(s)
+  if (e.ctrlKey && e.key === '[') {
+    e.preventDefault();
+    const lines = getSelectedLines();
+    const lineTexts = lines.content.split('\n');
+    let totalRemoved = 0;
+    let firstLineRemoved = 0;
+    const newContent = lineTexts.map((line, idx) => {
+      const spaces = line.match(/^\s*/)[0].length;
+      const toRemove = Math.min(indentSize.value, spaces);
+      if (idx === 0) firstLineRemoved = toRemove;
+      totalRemoved += toRemove;
+      return line.substring(toRemove);
+    }).join('\n');
+    const newText = value.substring(0, lines.start) + newContent + value.substring(lines.end);
+    const newSelStart = Math.max(lines.start, start - firstLineRemoved);
+    const newSelEnd = end - totalRemoved + (lineTexts.length - 1) * (indentSize.value - (totalRemoved / lineTexts.length));
+    applyEdit(textarea, newText, newSelStart, newSelEnd);
+    updateHighlight();
+    return;
+  }
+
+  // Ctrl+Enter - Insert line below
+  if (e.ctrlKey && !e.shiftKey && e.key === 'Enter') {
+    e.preventDefault();
+    const lineInfo = getLineInfo(start);
+    const currentIndent = lineInfo.lineContent.match(/^\s*/)[0];
+    const newText = value.substring(0, lineInfo.lineEnd) + '\n' + currentIndent + value.substring(lineInfo.lineEnd);
+    const newPos = lineInfo.lineEnd + 1 + currentIndent.length;
+    applyEdit(textarea, newText, newPos, newPos);
+    updateHighlight();
+    return;
+  }
+
+  // Ctrl+Shift+Enter - Insert line above
+  if (e.ctrlKey && e.shiftKey && e.key === 'Enter') {
+    e.preventDefault();
+    const lineInfo = getLineInfo(start);
+    const currentIndent = lineInfo.lineContent.match(/^\s*/)[0];
+    const newText = value.substring(0, lineInfo.lineStart) + currentIndent + '\n' + value.substring(lineInfo.lineStart);
+    const newPos = lineInfo.lineStart + currentIndent.length;
+    applyEdit(textarea, newText, newPos, newPos);
+    updateHighlight();
+    return;
+  }
+
+  // Home - Go to start of line (after indentation) or start of line
+  if (e.key === 'Home' && !e.ctrlKey) {
+    e.preventDefault();
+    const lineInfo = getLineInfo(start);
+    const firstNonSpace = lineInfo.lineStart + lineInfo.lineContent.search(/\S|$/);
+    const newPos = start === firstNonSpace ? lineInfo.lineStart : firstNonSpace;
+    if (e.shiftKey) {
+      textarea.selectionEnd = end;
+      textarea.selectionStart = newPos;
+    } else {
+      textarea.selectionStart = textarea.selectionEnd = newPos;
+    }
+    return;
+  }
+
+  // Auto-closing brackets and quotes
   if (autoClosePairs[e.key]) {
     const closeChar = autoClosePairs[e.key];
     
-    // For quotes, only auto-close if not already inside quotes or escaping
+    // For quotes, handle auto-close
     if (e.key === '"' || e.key === "'" || e.key === '`') {
       const charBefore = value.substring(start - 1, start);
       const charAfter = value.substring(start, start + 1);
@@ -979,11 +1389,46 @@ const handleKeydown = (e) => {
       
       // Don't auto-close if escaping
       if (charBefore === '\\') return;
+      
+      // Don't auto-close if inside a word (letter/number before)
+      if (/[a-zA-Z0-9]/.test(charBefore)) return;
+      
+      // If text is selected, wrap it with quotes
+      if (start !== end) {
+        e.preventDefault();
+        const selectedText = value.substring(start, end);
+        insertText(textarea, e.key + selectedText + closeChar);
+        textarea.selectionStart = start + 1;
+        textarea.selectionEnd = end + 1;
+        form.value.code = textarea.value;
+        updateHighlight();
+        return;
+      }
+      
+      // Auto-close quote
+      e.preventDefault();
+      insertText(textarea, e.key + closeChar);
+      textarea.selectionStart = textarea.selectionEnd = start + 1;
+      form.value.code = textarea.value;
+      updateHighlight();
+      return;
     }
     
-    // For brackets, check if next char is closing bracket
+    // For brackets, wrap selection or auto-close
     if (e.key === '{' || e.key === '[' || e.key === '(') {
       e.preventDefault();
+      
+      // If text is selected, wrap it
+      if (start !== end) {
+        const selectedText = value.substring(start, end);
+        insertText(textarea, e.key + selectedText + closeChar);
+        textarea.selectionStart = start + 1;
+        textarea.selectionEnd = end + 1;
+        form.value.code = textarea.value;
+        updateHighlight();
+        return;
+      }
+      
       insertText(textarea, e.key + closeChar);
       textarea.selectionStart = textarea.selectionEnd = start + 1;
       form.value.code = textarea.value;
@@ -992,8 +1437,8 @@ const handleKeydown = (e) => {
     }
   }
   
-  // Skip over closing brackets if typed
-  if (['}', ']', ')'].includes(e.key)) {
+  // Skip over closing brackets/quotes if typed
+  if (['}', ']', ')', '"', "'", '`'].includes(e.key)) {
     const nextChar = value.substring(start, start + 1);
     if (nextChar === e.key) {
       e.preventDefault();
@@ -1035,6 +1480,8 @@ const openAddModal = () => {
   isEditMode.value = false;
   editingId.value = null;
   form.value = { title: '', description: '', code: '', language: '', isPublic: true };
+  undoStack.value = [];
+  redoStack.value = [];
   showFormModal.value = true;
 };
 
@@ -1048,12 +1495,16 @@ const openEditModal = (snippet) => {
     language: snippet.language,
     isPublic: snippet.isPublic,
   };
+  undoStack.value = [];
+  redoStack.value = [];
   showFormModal.value = true;
 };
 
 const closeFormModal = () => {
   showFormModal.value = false;
   form.value = { title: '', description: '', code: '', language: '', isPublic: true };
+  undoStack.value = [];
+  redoStack.value = [];
 };
 
 const submitForm = async () => {
