@@ -18,7 +18,7 @@
             <polyline points="8 6 2 12 8 18" />
           </svg>
           <div>
-            <div class="stat-value">{{ snippets.length }}</div>
+            <div class="stat-value">{{ stats.totalSnippets }}</div>
             <div class="stat-label">Total Snippets</div>
           </div>
         </div>
@@ -28,7 +28,7 @@
             <circle cx="12" cy="12" r="3" />
           </svg>
           <div>
-            <div class="stat-value">{{ totalViews }}</div>
+            <div class="stat-value">{{ stats.totalViews }}</div>
             <div class="stat-label">Total Views</div>
           </div>
         </div>
@@ -41,7 +41,7 @@
             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
           <div>
-            <div class="stat-value">{{ publicSnippets }}</div>
+            <div class="stat-value">{{ stats.publicSnippets }}</div>
             <div class="stat-label">Public Snippets</div>
           </div>
         </div>
@@ -55,7 +55,7 @@
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
-          Daftar Snippets ({{ filteredSnippets.length }})
+          Daftar Snippets ({{ pagination.total }})
         </h3>
         <div class="header-actions">
           <button class="btn-reload" @click="loadSnippets" :disabled="loading">
@@ -92,7 +92,7 @@
             </svg>
             <select v-model="selectedLanguage">
               <option value="">Semua Bahasa</option>
-              <option v-for="lang in languages" :key="lang" :value="lang">
+              <option v-for="lang in availableLanguages" :key="lang" :value="lang">
                 {{ lang }}
               </option>
             </select>
@@ -106,9 +106,8 @@
               <rect x="3" y="14" width="7" height="7" />
             </svg>
             <select v-model="itemsPerPage">
-              <option :value="5">5 per halaman</option>
               <option :value="10">10 per halaman</option>
-              <option :value="20">20 per halaman</option>
+              <option :value="25">25 per halaman</option>
               <option :value="50">50 per halaman</option>
               <option :value="100">100 per halaman</option>
             </select>
@@ -116,8 +115,8 @@
         </div>
       </div>
 
-      <div class="snippets-container" v-if="paginatedSnippets.length">
-        <div v-for="snippet in paginatedSnippets" :key="snippet.id" class="snippet-card">
+      <div class="snippets-container" v-if="snippets.length">
+        <div v-for="snippet in snippets" :key="snippet.id" class="snippet-card">
           <div class="snippet-header">
             <div class="snippet-info">
               <h4>{{ snippet.title }}</h4>
@@ -184,22 +183,22 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1 || filteredSnippets.length > 0" class="pagination">
+      <div v-if="pagination.totalPages > 1 || pagination.total > 0" class="pagination">
         <div class="pagination-info">
-          Menampilkan <span class="count-highlight">{{ paginatedSnippets.length }}</span> dari <span class="count-highlight">{{ filteredSnippets.length }}</span> snippet
+          Menampilkan <span class="count-highlight">{{ snippets.length }}</span> dari <span class="count-highlight">{{ pagination.total }}</span> snippet
         </div>
         
-        <div class="pagination-nav" v-if="totalPages > 1">
-          <button class="btn-page btn-prev" :disabled="currentPage <= 1" @click="currentPage--">
+        <div class="pagination-nav" v-if="pagination.totalPages > 1">
+          <button class="btn-page btn-prev" :disabled="currentPage <= 1 || loading" @click="goToPage(currentPage - 1)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
             <span>Sebelumnya</span>
           </button>
           <div class="page-indicator">
-            {{ currentPage }} / {{ totalPages }}
+            {{ currentPage }} / {{ pagination.totalPages }}
           </div>
-          <button class="btn-page btn-next" :disabled="currentPage >= totalPages" @click="currentPage++">
+          <button class="btn-page btn-next" :disabled="currentPage >= pagination.totalPages || loading" @click="goToPage(currentPage + 1)">
             <span>Berikutnya</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -208,7 +207,7 @@
         </div>
       </div>
 
-      <div v-else-if="!paginatedSnippets.length && filteredSnippets.length === 0 && snippets.length > 0" class="empty-state">
+      <div v-else-if="!loading && snippets.length === 0 && (searchQuery || selectedLanguage)" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.35-4.35" />
@@ -217,7 +216,7 @@
         <p>Tidak ada snippet yang cocok dengan pencarian</p>
       </div>
 
-      <div v-else-if="snippets.length === 0" class="empty-state">
+      <div v-else-if="!loading && snippets.length === 0 && !searchQuery && !selectedLanguage" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="16 18 22 12 16 6" />
           <polyline points="8 6 2 12 8 18" />
@@ -424,6 +423,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { userApi } from '../api/http';
 import { useToast } from '../composables/useToast';
+import { debounce } from '../utils/debounce';
 
 // Highlight.js - use core bundle with only needed languages for smaller bundle size
 import hljs from 'highlight.js/lib/core';
@@ -521,9 +521,22 @@ const submitting = ref(false);
 const searchQuery = ref('');
 const selectedLanguage = ref('');
 
-// Pagination
+// Stats (fetched separately for accurate counts)
+const stats = ref({
+  totalSnippets: 0,
+  totalViews: 0,
+  publicSnippets: 0,
+});
+
+// Pagination (server-side)
 const currentPage = ref(1);
-const itemsPerPage = ref(10);
+const itemsPerPage = ref(25);
+const pagination = ref({
+  page: 1,
+  limit: 25,
+  total: 0,
+  totalPages: 0,
+});
 
 // Modals
 const showFormModal = ref(false);
@@ -543,38 +556,15 @@ const form = ref({
   isPublic: true,
 });
 
-// Computed
-const filteredSnippets = computed(() => {
-  return snippets.value.filter((s) => {
-    const matchSearch =
-      !searchQuery.value ||
-      s.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      (s.description && s.description.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-      s.code.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchLanguage = !selectedLanguage.value || s.language === selectedLanguage.value;
-    return matchSearch && matchLanguage;
-  });
-});
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredSnippets.value.length / itemsPerPage.value);
-});
-
-const paginatedSnippets = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  const end = start + itemsPerPage.value;
-  return filteredSnippets.value.slice(start, end);
-});
-
-const paginationInfo = computed(() => {
-  const total = filteredSnippets.value.length;
-  const start = total === 0 ? 0 : (currentPage.value - 1) * itemsPerPage.value + 1;
-  const end = Math.min(currentPage.value * itemsPerPage.value, total);
-  return { start, end, total };
-});
+// Available languages for filter (computed from stats or hardcoded)
+const availableLanguages = [
+  'python', 'javascript', 'typescript', 'java', 'cpp', 'c', 'csharp',
+  'html', 'css', 'sql', 'php', 'ruby', 'go', 'rust', 'kotlin', 'swift',
+  'bash', 'json', 'yaml', 'markdown', 'plaintext'
+];
 
 const visiblePages = computed(() => {
-  const total = totalPages.value;
+  const total = pagination.value.totalPages;
   const current = currentPage.value;
   const pages = [];
   
@@ -600,22 +590,21 @@ const visiblePages = computed(() => {
   return pages;
 });
 
-// Reset page when search/filter/itemsPerPage changes
-watch([searchQuery, selectedLanguage, itemsPerPage], () => {
+// Debounced search - calls API after 400ms of no typing
+const debouncedSearch = debounce(() => {
   currentPage.value = 1;
+  loadSnippets();
+}, 400);
+
+// Watch for filter changes
+watch([searchQuery, selectedLanguage], () => {
+  debouncedSearch();
 });
 
-const languages = computed(() => {
-  const langs = [...new Set(snippets.value.map((s) => s.language))];
-  return langs.sort();
-});
-
-const totalViews = computed(() => {
-  return snippets.value.reduce((sum, s) => sum + (s.viewCount || 0), 0);
-});
-
-const publicSnippets = computed(() => {
-  return snippets.value.filter((s) => s.isPublic).length;
+// Watch for items per page change - immediate reload
+watch(itemsPerPage, () => {
+  currentPage.value = 1;
+  loadSnippets();
 });
 
 const codeSize = computed(() => {
@@ -791,9 +780,10 @@ const escapeHtml = (text) => {
   return div.innerHTML;
 };
 
-// Get highlighted preview for snippet cards
+// Get highlighted preview for snippet cards (uses codePreview from server)
 const getHighlightedPreview = (snippet) => {
-  const code = truncateCode(snippet.code);
+  // Use codePreview from server (already truncated to 300 chars)
+  const code = truncateCode(snippet.codePreview || snippet.code || '');
   const selectedLang = snippet.language?.toLowerCase() || '';
   const lang = languageMap[selectedLang] || selectedLang;
   
@@ -1467,13 +1457,35 @@ const handleKeydown = (e) => {
 const loadSnippets = async () => {
   loading.value = true;
   try {
-    const res = await userApi.get('/code-snippets');
-    snippets.value = res.data;
+    const params = {
+      page: currentPage.value,
+      limit: itemsPerPage.value,
+      ...(searchQuery.value && { search: searchQuery.value }),
+      ...(selectedLanguage.value && { language: selectedLanguage.value }),
+    };
+    const res = await userApi.get('/code-snippets', { params });
+    snippets.value = res.data.data;
+    pagination.value = res.data.pagination;
   } catch (err) {
     toast.error('Gagal memuat snippets');
   } finally {
     loading.value = false;
   }
+};
+
+const loadStats = async () => {
+  try {
+    const res = await userApi.get('/code-snippets/stats');
+    stats.value = res.data;
+  } catch (err) {
+    // Silent fail for stats
+  }
+};
+
+const goToPage = (page) => {
+  if (page < 1 || page > pagination.value.totalPages || loading.value) return;
+  currentPage.value = page;
+  loadSnippets();
 };
 
 const openAddModal = () => {
@@ -1485,16 +1497,33 @@ const openAddModal = () => {
   showFormModal.value = true;
 };
 
-const openEditModal = (snippet) => {
+const openEditModal = async (snippet) => {
   isEditMode.value = true;
   editingId.value = snippet.id;
-  form.value = {
-    title: snippet.title,
-    description: snippet.description || '',
-    code: snippet.code,
-    language: snippet.language,
-    isPublic: snippet.isPublic,
-  };
+  
+  // Fetch full snippet data (including full code)
+  try {
+    const res = await userApi.get(`/code-snippets/${snippet.id}`);
+    const fullSnippet = res.data;
+    form.value = {
+      title: fullSnippet.title,
+      description: fullSnippet.description || '',
+      code: fullSnippet.code,
+      language: fullSnippet.language,
+      isPublic: fullSnippet.isPublic,
+    };
+  } catch (err) {
+    // Fallback to preview data if fetch fails
+    form.value = {
+      title: snippet.title,
+      description: snippet.description || '',
+      code: snippet.codePreview || '',
+      language: snippet.language,
+      isPublic: snippet.isPublic,
+    };
+    toast.error('Gagal memuat kode lengkap, menggunakan preview');
+  }
+  
   undoStack.value = [];
   redoStack.value = [];
   showFormModal.value = true;
@@ -1521,6 +1550,7 @@ const submitForm = async () => {
     }
     closeFormModal();
     loadSnippets();
+    loadStats(); // Refresh stats after changes
   } catch (err) {
     const msg = err.response?.data?.message || 'Gagal menyimpan snippet';
     toast.error(msg);
@@ -1548,6 +1578,7 @@ const deleteSnippet = async () => {
     toast.success('Snippet berhasil dihapus');
     closeDeleteModal();
     loadSnippets();
+    loadStats(); // Refresh stats after delete
   } catch (err) {
     toast.error('Gagal menghapus snippet');
   } finally {
@@ -1555,8 +1586,18 @@ const deleteSnippet = async () => {
   }
 };
 
-const previewSnippet = (snippet) => {
-  previewData.value = snippet;
+const previewSnippet = async (snippet) => {
+  // Fetch full snippet data for preview (to get full code)
+  try {
+    const res = await userApi.get(`/code-snippets/${snippet.id}`);
+    previewData.value = res.data;
+  } catch (err) {
+    // Fallback to preview data
+    previewData.value = {
+      ...snippet,
+      code: snippet.codePreview || '',
+    };
+  }
   showPreviewModal.value = true;
 };
 
@@ -1589,6 +1630,7 @@ const copyCode = async (code) => {
 };
 
 const truncateCode = (code, maxLines = 8) => {
+  if (!code) return '';
   const lines = code.split('\n');
   if (lines.length <= maxLines) return code;
   return lines.slice(0, maxLines).join('\n') + '\n...';
@@ -1604,6 +1646,7 @@ const formatDate = (dateStr) => {
 
 onMounted(() => {
   loadSnippets();
+  loadStats();
 });
 </script>
 
