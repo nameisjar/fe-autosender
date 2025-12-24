@@ -66,26 +66,40 @@
           <div class="code-header">
             <span class="filename">{{ snippet.language }}</span>
             <button class="btn-copy" @click="copyCode" :class="{ copied }">
-              <svg v-if="!copied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                v-if="!copied"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                v-else
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              {{ copied ? 'Copied!' : 'Copy Code' }}
+              {{ copied ? "Copied!" : "Copy Code" }}
             </button>
           </div>
           <div class="code-body">
             <div class="line-numbers">
               <span v-for="n in lineCount" :key="n">{{ n }}</span>
             </div>
-            <pre class="code-pre"><code :class="`language-${snippet.language?.toLowerCase()}`" v-html="highlightedCode"></code></pre>
+            <pre
+              class="code-pre"
+            ><code :class="`language-${snippet.language?.toLowerCase()}`" v-html="highlightedCode"></code></pre>
           </div>
         </div>
       </main>
 
-      <footer class="snippet-footer">
+      <!-- <footer class="snippet-footer">
         <p>
           Shared via 
           <a href="/" target="_blank">
@@ -96,64 +110,64 @@
             Code Snippet
           </a>
         </p>
-      </footer>
+      </footer> -->
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import axios from 'axios';
+import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
 
 // Highlight.js for syntax highlighting
-import hljs from 'highlight.js/lib/core';
-import 'highlight.js/styles/atom-one-dark.css';
+import hljs from "highlight.js/lib/core";
+import "highlight.js/styles/atom-one-dark.css";
 
 // Import only needed languages
-import python from 'highlight.js/lib/languages/python';
-import javascript from 'highlight.js/lib/languages/javascript';
-import typescript from 'highlight.js/lib/languages/typescript';
-import java from 'highlight.js/lib/languages/java';
-import c from 'highlight.js/lib/languages/c';
-import cpp from 'highlight.js/lib/languages/cpp';
-import csharp from 'highlight.js/lib/languages/csharp';
-import php from 'highlight.js/lib/languages/php';
-import ruby from 'highlight.js/lib/languages/ruby';
-import go from 'highlight.js/lib/languages/go';
-import rust from 'highlight.js/lib/languages/rust';
-import swift from 'highlight.js/lib/languages/swift';
-import kotlin from 'highlight.js/lib/languages/kotlin';
-import sql from 'highlight.js/lib/languages/sql';
-import bash from 'highlight.js/lib/languages/bash';
-import json from 'highlight.js/lib/languages/json';
-import yaml from 'highlight.js/lib/languages/yaml';
-import markdown from 'highlight.js/lib/languages/markdown';
-import css from 'highlight.js/lib/languages/css';
-import xml from 'highlight.js/lib/languages/xml';
+import python from "highlight.js/lib/languages/python";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import java from "highlight.js/lib/languages/java";
+import c from "highlight.js/lib/languages/c";
+import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import php from "highlight.js/lib/languages/php";
+import ruby from "highlight.js/lib/languages/ruby";
+import go from "highlight.js/lib/languages/go";
+import rust from "highlight.js/lib/languages/rust";
+import swift from "highlight.js/lib/languages/swift";
+import kotlin from "highlight.js/lib/languages/kotlin";
+import sql from "highlight.js/lib/languages/sql";
+import bash from "highlight.js/lib/languages/bash";
+import json from "highlight.js/lib/languages/json";
+import yaml from "highlight.js/lib/languages/yaml";
+import markdown from "highlight.js/lib/languages/markdown";
+import css from "highlight.js/lib/languages/css";
+import xml from "highlight.js/lib/languages/xml";
 
 // Register languages
-hljs.registerLanguage('python', python);
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('java', java);
-hljs.registerLanguage('c', c);
-hljs.registerLanguage('cpp', cpp);
-hljs.registerLanguage('csharp', csharp);
-hljs.registerLanguage('php', php);
-hljs.registerLanguage('ruby', ruby);
-hljs.registerLanguage('go', go);
-hljs.registerLanguage('rust', rust);
-hljs.registerLanguage('swift', swift);
-hljs.registerLanguage('kotlin', kotlin);
-hljs.registerLanguage('sql', sql);
-hljs.registerLanguage('bash', bash);
-hljs.registerLanguage('json', json);
-hljs.registerLanguage('yaml', yaml);
-hljs.registerLanguage('markdown', markdown);
-hljs.registerLanguage('css', css);
-hljs.registerLanguage('xml', xml);
-hljs.registerLanguage('html', xml);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("java", java);
+hljs.registerLanguage("c", c);
+hljs.registerLanguage("cpp", cpp);
+hljs.registerLanguage("csharp", csharp);
+hljs.registerLanguage("php", php);
+hljs.registerLanguage("ruby", ruby);
+hljs.registerLanguage("go", go);
+hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("swift", swift);
+hljs.registerLanguage("kotlin", kotlin);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("yaml", yaml);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("html", xml);
 
 const route = useRoute();
 
@@ -166,20 +180,20 @@ const copied = ref(false);
 // API Base URL - support both dev and prod
 const API_BASE =
   (import.meta.env && import.meta.env.VITE_API_BASE_URL) ||
-  (import.meta.env && import.meta.env.DEV ? '' : window.location.origin);
+  (import.meta.env && import.meta.env.DEV ? "" : window.location.origin);
 
 // Computed
 const lineCount = computed(() => {
   if (!snippet.value.code) return 0;
-  return snippet.value.code.split('\n').length;
+  return snippet.value.code.split("\n").length;
 });
 
 const highlightedCode = computed(() => {
-  if (!snippet.value.code) return '';
-  
+  if (!snippet.value.code) return "";
+
   const code = snippet.value.code;
-  const lang = snippet.value.language?.toLowerCase() || 'plaintext';
-  
+  const lang = snippet.value.language?.toLowerCase() || "plaintext";
+
   try {
     // Try to highlight with specified language
     if (hljs.getLanguage(lang)) {
@@ -188,13 +202,13 @@ const highlightedCode = computed(() => {
     // Fallback to auto-detection
     return hljs.highlightAuto(code).value;
   } catch (e) {
-    console.error('Highlight error:', e);
+    console.error("Highlight error:", e);
     return escapeHtml(code);
   }
 });
 
 const escapeHtml = (text) => {
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 };
@@ -203,7 +217,7 @@ const escapeHtml = (text) => {
 const loadSnippet = async () => {
   loading.value = true;
   error.value = null;
-  
+
   try {
     const token = route.params.token;
     const res = await axios.get(`${API_BASE}/snippets/share/${token}`);
@@ -211,11 +225,11 @@ const loadSnippet = async () => {
   } catch (err) {
     console.error(err);
     if (err.response?.status === 404) {
-      error.value = 'Snippet Tidak Ditemukan';
+      error.value = "Snippet Tidak Ditemukan";
     } else if (err.response?.status === 403) {
-      error.value = 'Snippet Tidak Tersedia';
+      error.value = "Snippet Tidak Tersedia";
     } else {
-      error.value = 'Terjadi Kesalahan';
+      error.value = "Terjadi Kesalahan";
     }
   } finally {
     loading.value = false;
@@ -230,16 +244,16 @@ const copyCode = async () => {
       copied.value = false;
     }, 2000);
   } catch (err) {
-    console.error('Failed to copy:', err);
+    console.error("Failed to copy:", err);
   }
 };
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 };
 
@@ -433,7 +447,7 @@ onMounted(() => {
 .filename {
   color: #64748b;
   font-size: 0.875rem;
-  font-family: 'Fira Code', monospace;
+  font-family: "Fira Code", monospace;
 }
 
 .btn-copy {
@@ -482,7 +496,7 @@ onMounted(() => {
 .line-numbers span {
   padding: 0 12px;
   color: #475569;
-  font-family: 'Fira Code', monospace;
+  font-family: "Fira Code", monospace;
   font-size: 0.85rem;
   line-height: 1.6;
 }
@@ -495,7 +509,7 @@ onMounted(() => {
 }
 
 .code-body code {
-  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+  font-family: "Fira Code", "Monaco", "Consolas", monospace;
   font-size: 0.85rem;
   line-height: 1.6;
   color: #e2e8f0;
