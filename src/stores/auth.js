@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { userApi, clearDeviceAccessTokenCache } from '../api/http.js';
+import { refreshSocketAuth, resetSocket } from '../api/socket.js';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({ me: null }),
@@ -15,6 +16,8 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const { data } = await userApi.get('/tutors/me');
                 this.me = data;
+                // 🔄 Refresh socket auth after successful login/fetch
+                refreshSocketAuth();
             } catch (_) {
                 this.me = null;
             }
@@ -27,11 +30,19 @@ export const useAuthStore = defineStore('auth', {
             // 🔐 Clear device access token cache from memory
             clearDeviceAccessTokenCache();
             
+            // 🔌 Reset socket connection
+            resetSocket();
+            
             // 🧹 Clear localStorage (except device selection for faster re-login)
-            localStorage.removeItem('token');
-            // Optionally clear device selection too:
-            // localStorage.removeItem('device_selected_id');
-            // localStorage.removeItem('device_selected_name');
+            try {
+                localStorage.removeItem('token');
+                // Optionally clear device selection too:
+                // localStorage.removeItem('device_selected_id');
+                // localStorage.removeItem('device_selected_name');
+            } catch (e) {
+                // localStorage may not be available in incognito mode
+                console.warn('Could not clear localStorage:', e);
+            }
             
             // Redirect to login
             window.location.href = '/login';

@@ -36,7 +36,6 @@ export const formatLocalTime = (isoString) => {
   
   try {
     const date = new Date(isoString);
-    // Hapus timeZone parameter agar otomatis mengikuti timezone browser user
     // User di WIB akan lihat waktu WIB, user di WITA lihat waktu WITA, dst.
     return date.toLocaleString('id-ID', {
       year: 'numeric',

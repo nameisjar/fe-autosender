@@ -39,6 +39,34 @@ export function getSocket() {
   return socket;
 }
 
+/**
+ * Refresh socket authentication with new token
+ * Call this after login or when token is refreshed
+ */
+export function refreshSocketAuth() {
+  const token = localStorage.getItem('token');
+  if (socket) {
+    socket.auth = { token };
+    // Reconnect with new auth if currently connected
+    if (socket.connected) {
+      socket.disconnect();
+      socket.connect();
+    }
+  }
+}
+
+/**
+ * Reset socket instance completely
+ * Call this on logout
+ */
+export function resetSocket() {
+  if (socket) {
+    socket.disconnect();
+    socket.removeAllListeners();
+    socket = null;
+  }
+}
+
 export function connectSocket() {
   const socket = getSocket();
   if (!socket.connected) {
