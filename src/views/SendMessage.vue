@@ -184,7 +184,9 @@ const loadGroups = async () => {
     loadingGroups.value = true;
     error.value = '';
     // ensure device api key is available (interceptor does this lazily)
-    await userApi.get('/devices').catch(() => {});
+    await userApi.get('/devices').catch((e) => {
+      console.warn('Failed to prefetch devices:', e?.message || e);
+    });
     let res;
     try {
       res = await deviceApi.get('/messages/get-groups/detail');

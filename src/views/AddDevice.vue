@@ -310,7 +310,10 @@ onMounted(async () => {
       await auth.fetchMe();
     } catch (_) {}
   }
-  await loadDevices().catch(() => {});
+  await loadDevices().catch((e) => {
+    console.error('Failed to load devices:', e);
+    toast.error('Gagal memuat daftar device. Silakan refresh halaman.');
+  });
   // 🆕 Pass devices.value ke fetchAllDeviceStats
   await fetchAllDeviceStats(devices.value);
   await fetchAllMessageStats();
