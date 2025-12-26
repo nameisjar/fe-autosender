@@ -4,6 +4,7 @@ import { API_BASE } from "../api/http.js";
  * Build absolute URL for media/static files served by the backend.
  * - If `p` is already an absolute URL (http/https) or special scheme (data/blob), it is returned as-is.
  * - Otherwise it is treated as a relative path and prefixed with API_BASE.
+ * - Converts Windows backslashes to forward slashes for URL compatibility.
  */
 export function mediaUrl(p) {
   if (p == null) return "";
@@ -26,7 +27,8 @@ export function mediaUrl(p) {
 
   // Join API_BASE and relative path safely
   const base = String(API_BASE || "").replace(/\/+$/, "");
-  const path = s.replace(/^\/+/, "");
+  // Convert Windows backslashes to forward slashes and remove leading slashes
+  const path = s.replace(/\\/g, "/").replace(/^\/+/, "");
 
   // If base is empty (dev proxy), just return /<path>
   if (!base) return `/${path}`;

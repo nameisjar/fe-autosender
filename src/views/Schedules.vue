@@ -765,10 +765,33 @@ const loadContacts = async () => {
   try {
     loadingContacts.value = true;
     const deviceId = localStorage.getItem("device_selected_id") || "";
-    const { data } = await userApi.get("/contacts", {
-      params: deviceId ? { deviceId } : {},
-    });
-    contacts.value = Array.isArray(data) ? data : [];
+    const allContacts = [];
+    let page = 1;
+    let hasMore = true;
+
+    // Loop pagination untuk load semua kontak
+    while (hasMore) {
+      const { data } = await userApi.get("/contacts", {
+        params: {
+          ...(deviceId ? { deviceId } : {}),
+          page,
+          pageSize: 200,
+        },
+      });
+
+      // Backend mengembalikan { data: contacts[], metadata: {...} }
+      const batch = data?.data || [];
+      allContacts.push(...batch);
+
+      // Cek apakah masih ada data lagi
+      hasMore = data?.metadata?.hasMore ?? batch.length === 200;
+      page++;
+
+      // Safety limit: maksimal 50 halaman (10.000 kontak)
+      if (page > 50) break;
+    }
+
+    contacts.value = allContacts;
   } catch (_) {
     contacts.value = [];
   } finally {
