@@ -320,6 +320,7 @@ const validationError = computed(() => {
 });
 
 const submit = async () => {
+  if (loading.value) return;
   msg.value = "";
   err.value = "";
   if (validationError.value) {

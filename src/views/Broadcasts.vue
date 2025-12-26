@@ -338,6 +338,9 @@ const validationError = computed(() => {
 });
 
 async function submit() {
+  // 🔒 Extra safety: Prevent double submit
+  if (loading.value) return;
+  
   msg.value = "";
   err.value = "";
   if (validationError.value) {
