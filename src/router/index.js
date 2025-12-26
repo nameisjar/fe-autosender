@@ -1,28 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '../stores/auth.js';
-
-// 🔄 Core views - loaded synchronously (needed for initial render)
 import Login from '../views/Login.vue';
 import Dashboard from '../views/Dashboard.vue';
 import AddDevice from '../views/AddDevice.vue';
+import ScheduleFeedback from '../views/ScheduleFeedback.vue';
+import ScheduleReminder from '../views/ScheduleReminder.vue';
+import ReminderAlgo from '../views/ReminderAlgo.vue';
+import Templates from '../views/Templates.vue';
+import MonthlyTemplates from '../views/MonthlyTemplates.vue';
+import MonthlyFeedback from '../views/MonthlyFeedback.vue';
+import AdminTutors from '../views/AdminTutors.vue';
+import AdminSentHistory from '../views/AdminSentHistory.vue';
+import AdminMonitoring from '../views/AdminMonitoring.vue';
+import SendMessage from '../views/SendMessage.vue';
+import Schedules from '../views/Schedules.vue';
+import Broadcasts from '../views/Broadcasts.vue';
+import Contacts from '../views/Contacts.vue';
+import Groups from '../views/Groups.vue';
+import CodeSnippets from '../views/CodeSnippets.vue';
 import SnippetView from '../views/SnippetView.vue';
-
-// 🚀 Lazy loaded views - loaded on-demand for better performance
-const ScheduleFeedback = () => import('../views/ScheduleFeedback.vue');
-const ScheduleReminder = () => import('../views/ScheduleReminder.vue');
-const ReminderAlgo = () => import('../views/ReminderAlgo.vue');
-const Templates = () => import('../views/Templates.vue');
-const MonthlyTemplates = () => import('../views/MonthlyTemplates.vue');
-const MonthlyFeedback = () => import('../views/MonthlyFeedback.vue');
-const AdminTutors = () => import('../views/AdminTutors.vue');
-const AdminSentHistory = () => import('../views/AdminSentHistory.vue');
-const AdminMonitoring = () => import('../views/AdminMonitoring.vue');
-const SendMessage = () => import('../views/SendMessage.vue');
-const Schedules = () => import('../views/Schedules.vue');
-const Broadcasts = () => import('../views/Broadcasts.vue');
-const Contacts = () => import('../views/Contacts.vue');
-const Groups = () => import('../views/Groups.vue');
-const CodeSnippets = () => import('../views/CodeSnippets.vue');
+import { useAuthStore } from '../stores/auth.js';
 
 const routes = [
     { path: '/login', name: 'login', component: Login },
