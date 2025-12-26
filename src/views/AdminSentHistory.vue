@@ -1167,8 +1167,12 @@ const getBroadcastPkId = (id) => {
 const loadBroadcasts = async () => {
   try {
     // backend returns list of broadcasts; map by pkId/id -> name
-    const { data } = await deviceApi.get("/messages/broadcasts");
-    const arr = Array.isArray(data) ? data : [];
+    // Use pagination to avoid fetching ALL broadcasts (performance fix)
+    const { data } = await deviceApi.get("/messages/broadcasts", {
+      params: { page: 1, pageSize: 500 },
+    });
+    // Handle both paginated response {data: [...]} and legacy array response
+    const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
     const map = {};
     for (const b of arr) {
       const key = Number(b?.pkId ?? b?.id);
