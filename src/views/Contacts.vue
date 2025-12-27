@@ -286,10 +286,10 @@
               <td class="col-labels">
                 <div
                   class="labels-list-table"
-                  v-if="contact.ContactLabel && filteredContactLabels(contact).length"
+                  v-if="contact.displayLabels && contact.displayLabels.length"
                 >
                   <div
-                    v-for="label in filteredContactLabels(contact)"
+                    v-for="label in contact.displayLabels"
                     :key="label"
                     class="label-chip-table"
                   >
@@ -757,12 +757,29 @@ const selectedLabelFilter = ref("");
 // New: Store all available labels fetched from API
 const allLabels = ref([]);
 
-// New: Fetch all labels from API
-const fetchAllLabels = async () => {
+// Labels cache configuration
+const LABELS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+const labelsCache = ref({ data: [], timestamp: 0, deviceId: null });
+
+// New: Fetch all labels from API with caching
+const fetchAllLabels = async (forceRefresh = false) => {
   if (!selectedDeviceId.value) {
     allLabels.value = [];
     return;
   }
+
+  // Check if cache is still valid
+  const now = Date.now();
+  if (
+    !forceRefresh &&
+    labelsCache.value.deviceId === selectedDeviceId.value &&
+    labelsCache.value.data.length > 0 &&
+    now - labelsCache.value.timestamp < LABELS_CACHE_DURATION
+  ) {
+    allLabels.value = labelsCache.value.data;
+    return; // Use cache, no API request needed
+  }
+
   try {
     const { data } = await userApi.get("/contacts/labels", {
       params: {
@@ -770,10 +787,24 @@ const fetchAllLabels = async () => {
         pageSize: 1000, // Fetch all labels
       },
     });
-    allLabels.value = data?.labels?.map((l) => l.name) || [];
+    const labels = data?.labels?.map((l) => l.name) || [];
+    
+    // Save to cache
+    labelsCache.value = {
+      data: labels,
+      timestamp: now,
+      deviceId: selectedDeviceId.value,
+    };
+    
+    allLabels.value = labels;
   } catch {
     allLabels.value = [];
   }
+};
+
+// Invalidate labels cache (call after adding new labels)
+const invalidateLabelsCache = () => {
+  labelsCache.value = { data: [], timestamp: 0, deviceId: null };
 };
 
 // Get all available labels from API (not just current page)
@@ -848,9 +879,12 @@ const filteredContactLabels = (contact) => {
   return names.filter((n) => !String(n).startsWith("device_"));
 };
 
-// visibleContacts - now filtered server-side via API
+// Memoized contacts with pre-computed labels for better template performance
 const visibleContacts = computed(() => {
-  return contacts.value;
+  return contacts.value.map((contact) => ({
+    ...contact,
+    displayLabels: filteredContactLabels(contact),
+  }));
 });
 
 // Debounced server-side reload on search/sort/pageSize/label change
@@ -968,27 +1002,12 @@ const saveContact = async () => {
     // Reset form immediately
     resetForm();
 
-    // Force reload contacts with better timing and error handling
-
-    // Try immediate reload first
+    // Reload contacts
     await loadContacts();
     
-    // Refresh labels in case new labels were added
-    await fetchAllLabels();
-
-    // If no contacts found, try again after a short delay
-    if (contacts.value.length === 0) {
-      setTimeout(async () => {
-        await loadContacts();
-
-        // If still no contacts, try one more time
-        if (contacts.value.length === 0) {
-          setTimeout(async () => {
-            await loadContacts();
-          }, 1000);
-        }
-      }, 500);
-    }
+    // Invalidate cache and refresh labels in case new labels were added
+    invalidateLabelsCache();
+    await fetchAllLabels(true);
   } catch (e) {
     // console.error("❌ Contact save error:", e);
     // console.error("❌ Error response data:", e?.response?.data);
@@ -1106,8 +1125,9 @@ const confirmImport = async () => {
     // reload contacts after import
     await loadContacts();
     
-    // Refresh labels in case new labels were imported
-    await fetchAllLabels();
+    // Invalidate cache and refresh labels in case new labels were imported
+    invalidateLabelsCache();
+    await fetchAllLabels(true);
   } catch (e) {
     toast.error(e?.response?.data?.message || "Gagal mengimpor kontak");
   } finally {
