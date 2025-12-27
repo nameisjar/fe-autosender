@@ -4,6 +4,7 @@ import { ref, onUnmounted } from 'vue';
 import { userApi } from '../api/http.js';
 import { listenToGroupUpdates, listenToNewGroup, listenToGroupLeft } from '../api/socket.js';
 import { cache } from '../utils/cache.js';
+import { indexedDBCache, CACHE_TTL, CACHE_KEYS } from '../utils/indexedDBCache.js';
 import { debounce } from '../utils/debounce.js';
 
 // Singleton state (module-scoped)
@@ -17,7 +18,7 @@ let socketCleanups = [];
 
 // ✅ Cache configuration
 const CACHE_KEY_PREFIX = 'groups_device_';
-const CACHE_TTL = 30; // 30 seconds
+const LOCAL_CACHE_TTL = 30; // 30 seconds for memory cache
 
 // ✅ Flag untuk mencegah multiple socket setup
 let socketSetupCompleted = false;
@@ -96,19 +97,43 @@ const loadGroupsInternal = async ({ force = false } = {}) => {
     return [];
   }
 
-  // ✅ Check cache first (jika tidak force reload)
+  const cacheKey = CACHE_KEYS.GROUPS(deviceId);
+  const memoryCacheKey = getCacheKey(deviceId);
+
+  // 🔥 Check IndexedDB cache first (instant load)
   if (!force) {
-    const cacheKey = getCacheKey(deviceId);
-    const cachedGroups = cache.get(cacheKey);
-    if (cachedGroups) {
-      groupsState.value = cachedGroups;
+    // First try memory cache (instant)
+    const memoryCached = cache.get(memoryCacheKey);
+    if (memoryCached) {
+      groupsState.value = memoryCached;
+      if (!socketSetupCompleted) {
+        setupGroupSocketListeners(deviceId);
+        socketSetupCompleted = true;
+      }
+      return groupsState.value;
+    }
+    
+    // Then try IndexedDB cache
+    const cached = await indexedDBCache.get(cacheKey);
+    if (cached.fromCache && cached.data) {
+      groupsState.value = cached.data;
+      // Also set to memory cache
+      cache.set(memoryCacheKey, cached.data, LOCAL_CACHE_TTL);
       
-      // ✅ Setup socket hanya jika belum setup
       if (!socketSetupCompleted) {
         setupGroupSocketListeners(deviceId);
         socketSetupCompleted = true;
       }
       
+      // If stale, refresh in background
+      if (cached.isStale) {
+        indexedDBCache.backgroundRefresh(cacheKey, async () => {
+          const { groups: data } = await fetchGroupsFromDatabase({ pageSize: 50 });
+          groupsState.value = data;
+          cache.set(memoryCacheKey, data, LOCAL_CACHE_TTL);
+          return data;
+        }, CACHE_TTL.GROUPS);
+      }
       return groupsState.value;
     }
   }
@@ -125,9 +150,9 @@ const loadGroupsInternal = async ({ force = false } = {}) => {
       const { groups: data } = await fetchGroupsFromDatabase({ pageSize: 50 });
       groupsState.value = data;
       
-      // ✅ Save to cache
-      const cacheKey = getCacheKey(deviceId);
-      cache.set(cacheKey, data, CACHE_TTL);
+      // 🔥 Save to both caches
+      cache.set(memoryCacheKey, data, LOCAL_CACHE_TTL);
+      await indexedDBCache.set(cacheKey, data, CACHE_TTL.GROUPS);
       
       // ✅ Setup socket hanya sekali
       if (!socketSetupCompleted) {
@@ -193,7 +218,7 @@ const setupGroupSocketListeners = (deviceId) => {
       
       // ✅ Update cache
       const cacheKey = getCacheKey(deviceId);
-      cache.set(cacheKey, groupsState.value, CACHE_TTL);
+      cache.set(cacheKey, groupsState.value, LOCAL_CACHE_TTL);
     } else {
       // ✅ Debounced refresh untuk update lainnya
       debouncedRefresh();
@@ -223,7 +248,7 @@ const setupGroupSocketListeners = (deviceId) => {
         
         // ✅ Update cache
         const cacheKey = getCacheKey(deviceId);
-        cache.set(cacheKey, groupsState.value, CACHE_TTL);
+        cache.set(cacheKey, groupsState.value, LOCAL_CACHE_TTL);
       }
     }
     
@@ -246,7 +271,7 @@ const setupGroupSocketListeners = (deviceId) => {
       if (beforeCount > afterCount) {
         // ✅ Update cache
         const cacheKey = getCacheKey(deviceId);
-        cache.set(cacheKey, groupsState.value, CACHE_TTL);
+        cache.set(cacheKey, groupsState.value, LOCAL_CACHE_TTL);
       }
     }
   });
@@ -409,7 +434,7 @@ export function useGroups() {
       
       // ✅ Update cache
       const cacheKey = getCacheKey(deviceId);
-      cache.set(cacheKey, groups.value, CACHE_TTL);
+      cache.set(cacheKey, groups.value, LOCAL_CACHE_TTL);
       
       return res.data;
     } catch (e) {

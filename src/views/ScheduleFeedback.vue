@@ -276,6 +276,7 @@ import {
   isValidDateTime,
   addInterval,
 } from "../utils/datetime.js";
+import { indexedDBCache, CACHE_TTL, CACHE_KEYS } from "../utils/indexedDBCache.js";
 
 const toast = useToast();
 
@@ -307,11 +308,36 @@ const extractCourseOptions = (items) => {
 };
 
 const loadTemplates = async () => {
+  const cacheKey = CACHE_KEYS.TEMPLATES;
+  
+  // Check cache first
+  const cached = await indexedDBCache.get(cacheKey);
+  if (cached.fromCache && cached.data) {
+    templates.value = cached.data;
+    extractCourseOptions(templates.value);
+    
+    // If stale, refresh in background
+    if (cached.isStale) {
+      indexedDBCache.backgroundRefresh(cacheKey, async () => {
+        const res = await userApi.get("/course/feedbacks");
+        const data = res.data;
+        const list = data.feedbacks || [];
+        templates.value = list;
+        extractCourseOptions(list);
+        return list;
+      }, CACHE_TTL.TEMPLATES);
+    }
+    return;
+  }
+  
   try {
     const res = await userApi.get("/course/feedbacks");
     const data = res.data;
     templates.value = data.feedbacks || [];
     extractCourseOptions(templates.value);
+    
+    // Save to cache
+    await indexedDBCache.set(cacheKey, templates.value, CACHE_TTL.TEMPLATES);
   } catch (e) {
     const errorMsg = e?.response?.data?.message || e?.message || "Gagal memuat templates";
     toast.error("Gagal memuat templates: " + errorMsg);

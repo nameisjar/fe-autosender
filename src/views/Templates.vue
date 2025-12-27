@@ -545,6 +545,7 @@ import { userApi } from "../api/http.js";
 import { useAuthStore } from "../stores/auth.js";
 import { useToast } from "../composables/useToast.js";
 import { loadXLSX } from "../utils/xlsx-loader.js";
+import { indexedDBCache, CACHE_TTL, CACHE_KEYS } from "../utils/indexedDBCache.js";
 
 const toast = useToast();
 
@@ -622,26 +623,58 @@ const mostLessons = computed(() => {
   return max;
 });
 
-const loadFeedbacks = async () => {
-  loading.value = true;
-  err.value = "";
-  try {
-    // console.log('🔍 Loading templates...');
-
-    if (fbFilter.value) {
+const loadFeedbacks = async ({ force = false } = {}) => {
+  const cacheKey = CACHE_KEYS.TEMPLATES;
+  
+  // Jika ada filter, skip cache dan fetch langsung
+  if (fbFilter.value) {
+    loading.value = true;
+    err.value = "";
+    try {
       const { data } = await userApi.get(
         `/course/feedback/${encodeURIComponent(fbFilter.value)}`
       );
       feedbacks.value = data.feedbacks || [];
-    } else {
-      const { data } = await userApi.get("/course/feedbacks");
-      feedbacks.value = data.feedbacks || [];
+      collapsed.value = {};
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Gagal memuat template");
+    } finally {
+      loading.value = false;
     }
-
-    // console.log('✅ Templates loaded:', feedbacks.value.length);
+    return;
+  }
+  
+  // Check cache first (only for non-filtered requests)
+  if (!force) {
+    const cached = await indexedDBCache.get(cacheKey);
+    if (cached.fromCache && cached.data) {
+      feedbacks.value = cached.data;
+      collapsed.value = {};
+      
+      // If stale, refresh in background
+      if (cached.isStale) {
+        indexedDBCache.backgroundRefresh(cacheKey, async () => {
+          const { data } = await userApi.get("/course/feedbacks");
+          const templates = data.feedbacks || [];
+          feedbacks.value = templates;
+          return templates;
+        }, CACHE_TTL.TEMPLATES);
+      }
+      return;
+    }
+  }
+  
+  loading.value = true;
+  err.value = "";
+  try {
+    const { data } = await userApi.get("/course/feedbacks");
+    feedbacks.value = data.feedbacks || [];
+    
+    // Save to cache
+    await indexedDBCache.set(cacheKey, feedbacks.value, CACHE_TTL.TEMPLATES);
+    
     collapsed.value = {};
   } catch (e) {
-    // console.error("❌ Error loading templates:", e);
     toast.error(e?.response?.data?.message || e?.message || "Gagal memuat template");
   } finally {
     loading.value = false;
@@ -656,7 +689,8 @@ const createFeedback = async () => {
     await userApi.post("/course/feedback", fb.value);
     fb.value = { courseName: "", lesson: 1, message: "" };
     toast.success("Template berhasil ditambahkan");
-    await loadFeedbacks();
+    indexedDBCache.invalidate(CACHE_KEYS.TEMPLATES);
+    await loadFeedbacks({ force: true });
   } catch (e) {
     toast.error(e?.response?.data?.message || e?.message || "Gagal menambah template");
   } finally {
@@ -694,7 +728,8 @@ const saveEdit = async () => {
     });
     toast.success("Template berhasil diperbarui");
     editId.value = "";
-    await loadFeedbacks();
+    indexedDBCache.invalidate(CACHE_KEYS.TEMPLATES);
+    await loadFeedbacks({ force: true });
   } catch (e) {
     toast.error(e?.response?.data?.message || e?.message || "Gagal memperbarui template");
   } finally {
@@ -727,7 +762,8 @@ const handleConfirmDelete = async () => {
     templateToDelete.value = null;
 
     // Reload templates
-    await loadFeedbacks();
+    indexedDBCache.invalidate(CACHE_KEYS.TEMPLATES);
+    await loadFeedbacks({ force: true });
   } catch (e) {
     toast.error(e?.response?.data?.message || e?.message || "Gagal menghapus template");
   } finally {
@@ -809,7 +845,8 @@ const confirmImport = async () => {
     toast.success(
       `Import template berhasil${importReplaceMode.value ? " (replace)" : " (append)"}`
     );
-    await loadFeedbacks();
+    indexedDBCache.invalidate(CACHE_KEYS.TEMPLATES);
+    await loadFeedbacks({ force: true });
   } catch (e) {
     toast.error(e?.response?.data?.message || e?.message || "Gagal mengimpor template");
   } finally {
@@ -858,7 +895,8 @@ const saveTemplate = async () => {
       await userApi.post("/course/feedback", formData.value);
       toast.success("Template berhasil ditambahkan");
     }
-    await loadFeedbacks();
+    indexedDBCache.invalidate(CACHE_KEYS.TEMPLATES);
+    await loadFeedbacks({ force: true });
     closeFormModal();
   } catch (e) {
     toast.error(e?.response?.data?.message || e?.message || "Gagal menyimpan template");

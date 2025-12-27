@@ -4,6 +4,7 @@ import { useToast } from "./useToast.js";
 import { useGroups } from "./useGroups.js";
 import { userApi } from "../api/http.js";
 import { debounce } from "../utils/debounce.js";
+import { indexedDBCache, CACHE_TTL, CACHE_KEYS } from "../utils/indexedDBCache.js";
 
 // 🆕 Shared state untuk contacts dan labels (di luar fungsi agar persistent)
 const contacts = ref([]); // Initial 100 contacts for dropdown
@@ -361,16 +362,40 @@ export function useRecipients() {
   const loadContacts = async (deviceIdOverride, { force = false } = {}) => {
     try {
       const deviceId = deviceIdOverride || (await ensureDeviceId()) || undefined;
+      if (!deviceId) return;
       
-      // 🔧 Skip jika sudah ada data dan device sama (kecuali force)
-      if (!force && contacts.value.length > 0 && lastContactsDeviceId === deviceId) {
-        return;
+      const cacheKey = CACHE_KEYS.CONTACTS(deviceId);
+      
+      // 🔥 Check IndexedDB cache first (instant load)
+      if (!force) {
+        const cached = await indexedDBCache.get(cacheKey);
+        if (cached.fromCache && cached.data) {
+          contacts.value = cached.data;
+          lastContactsDeviceId = deviceId;
+          
+          // If stale, refresh in background
+          if (cached.isStale) {
+            indexedDBCache.backgroundRefresh(cacheKey, async () => {
+              const res = await userApi.get("/contacts", {
+                params: { deviceId, pageSize: 50 },
+              });
+              const responseData = res?.data;
+              const freshData = Array.isArray(responseData?.data)
+                ? responseData.data
+                : Array.isArray(responseData)
+                  ? responseData
+                  : [];
+              contacts.value = freshData;
+              return freshData;
+            }, CACHE_TTL.CONTACTS);
+          }
+          return;
+        }
       }
       
       loadingContacts.value = true;
       
-      // 🆕 Hybrid approach: Load only initial 50 contacts for dropdown
-      // Server-side search will be used when user types in search box
+      // Fetch from server
       const res = await userApi.get("/contacts", {
         params: {
           ...(deviceId ? { deviceId } : {}),
@@ -379,14 +404,17 @@ export function useRecipients() {
       });
       
       const responseData = res?.data;
-      contacts.value = Array.isArray(responseData?.data)
+      const contactsData = Array.isArray(responseData?.data)
         ? responseData.data
         : Array.isArray(responseData)
           ? responseData
           : [];
       
-      // 🔧 Track device yang sudah di-load
+      contacts.value = contactsData;
       lastContactsDeviceId = deviceId;
+      
+      // 🔥 Save to IndexedDB cache
+      await indexedDBCache.set(cacheKey, contactsData, CACHE_TTL.CONTACTS);
     } catch (e) {
       console.error("Failed to load contacts", e);
     } finally {
@@ -397,15 +425,41 @@ export function useRecipients() {
   const loadLabels = async (deviceIdOverride, { force = false } = {}) => {
     try {
       const deviceId = deviceIdOverride || (await ensureDeviceId()) || undefined;
+      if (!deviceId) return;
       
-      // 🔧 Skip jika sudah ada data dan device sama (kecuali force)
-      if (!force && labels.value.length > 0 && lastLabelsDeviceId === deviceId) {
-        return;
+      const cacheKey = CACHE_KEYS.LABELS(deviceId);
+      
+      // 🔥 Check IndexedDB cache first (instant load)
+      if (!force) {
+        const cached = await indexedDBCache.get(cacheKey);
+        if (cached.fromCache && cached.data) {
+          labels.value = cached.data;
+          lastLabelsDeviceId = deviceId;
+          
+          // If stale, refresh in background
+          if (cached.isStale) {
+            indexedDBCache.backgroundRefresh(cacheKey, async () => {
+              const res = await userApi.get("/contacts/labels", {
+                params: { deviceId, pageSize: 50 },
+              });
+              const data = res?.data;
+              let list = Array.isArray(data?.labels)
+                ? data.labels
+                : Array.isArray(data)
+                ? data
+                : [];
+              const mappedLabels = mapLabels(list);
+              labels.value = mappedLabels;
+              return mappedLabels;
+            }, CACHE_TTL.LABELS);
+          }
+          return;
+        }
       }
       
       loadingLabels.value = true;
       
-      // 🆕 Hybrid approach: Load only initial 50 labels for dropdown
+      // Fetch from server
       const res = await userApi.get("/contacts/labels", {
         params: {
           ...(deviceId ? { deviceId } : {}),
@@ -425,10 +479,12 @@ export function useRecipients() {
         }
         list = deriveLabelsFromContacts();
       }
-      labels.value = mapLabels(list);
-      
-      // 🔧 Track device yang sudah di-load
+      const mappedLabels = mapLabels(list);
+      labels.value = mappedLabels;
       lastLabelsDeviceId = deviceId;
+      
+      // 🔥 Save to IndexedDB cache
+      await indexedDBCache.set(cacheKey, mappedLabels, CACHE_TTL.LABELS);
     } catch (_) {
       if (!contacts.value || contacts.value.length === 0) {
         await loadContacts(deviceIdOverride, { force }).catch(() => {});

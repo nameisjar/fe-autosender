@@ -424,6 +424,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { userApi } from '../api/http';
 import { useToast } from '../composables/useToast';
 import { debounce } from '../utils/debounce';
+import { indexedDBCache, CACHE_TTL } from '../utils/indexedDBCache.js';
 
 // Highlight.js - use core bundle with only needed languages for smaller bundle size
 import hljs from 'highlight.js/lib/core';
@@ -1454,18 +1455,49 @@ const handleKeydown = (e) => {
 };
 
 // Methods
-const loadSnippets = async () => {
+const loadSnippets = async ({ force = false } = {}) => {
+  const params = {
+    page: currentPage.value,
+    limit: itemsPerPage.value,
+    ...(searchQuery.value && { search: searchQuery.value }),
+    ...(selectedLanguage.value && { language: selectedLanguage.value }),
+  };
+  
+  // Create cache key based on params
+  const cacheKey = `snippets_${JSON.stringify(params)}`;
+  
+  // Check cache first (only for non-forced requests)
+  if (!force) {
+    const cached = await indexedDBCache.get(cacheKey);
+    if (cached.fromCache && cached.data) {
+      snippets.value = cached.data.snippets;
+      pagination.value = cached.data.pagination;
+      
+      // If stale, refresh in background
+      if (cached.isStale) {
+        indexedDBCache.backgroundRefresh(cacheKey, async () => {
+          const res = await userApi.get('/code-snippets', { params });
+          const data = { snippets: res.data.data, pagination: res.data.pagination };
+          snippets.value = data.snippets;
+          pagination.value = data.pagination;
+          return data;
+        }, CACHE_TTL.SNIPPETS);
+      }
+      return;
+    }
+  }
+  
   loading.value = true;
   try {
-    const params = {
-      page: currentPage.value,
-      limit: itemsPerPage.value,
-      ...(searchQuery.value && { search: searchQuery.value }),
-      ...(selectedLanguage.value && { language: selectedLanguage.value }),
-    };
     const res = await userApi.get('/code-snippets', { params });
     snippets.value = res.data.data;
     pagination.value = res.data.pagination;
+    
+    // Save to cache
+    await indexedDBCache.set(cacheKey, {
+      snippets: snippets.value,
+      pagination: pagination.value,
+    }, CACHE_TTL.SNIPPETS);
   } catch (err) {
     toast.error('Gagal memuat snippets');
   } finally {
@@ -1549,7 +1581,9 @@ const submitForm = async () => {
       toast.success('Snippet berhasil ditambahkan');
     }
     closeFormModal();
-    loadSnippets();
+    // Invalidate all snippet caches
+    indexedDBCache.invalidatePattern('snippets_');
+    loadSnippets({ force: true });
     loadStats(); // Refresh stats after changes
   } catch (err) {
     const msg = err.response?.data?.message || 'Gagal menyimpan snippet';
@@ -1577,7 +1611,9 @@ const deleteSnippet = async () => {
     await userApi.delete('/code-snippets', { data: { ids: [deleteTarget.value.id] } });
     toast.success('Snippet berhasil dihapus');
     closeDeleteModal();
-    loadSnippets();
+    // Invalidate all snippet caches
+    indexedDBCache.invalidatePattern('snippets_');
+    loadSnippets({ force: true });
     loadStats(); // Refresh stats after delete
   } catch (err) {
     toast.error('Gagal menghapus snippet');

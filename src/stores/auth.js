@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import { userApi, clearDeviceAccessTokenCache } from '../api/http.js';
 import { refreshSocketAuth, resetSocket } from '../api/socket.js';
+import { prefetchAfterLogin } from '../utils/prefetch.js';
+import { indexedDBCache } from '../utils/indexedDBCache.js';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({ me: null }),
@@ -18,6 +20,8 @@ export const useAuthStore = defineStore('auth', {
                 this.me = data;
                 // 🔄 Refresh socket auth after successful login/fetch
                 refreshSocketAuth();
+                // 🚀 Prefetch data in background for instant loading
+                prefetchAfterLogin();
             } catch (_) {
                 this.me = null;
             }
@@ -32,6 +36,9 @@ export const useAuthStore = defineStore('auth', {
             
             // 🔌 Reset socket connection
             resetSocket();
+            
+            // 🧹 Clear IndexedDB cache
+            indexedDBCache.invalidate();
             
             // 🧹 Clear localStorage (except device selection for faster re-login)
             try {

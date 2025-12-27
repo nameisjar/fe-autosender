@@ -227,6 +227,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useDevices } from "../composables/useDevices.js";
+import { prefetchForDevice } from "../utils/prefetch.js";
 
 const emit = defineEmits(["device-changed"]);
 
@@ -273,6 +274,9 @@ function handleSelectDevice(deviceId) {
   if (oldDeviceId && oldDeviceId !== deviceId) {
     emit("device-changed", deviceId);
   }
+  
+  // 🚀 Prefetch data for new device in background
+  prefetchForDevice(deviceId);
   
   // 🆕 Fetch health for new device
   fetchDeviceHealth(deviceId);

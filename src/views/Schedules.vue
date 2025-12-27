@@ -651,6 +651,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { deviceApi, userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import { mediaUrl } from "../utils/mediaUrl.js";
+import { indexedDBCache, CACHE_TTL, CACHE_KEYS } from "../utils/indexedDBCache.js";
 
 const toast = useToast();
 
@@ -1096,7 +1097,8 @@ const confirmDelete = async () => {
       `Jadwal "${scheduleToDelete.value}" yang belum terkirim berhasil dihapus`
     );
     closeDeleteDialog();
-    await load();
+    indexedDBCache.invalidatePattern('schedules_');
+    await load({ force: true });
   } catch (e) {
     const errorMessage =
       e?.response?.data?.message || e?.message || "Gagal menghapus jadwal";
@@ -1140,7 +1142,42 @@ watch([statusFilter, typeFilter, sortBy, sortDir, pageSize], async () => {
   await load();
 });
 
-const load = async () => {
+// Helper function to process schedule data from API/cache
+const processScheduleData = (data) => {
+  const list = Array.isArray(data?.data) ? data.data : [];
+  serverMeta.value = data?.meta || null;
+
+  // Konversi group row -> bentuk yg dipakai UI
+  // broadcasts: isi awal 1 sample broadcast (untuk status/schedule/recipients summary).
+  groups.value = list.map((row) => {
+    const sample = {
+      id: row.sampleId,
+      name: row.name,
+      schedule: row.sampleSchedule || row.nextSchedule,
+      message: row.sampleMessage,
+      mediaPath: row.sampleMediaPath,
+      recipients: Array.isArray(row.sampleRecipients) ? row.sampleRecipients : [],
+      status: row.sampleStatus,
+      isSent: row.sampleIsSent,
+      sentCount: row.sampleSentCount || 0,
+      failedCount: row.sampleFailedCount || 0,
+      lastError: row.sampleLastError || null,
+      type: row.sampleType || row.type || "broadcast",
+    };
+
+    return {
+      name: row.name,
+      broadcastsCount: row.broadcastsCount,
+      nextSchedule: row.nextSchedule,
+      broadcasts: [sample],
+      _originalSample: sample,
+    };
+  });
+
+  items.value = list;
+};
+
+const load = async ({ force = false } = {}) => {
   loading.value = true;
   err.value = "";
 
@@ -1172,41 +1209,40 @@ const load = async () => {
       sortBy: sortBy.value,
       sortDir: sortDir.value,
     };
+    
+    // Create cache key based on params
+    const cacheKey = `schedules_${JSON.stringify(params)}`;
+    
+    // Check cache first
+    if (!force) {
+      const cached = await indexedDBCache.get(cacheKey);
+      if (cached.fromCache && cached.data) {
+        processScheduleData(cached.data);
+        
+        // Still load group names and summary
+        await loadGroupNames();
+        await loadSummary();
+        
+        loading.value = false;
+        
+        // If stale, refresh in background
+        if (cached.isStale) {
+          indexedDBCache.backgroundRefresh(cacheKey, async () => {
+            const { data } = await userApi.get("/broadcasts/groups", { params });
+            processScheduleData(data);
+            return data;
+          }, CACHE_TTL.SCHEDULES);
+        }
+        return;
+      }
+    }
 
     const { data } = await userApi.get("/broadcasts/groups", { params });
+    
+    // Save to cache
+    await indexedDBCache.set(cacheKey, data, CACHE_TTL.SCHEDULES);
 
-    const list = Array.isArray(data?.data) ? data.data : [];
-    serverMeta.value = data?.meta || null;
-
-    // Konversi group row -> bentuk yg dipakai UI
-    // broadcasts: isi awal 1 sample broadcast (untuk status/schedule/recipients summary).
-    groups.value = list.map((row) => {
-      const sample = {
-        id: row.sampleId,
-        name: row.name,
-        schedule: row.sampleSchedule || row.nextSchedule,
-        message: row.sampleMessage,
-        mediaPath: row.sampleMediaPath,
-        recipients: Array.isArray(row.sampleRecipients) ? row.sampleRecipients : [],
-        status: row.sampleStatus,
-        isSent: row.sampleIsSent,
-        sentCount: row.sampleSentCount || 0,
-        failedCount: row.sampleFailedCount || 0,
-        lastError: row.sampleLastError || null,
-        type: row.sampleType || row.type || "broadcast", // ✅ Tambahkan type untuk filtering
-      };
-
-      return {
-        name: row.name,
-        broadcastsCount: row.broadcastsCount,
-        nextSchedule: row.nextSchedule,
-        broadcasts: [sample],
-        // ✅ FIX: Simpan original sample terpisah agar tidak terpengaruh hydration modal
-        _originalSample: sample,
-      };
-    });
-
-    items.value = list;
+    processScheduleData(data);
 
     await loadGroupNames();
     await loadSummary();
