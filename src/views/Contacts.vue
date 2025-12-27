@@ -754,14 +754,31 @@ const meta = ref({ totalContacts: 0, currentPage: 1, totalPages: 1, hasMore: fal
 // New: Label filter state
 const selectedLabelFilter = ref("");
 
-// New: Get all available labels from contacts
+// New: Store all available labels fetched from API
+const allLabels = ref([]);
+
+// New: Fetch all labels from API
+const fetchAllLabels = async () => {
+  if (!selectedDeviceId.value) {
+    allLabels.value = [];
+    return;
+  }
+  try {
+    const { data } = await userApi.get("/contacts/labels", {
+      params: {
+        deviceId: selectedDeviceId.value,
+        pageSize: 1000, // Fetch all labels
+      },
+    });
+    allLabels.value = data?.labels?.map((l) => l.name) || [];
+  } catch {
+    allLabels.value = [];
+  }
+};
+
+// Get all available labels from API (not just current page)
 const availableLabels = computed(() => {
-  const labelsSet = new Set();
-  contacts.value.forEach((contact) => {
-    const labels = filteredContactLabels(contact);
-    labels.forEach((label) => labelsSet.add(label));
-  });
-  return Array.from(labelsSet).sort();
+  return allLabels.value.sort();
 });
 
 const fetchDevices = async () => {
@@ -781,6 +798,7 @@ const onDeviceChange = () => {
 
   page.value = 1; // reset
   loadContacts();
+  fetchAllLabels(); // Fetch all labels when device changes
 };
 
 const loadContacts = async () => {
@@ -796,6 +814,7 @@ const loadContacts = async () => {
       params: {
         deviceId: selectedDeviceId.value,
         ...(q.value ? { q: q.value } : {}),
+        ...(selectedLabelFilter.value ? { label: selectedLabelFilter.value } : {}),
         page: page.value,
         pageSize: pageSize.value,
         sortBy: sortBy.value,
@@ -829,36 +848,13 @@ const filteredContactLabels = (contact) => {
   return names.filter((n) => !String(n).startsWith("device_"));
 };
 
-// Updated: visibleContacts filtered by query AND label
+// visibleContacts - now filtered server-side via API
 const visibleContacts = computed(() => {
-  let filtered = contacts.value;
-
-  // Filter by selected label first
-  if (selectedLabelFilter.value) {
-    filtered = filtered.filter((c) => {
-      const labels = filteredContactLabels(c);
-      return labels.includes(selectedLabelFilter.value);
-    });
-  }
-
-  // Then filter by search term
-  const term = String(q.value || "")
-    .trim()
-    .toLowerCase();
-  if (term) {
-    filtered = filtered.filter((c) => {
-      const name = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
-      const phone = String(c.phone || "").toLowerCase();
-      const labels = filteredContactLabels(c).join(" ").toLowerCase();
-      return name.includes(term) || phone.includes(term) || labels.includes(term);
-    });
-  }
-
-  return filtered;
+  return contacts.value;
 });
 
-// Debounced server-side reload on search/sort/pageSize change
-watch([q, sortBy, sortDir, pageSize], () => {
+// Debounced server-side reload on search/sort/pageSize/label change
+watch([q, sortBy, sortDir, pageSize, selectedLabelFilter], () => {
   page.value = 1; // reset to first page on criteria change
   if (searchTimer) clearTimeout(searchTimer);
   searchTimer = setTimeout(() => loadContacts(), 300);
@@ -976,6 +972,9 @@ const saveContact = async () => {
 
     // Try immediate reload first
     await loadContacts();
+    
+    // Refresh labels in case new labels were added
+    await fetchAllLabels();
 
     // If no contacts found, try again after a short delay
     if (contacts.value.length === 0) {
@@ -1106,6 +1105,9 @@ const confirmImport = async () => {
 
     // reload contacts after import
     await loadContacts();
+    
+    // Refresh labels in case new labels were imported
+    await fetchAllLabels();
   } catch (e) {
     toast.error(e?.response?.data?.message || "Gagal mengimpor kontak");
   } finally {
@@ -1189,6 +1191,7 @@ onMounted(async () => {
   await fetchDevices();
   if (selectedDeviceId.value) {
     await loadContacts();
+    await fetchAllLabels(); // Fetch all available labels
   }
 });
 </script>
