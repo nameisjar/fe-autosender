@@ -572,7 +572,6 @@ import { ref, computed, onMounted } from "vue";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import { loadXLSX } from "../utils/xlsx-loader.js";
-import { indexedDBCache, CACHE_TTL, CACHE_KEYS } from "../utils/indexedDBCache.js";
 
 const toast = useToast();
 
@@ -649,37 +648,11 @@ const expandAll = () => {
   }
 };
 
-const loadTemplates = async ({ force = false } = {}) => {
-  const cacheKey = CACHE_KEYS.MONTHLY_TEMPLATES;
-  
-  // Check cache first
-  if (!force) {
-    const cached = await indexedDBCache.get(cacheKey);
-    if (cached.fromCache && cached.data) {
-      templates.value = cached.data;
-      collapsed.value = {};
-      
-      // If stale, refresh in background
-      if (cached.isStale) {
-        indexedDBCache.backgroundRefresh(cacheKey, async () => {
-          const { data } = await userApi.get("/algorithmics/monthly-templates");
-          const list = data.templates || [];
-          templates.value = list;
-          return list;
-        }, CACHE_TTL.MONTHLY_TEMPLATES);
-      }
-      return;
-    }
-  }
-  
+const loadTemplates = async () => {
   loading.value = true;
   try {
     const { data } = await userApi.get("/algorithmics/monthly-templates");
     templates.value = data.templates || [];
-    
-    // Save to cache
-    await indexedDBCache.set(cacheKey, templates.value, CACHE_TTL.MONTHLY_TEMPLATES);
-    
     collapsed.value = {};
   } catch (e) {
     toast.error(e?.response?.data?.message || "Gagal memuat templates");
@@ -734,8 +707,7 @@ const onFileChange = async (e) => {
           templates: importData,
         });
         toast.success(`Berhasil mengimport ${importData.length} template`);
-        indexedDBCache.invalidate(CACHE_KEYS.MONTHLY_TEMPLATES);
-        await loadTemplates({ force: true });
+        await loadTemplates();
       } catch (err) {
         toast.error(err?.response?.data?.message || "Gagal mengimport data");
       } finally {
@@ -851,8 +823,7 @@ const saveTemplate = async () => {
       await userApi.post("/algorithmics/monthly-templates", formData.value);
       toast.success("Template berhasil ditambahkan");
     }
-    indexedDBCache.invalidate(CACHE_KEYS.MONTHLY_TEMPLATES);
-    await loadTemplates({ force: true });
+    await loadTemplates();
     closeFormModal();
   } catch (e) {
     toast.error(e?.response?.data?.message || "Gagal menyimpan template");
@@ -878,8 +849,7 @@ const handleConfirmDelete = async () => {
   try {
     await userApi.delete(`/algorithmics/monthly-templates/${templateToDelete.value.id}`);
     toast.success("Template berhasil dihapus");
-    indexedDBCache.invalidate(CACHE_KEYS.MONTHLY_TEMPLATES);
-    await loadTemplates({ force: true });
+    await loadTemplates();
     cancelDelete();
   } catch (e) {
     toast.error(e?.response?.data?.message || "Gagal menghapus template");

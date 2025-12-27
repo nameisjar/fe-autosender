@@ -690,11 +690,9 @@ import { useToast } from "../composables/useToast.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
 import { getImagesAsBase64 } from "../utils/images.js";
 import { normalizePhoneNumber, isValidPhoneNumber } from "../utils/phone.js";
-import { debounce } from "../utils/debounce.js";
 import html2pdf from "html2pdf.js";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 import DevicePicker from "../components/DevicePicker.vue";
-import { indexedDBCache, CACHE_TTL, CACHE_KEYS } from "../utils/indexedDBCache.js";
 
 const toast = useToast();
 
@@ -848,26 +846,14 @@ const clearSavedData = () => {
   } catch (e) {}
 };
 
-// 🔥 Debounced save - tunggu 500ms setelah user berhenti ketik
-const debouncedSaveToStorage = debounce(saveDataToStorage, 500);
-
-// Single watcher untuk semua form fields (lebih efisien)
-watch(
-  () => ({
-    studentName: form.value.studentName,
-    courseName: form.value.courseName,
-    month: form.value.month,
-    youtubeLink: form.value.youtubeLink,
-    referralLink: form.value.referralLink,
-    reportBy: form.value.reportBy,
-    rating: form.value.rating,
-    selectedComments: [...form.value.selectedComments],
-  }),
-  () => {
-    debouncedSaveToStorage();
-  },
-  { deep: true }
-);
+watch(() => form.value.studentName, saveDataToStorage);
+watch(() => form.value.courseName, saveDataToStorage);
+watch(() => form.value.month, saveDataToStorage);
+watch(() => form.value.youtubeLink, saveDataToStorage);
+watch(() => form.value.referralLink, saveDataToStorage);
+watch(() => form.value.reportBy, saveDataToStorage);
+watch(() => form.value.rating, saveDataToStorage);
+watch(() => form.value.selectedComments, saveDataToStorage, { deep: true });
 
 const commentCategories = ref({
   kehadiran: [
@@ -1113,38 +1099,12 @@ const formatResetTime = (resetTime) => {
 };
 
 const loadTemplates = async () => {
-  const cacheKey = CACHE_KEYS.MONTHLY_TEMPLATES;
-  
-  // Check cache first
-  const cached = await indexedDBCache.get(cacheKey);
-  if (cached.fromCache && cached.data) {
-    templates.value = cached.data;
-    const uniqueCourses = [...new Set(templates.value.map((t) => t.courseName))].sort();
-    courses.value = uniqueCourses;
-    
-    // If stale, refresh in background
-    if (cached.isStale) {
-      indexedDBCache.backgroundRefresh(cacheKey, async () => {
-        const { data } = await userApi.get("/algorithmics/monthly-templates");
-        const list = data.templates || [];
-        templates.value = list;
-        const uniqueCourses = [...new Set(list.map((t) => t.courseName))].sort();
-        courses.value = uniqueCourses;
-        return list;
-      }, CACHE_TTL.MONTHLY_TEMPLATES);
-    }
-    return;
-  }
-  
   try {
     const { data } = await userApi.get("/algorithmics/monthly-templates");
     templates.value = data.templates || [];
 
     const uniqueCourses = [...new Set(templates.value.map((t) => t.courseName))].sort();
     courses.value = uniqueCourses;
-    
-    // Save to cache
-    await indexedDBCache.set(cacheKey, templates.value, CACHE_TTL.MONTHLY_TEMPLATES);
   } catch (e) {
     toast.error("Gagal memuat templates");
   }

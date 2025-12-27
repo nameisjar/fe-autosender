@@ -520,7 +520,6 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
-import { indexedDBCache, CACHE_TTL } from "../utils/indexedDBCache.js";
 
 const toast = useToast();
 
@@ -594,62 +593,28 @@ const goToPage = (p) => {
   loadTutors();
 };
 
-const loadTutors = async ({ force = false } = {}) => {
-  const params = {
-    search: (search.value || "").trim() || undefined,
-    page: page.value,
-    pageSize: pageSize.value,
-    sortBy: sortBy.value,
-    sortDir: sortDir.value,
-  };
-  
-  // Create cache key based on params
-  const cacheKey = `tutors_${JSON.stringify(params)}`;
-  
-  // Check cache first
-  if (!force) {
-    const cached = await indexedDBCache.get(cacheKey);
-    if (cached.fromCache && cached.data) {
-      rows.value = cached.data.rows;
-      total.value = cached.data.total;
-      
-      // If stale, refresh in background
-      if (cached.isStale) {
-        indexedDBCache.backgroundRefresh(cacheKey, async () => {
-          const { data } = await userApi.get("/tutors", { params });
-          let result;
-          if (data && data.data && Array.isArray(data.data)) {
-            result = { rows: data.data, total: Number(data.metadata?.total || 0) };
-          } else if (Array.isArray(data)) {
-            result = { rows: data, total: data.length };
-          } else {
-            result = { rows: [], total: 0 };
-          }
-          rows.value = result.rows;
-          total.value = result.total;
-          return result;
-        }, CACHE_TTL.TUTORS);
-      }
-      return;
-    }
-  }
-  
+const loadTutors = async () => {
   err.value = "";
   try {
+    const params = {
+      search: (search.value || "").trim() || undefined,
+      page: page.value,
+      pageSize: pageSize.value,
+      sortBy: sortBy.value,
+      sortDir: sortDir.value,
+    };
     const { data } = await userApi.get("/tutors", { params });
-    let result;
     if (data && data.data && Array.isArray(data.data)) {
-      result = { rows: data.data, total: Number(data.metadata?.total || 0) };
+      rows.value = data.data;
+      const m = data.metadata || {};
+      total.value = Number(m.total || 0);
     } else if (Array.isArray(data)) {
-      result = { rows: data, total: data.length };
+      rows.value = data;
+      total.value = data.length;
     } else {
-      result = { rows: [], total: 0 };
+      rows.value = [];
+      total.value = 0;
     }
-    rows.value = result.rows;
-    total.value = result.total;
-    
-    // Save to cache
-    await indexedDBCache.set(cacheKey, result, CACHE_TTL.TUTORS);
   } catch (e) {
     err.value = e?.response?.data?.message || e?.message || "Gagal memuat daftar tutor";
   }
@@ -683,8 +648,7 @@ const createTutor = async () => {
     toast.success("Tutor berhasil dibuat");
     closeCreateModal();
     page.value = 1;
-    indexedDBCache.invalidatePattern('tutors_');
-    await loadTutors({ force: true });
+    await loadTutors();
   } catch (e) {
     const status = e?.response?.status;
     if (status === 409) toast.error("Email sudah terdaftar");
@@ -756,8 +720,7 @@ const saveEdit = async () => {
     toast.success("Akun tutor berhasil diperbarui");
     editingId.value = "";
     ed.value = { firstName: "", lastName: "", email: "", password: "" };
-    indexedDBCache.invalidatePattern('tutors_');
-    await loadTutors({ force: true });
+    await loadTutors();
   } catch (e) {
     const m = e?.response?.data?.message || e?.message || "Gagal menyimpan perubahan";
     toast.error(m);
@@ -787,8 +750,7 @@ const deleteTutor = async () => {
     toast.success("Akun tutor berhasil dihapus");
     deletingUser.value = null;
     page.value = 1;
-    indexedDBCache.invalidatePattern('tutors_');
-    await loadTutors({ force: true });
+    await loadTutors();
   } catch (e) {
     toast.error(
       (e && e.response && e.response.data && e.response.data.message) ||
