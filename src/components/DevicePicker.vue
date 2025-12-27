@@ -29,11 +29,13 @@
           <!-- 🆕 Health Badge -->
           <span 
             v-if="selectedDeviceHealth" 
-            class="health-badge"
+            class="health-pill"
             :class="getHealthBadge(selectedDevice.id).color"
             :title="getHealthTooltip(selectedDevice.id)"
             @click.stop="showHealthModal = true"
-          ></span>
+          >
+            {{ getHealthBadge(selectedDevice.id).label }}
+          </span>
         </div>
         <div
           class="device-status-compact"
@@ -80,9 +82,11 @@
           <!-- 🆕 Health Badge in list -->
           <span 
             v-if="device.health" 
-            class="health-badge-small"
+            class="health-pill-small"
             :class="getHealthBadge(device.id).color"
-          ></span>
+          >
+            {{ getHealthBadge(device.id).label }}
+          </span>
         </span>
         <span class="status-dot" :class="{ online: device.isConnected }"></span>
       </button>
@@ -605,41 +609,77 @@ defineExpose({
   background: #10b981;
 }
 
-/* 🆕 Health Badge Styles */
-.health-badge {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+/* 🆕 Health Pill Styles */
+.health-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
   margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 10px;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-  background: #9ca3af;
+  transition: transform 0.15s, opacity 0.15s;
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
-.health-badge:hover {
-  transform: scale(1.3);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+.health-pill:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
 }
 
-.health-badge.green { background: #22c55e; }
-.health-badge.yellow { background: #f59e0b; }
-.health-badge.red { background: #ef4444; }
-.health-badge.gray { background: #9ca3af; }
+.health-pill.green {
+  background: #dcfce7;
+  color: #166534;
+}
 
-.health-badge-small {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.health-pill.yellow {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.health-pill.red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.health-pill.gray {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.health-pill-small {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
   margin-left: 6px;
-  background: #9ca3af;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
-.health-badge-small.green { background: #22c55e; }
-.health-badge-small.yellow { background: #f59e0b; }
-.health-badge-small.red { background: #ef4444; }
-.health-badge-small.gray { background: #9ca3af; }
+.health-pill-small.green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.health-pill-small.yellow {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.health-pill-small.red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.health-pill-small.gray {
+  background: #f3f4f6;
+  color: #6b7280;
+}
 
 .paused-indicator {
   color: #f59e0b;

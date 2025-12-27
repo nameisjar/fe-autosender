@@ -2033,13 +2033,18 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 38fr 62fr;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .form-column {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Make left column cards fill height proportionally */
+.form-column:first-child {
+  justify-content: space-between;
 }
 
 /* Full Height Card for Comments */

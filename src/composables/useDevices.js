@@ -231,14 +231,14 @@ export function useDevices() {
     if (!health) return { label: '-', color: 'gray', icon: '' };
     
     const statusMap = {
-      healthy: { label: 'Healthy', color: 'green', icon: '' },
-      warning: { label: 'Warning', color: 'yellow', icon: '' },
-      critical: { label: 'Critical', color: 'red', icon: '' },
-      paused: { label: 'Paused', color: 'gray', icon: '' },
+      healthy: { label: 'Baik', color: 'green', icon: '' },
+      warning: { label: 'Periksa', color: 'yellow', icon: '' },
+      critical: { label: 'Error', color: 'red', icon: '' },
+      paused: { label: 'Dijeda', color: 'gray', icon: '' },
       banned: { label: 'Banned', color: 'red', icon: '' },
     };
     
-    return statusMap[health.healthStatus] || { label: 'Unknown', color: 'gray', icon: '' };
+    return statusMap[health.healthStatus] || { label: '-', color: 'gray', icon: '' };
   };
 
   // 🆕 Method untuk clear device selection
