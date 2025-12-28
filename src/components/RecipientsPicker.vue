@@ -326,7 +326,12 @@ const handleContactSelect = async (option) => {
         .map((cl) => cl?.label?.name)
         .filter((n) => n && !String(n).startsWith("device_"))
         .join(", ");
-      recipientLabels.value[phone] = `Contact: ${found.firstName || ''} ${found.lastName || ""}${labelNames ? " [" + labelNames + "]" : ""}`.trim();
+      
+      // 🔧 Build nama dengan benar
+      const fullName = `${found.firstName || ''} ${found.lastName || ''}`.trim();
+      const displayName = fullName || phone; // Fallback ke phone jika tidak ada nama
+      recipientLabels.value[phone] = `Contact: ${displayName}${labelNames ? " [" + labelNames + "]" : ""}`;
+      
       // Emit event with contact details
       emit('contact-selected', {
         phone,

@@ -190,7 +190,7 @@ const normalizedOptions = computed(() => {
       value: opt[props.valueKey] ?? opt.value ?? opt.id,
       label: opt[props.labelKey] ?? opt.label ?? opt.name ?? String(opt.value),
       sublabel: opt.sublabel ?? opt.phone ?? null,
-      raw: opt
+      raw: opt.raw ?? opt  // 🔧 Gunakan opt.raw jika ada, atau opt sendiri
     };
   });
 });

@@ -771,7 +771,7 @@
                 </div>
                 <div class="result-content">
                   <span class="result-recipient">{{
-                    getRecipientDisplayName(result.recipient)
+                    getRecipientDisplayName(result.recipient, result.studentName, result.label)
                   }}</span>
                   <span v-if="!result.success" class="result-error">{{
                     result.error || "Gagal mengirim"
@@ -821,6 +821,17 @@ const recipientLabels = computed(() => recipientsPicker.value?.recipientLabels |
 // 🆕 Map untuk menyimpan firstName setiap recipient (phone -> firstName)
 const recipientContactMap = ref({});
 
+// 🆕 Helper untuk extract nama dari label "Contact: Nama [Label]"
+const extractNameFromLabel = (label) => {
+  if (!label) return '';
+  // Format: "Contact: Nama Lengkap [Label1, Label2]" atau "Contact: Nama Lengkap"
+  const match = label.match(/^Contact:\s*(.+?)(?:\s*\[|$)/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  return '';
+};
+
 // 🆕 Computed untuk mendapatkan daftar penerima dengan nama masing-masing
 const recipientsWithNames = computed(() => {
   const defaultName = form.value.defaultStudentName?.trim() || "";
@@ -828,16 +839,20 @@ const recipientsWithNames = computed(() => {
   return recipients.value.map((phone) => {
     const contactFirstName = recipientContactMap.value[phone] || "";
     const label = recipientLabels.value[phone] || phone;
+    
+    // 🆕 Coba extract nama dari label jika tidak ada firstName
+    const nameFromLabel = !contactFirstName ? extractNameFromLabel(label) : '';
 
-    // Prioritas: firstName dari kontak, lalu defaultStudentName
-    const finalName = contactFirstName || defaultName;
-    const isContact = !!contactFirstName;
-    const usesDefault = !contactFirstName && !!defaultName;
+    // Prioritas: firstName dari kontak, lalu nama dari label, lalu defaultStudentName
+    const finalName = contactFirstName || nameFromLabel || defaultName;
+    const isContact = !!contactFirstName || !!nameFromLabel;
+    const usesDefault = !contactFirstName && !nameFromLabel && !!defaultName;
     const hasName = !!finalName;
 
     return {
       phone,
       firstName: contactFirstName,
+      nameFromLabel,
       defaultName,
       finalName,
       label,
@@ -845,7 +860,7 @@ const recipientsWithNames = computed(() => {
       usesDefault,
       hasName,
       displayName: hasName ? toTitleCase(finalName) : "Tidak ada nama",
-      nameSource: isContact ? "(dari kontak)" : usesDefault ? "(nama default)" : "",
+      nameSource: contactFirstName ? "(dari kontak)" : nameFromLabel ? "(dari kontak)" : usesDefault ? "(nama default)" : "",
     };
   });
 });
@@ -1273,19 +1288,57 @@ const availableMonths = computed(() => {
     .sort((a, b) => a - b);
 });
 
-const getRecipientDisplayName = (recipient) => {
-  if (savedRecipientLabels.value[recipient]) {
-    return savedRecipientLabels.value[recipient];
+const getRecipientDisplayName = (recipient, studentName = '', label = '') => {
+  // 🆕 Format: Type: nama
+  // Type bisa: Contact, Group, Label
+  
+  // Deteksi tipe dari label atau recipient
+  const getType = () => {
+    if (label) {
+      if (label.startsWith('Group:')) return 'Group';
+      if (label.startsWith('Label:')) return 'Label';
+      if (label.startsWith('Contact:')) return 'Contact';
+    }
+    if (recipient && recipient.includes('@g.us')) return 'Group';
+    if (recipient && recipient.startsWith('label_')) return 'Label';
+    return 'Contact';
+  };
+  
+  const type = getType();
+  
+  // Prioritas 1: label yang sudah disimpan (paling lengkap)
+  if (label && !label.endsWith(': ') && label !== recipient) {
+    return label;
   }
-  if (recipientLabels.value[recipient]) {
-    return recipientLabels.value[recipient];
+  
+  // Prioritas 2: studentName dari backend
+  if (studentName && studentName !== 'Tidak ada nama') {
+    return `${type}: ${studentName}`;
   }
-  if (recipient && recipient.includes("@g.us")) {
-    return `Grup: ${recipient.replace("@g.us", "")}`;
+  
+  // Prioritas 3: savedRecipientLabels (disimpan sebelum kirim)
+  const savedLabel = savedRecipientLabels.value[recipient];
+  if (savedLabel && !savedLabel.endsWith(': ') && savedLabel !== recipient) {
+    return savedLabel;
   }
-  if (recipient && recipient.startsWith("label_")) {
-    return `Label: ${recipient.replace("label_", "")}`;
+  
+  // Prioritas 4: recipientLabels saat ini
+  const currentLabel = recipientLabels.value[recipient];
+  if (currentLabel && !currentLabel.endsWith(': ') && currentLabel !== recipient) {
+    return currentLabel;
   }
+  
+  // Fallback untuk grup
+  if (type === 'Group') {
+    return `Group: ${recipient.replace('@g.us', '')}`;
+  }
+  
+  // Fallback untuk label
+  if (type === 'Label') {
+    return `Label: ${recipient.replace('label_', '')}`;
+  }
+  
+  // Default: nomor biasa
   return recipient;
 };
 
@@ -1412,6 +1465,7 @@ const handleGenerateAndSend = async () => {
     const recipientsData = recipientsWithNames.value.map((r) => ({
       phone: r.phone,
       studentName: r.displayName, // Sudah di-titleCase dan handle default
+      label: r.label, // 🆕 Simpan label asli (Contact/Group/Label: nama)
     }));
 
     const payload = {
@@ -1436,14 +1490,22 @@ const handleGenerateAndSend = async () => {
     const { data } = await deviceApi.post("/messages/monthly-feedback/send", payload);
 
     if (data.results && Array.isArray(data.results)) {
-      sendResults.value = data.results.map((r) => ({
-        recipient: r.recipient,
-        success: r.status === "success",
-        error: r.error,
-      }));
+      sendResults.value = data.results.map((r) => {
+        // 🆕 Cari label dari recipientsData
+        const recipientData = recipientsData.find(rd => rd.phone === r.recipient);
+        return {
+          recipient: r.recipient,
+          studentName: r.studentName || '', // Simpan studentName dari backend
+          label: recipientData?.label || '', // 🆕 Simpan label
+          success: r.status === "success",
+          error: r.error,
+        };
+      });
     } else {
-      sendResults.value = recipients.value.map((r) => ({
-        recipient: r,
+      sendResults.value = recipientsData.map((rd) => ({
+        recipient: rd.phone,
+        studentName: rd.studentName || '', // Gunakan dari recipientsData
+        label: rd.label || '', // 🆕 Simpan label
         success: true,
       }));
     }
@@ -1483,11 +1545,17 @@ const handleGenerateAndSend = async () => {
     }
 
     if (e?.response?.data?.results && Array.isArray(e.response.data.results)) {
-      sendResults.value = e.response.data.results.map((r) => ({
-        recipient: r.recipient,
-        success: r.status === "success",
-        error: r.error,
-      }));
+      sendResults.value = e.response.data.results.map((r) => {
+        // 🆕 Cari label dari recipientsData
+        const recipientData = recipientsData.find(rd => rd.phone === r.recipient);
+        return {
+          recipient: r.recipient,
+          studentName: r.studentName || '', // Simpan studentName dari backend
+          label: recipientData?.label || '', // 🆕 Simpan label
+          success: r.status === "success",
+          error: r.error,
+        };
+      });
       showSendResults.value = true;
     }
   } finally {
