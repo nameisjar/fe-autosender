@@ -311,6 +311,9 @@ const handleLabelSearch = (query) => {
   labelSearch.value = query;
 };
 
+// Emit events
+const emit = defineEmits(['contact-selected', 'contact-removed']);
+
 // Selection handlers - add to recipients
 const handleContactSelect = async (option) => {
   const phone = option.value;
@@ -323,6 +326,13 @@ const handleContactSelect = async (option) => {
         .filter((n) => n && !String(n).startsWith("device_"))
         .join(", ");
       recipientLabels.value[phone] = `Contact: ${found.firstName} ${found.lastName || ""}${labelNames ? " [" + labelNames + "]" : ""}`;
+      // Emit event with contact details
+      emit('contact-selected', {
+        phone,
+        firstName: found.firstName,
+        lastName: found.lastName || '',
+        contact: found
+      });
     }
   }
 };
@@ -350,6 +360,8 @@ const handleContactRemove = (option) => {
   if (idx !== -1) {
     recipients.value.splice(idx, 1);
     delete recipientLabels.value[option.value];
+    // Emit event when contact is removed
+    emit('contact-removed', { phone: option.value });
   }
 };
 

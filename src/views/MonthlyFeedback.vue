@@ -84,19 +84,36 @@
           <!-- Student & Course Info -->
           <div class="card card-compact">
             <div class="card-header card-header-compact">
-              <h3>Informasi Siswa</h3>
+              <h3>Informasi Kursus & Siswa</h3>
             </div>
             <div class="card-body card-body-compact">
+              <!-- Nama Siswa Default (opsional) -->
               <div class="form-group form-group-compact">
-                <label class="form-label"
-                  >Nama Siswa <span class="required">*</span></label
-                >
+                <label class="form-label">
+                  Nama Siswa Default
+                  <span class="optional-badge">Opsional</span>
+                </label>
                 <input
-                  v-model="form.studentName"
-                  placeholder="Nama siswa"
-                  required
+                  v-model="form.defaultStudentName"
+                  placeholder="Untuk penerima manual yang tidak ada di kontak"
                   class="form-input form-input-compact"
                 />
+                <div class="form-hint">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <span
+                    >Digunakan jika penerima bukan kontak (tidak punya firstName). Kontak
+                    akan menggunakan firstName masing-masing.</span
+                  >
+                </div>
               </div>
 
               <div class="form-grid-2">
@@ -275,7 +292,7 @@
                         >{{
                           replaceNameInComment(
                             comment.text,
-                            form.studentName || "Siswa"
+                            formattedStudentName
                           ).substring(0, 100)
                         }}...</span
                       >
@@ -308,7 +325,7 @@
                         >{{
                           replaceNameInComment(
                             comment.text,
-                            form.studentName || "Siswa"
+                            formattedStudentName
                           ).substring(0, 100)
                         }}...</span
                       >
@@ -341,7 +358,7 @@
                         >{{
                           replaceNameInComment(
                             comment.text,
-                            form.studentName || "Siswa"
+                            formattedStudentName
                           ).substring(0, 100)
                         }}...</span
                       >
@@ -374,20 +391,44 @@
                         <textarea
                           v-model="comment.text"
                           @input="updateCustomComment(comment.id, comment.text)"
-                          placeholder="Tulis komentar custom..."
+                          placeholder="Tulis komentar custom... Gunakan {{firstname}} untuk nama siswa"
                           class="custom-textarea-inline"
                           rows="1"
-                          maxlength="220"
+                          maxlength="250"
                           :disabled="!form.selectedComments.includes(comment.id)"
                         ></textarea>
                         <div
                           class="custom-char-count"
-                          :class="{ 'limit-reached': comment.text.length >= 220 }"
+                          :class="{ 'limit-reached': comment.text.length >= 250 }"
                         >
-                          {{ comment.text.length }}/220 karakter
+                          {{ comment.text.length }}/250 karakter
                         </div>
                       </div>
                     </label>
+                  </div>
+                  <!-- Penjelasan penggunaan {{firstname}} -->
+                  <div class="custom-comment-hint">
+                    <!-- <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+                      />
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg> -->
+                    <span>
+                      <strong>Tip:</strong> Tulis <code>{<!-- -->{firstname}}</code> di
+                      komentar custom untuk menyisipkan nama siswa secara otomatis.
+                      <br />
+                      <small style="opacity: 0.85">
+                        Saat dikirim, <code>{<!-- -->{firstname}}</code> akan diganti
+                        dengan nama dari kontak (firstName) masing-masing penerima.
+                      </small>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -414,7 +455,78 @@
             >
           </div>
           <div class="card-body card-body-compact">
-            <RecipientsPicker ref="recipientsPicker" />
+            <div class="recipients-info-box">
+              <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg> -->
+              <span>
+                <strong>Kontak:</strong> Nama depan (firstName) otomatis digunakan sebagai
+                nama siswa.<br />
+                <strong>Non-kontak:</strong> Akan menggunakan "Nama Siswa Default" yang
+                diisi di atas.
+              </span>
+            </div>
+
+            <RecipientsPicker
+              ref="recipientsPicker"
+              @contact-selected="onContactSelected"
+              @contact-removed="onContactRemoved"
+            />
+
+            <!-- 🆕 Tampilkan daftar penerima dengan nama siswa -->
+            <div v-if="recipientsWithNames.length > 0" class="recipients-name-list">
+              <h4 class="recipients-list-title">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+                Nama Siswa per Penerima:
+              </h4>
+              <div class="recipients-name-chips">
+                <div
+                  v-for="r in recipientsWithNames"
+                  :key="r.phone"
+                  class="recipient-name-chip"
+                  :class="{
+                    'has-name': r.hasName,
+                    'uses-default': r.usesDefault,
+                    'no-name': !r.hasName,
+                  }"
+                >
+                  <span class="chip-name">{{ r.displayName }}</span>
+                  <span class="chip-source">{{ r.nameSource }}</span>
+                  <span class="chip-phone">{{ r.label }}</span>
+                </div>
+              </div>
+              <div
+                v-if="recipientsWithNames.some((r) => !r.hasName)"
+                class="recipients-warning"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                  />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span
+                  >Beberapa penerima tidak memiliki nama! Isi "Nama Siswa Default" di
+                  atas, atau pilih kontak yang memiliki firstName.</span
+                >
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -706,6 +818,38 @@ const recipientsPicker = ref(null);
 const recipients = computed(() => recipientsPicker.value?.recipients || []);
 const recipientLabels = computed(() => recipientsPicker.value?.recipientLabels || {});
 
+// 🆕 Map untuk menyimpan firstName setiap recipient (phone -> firstName)
+const recipientContactMap = ref({});
+
+// 🆕 Computed untuk mendapatkan daftar penerima dengan nama masing-masing
+const recipientsWithNames = computed(() => {
+  const defaultName = form.value.defaultStudentName?.trim() || "";
+
+  return recipients.value.map((phone) => {
+    const contactFirstName = recipientContactMap.value[phone] || "";
+    const label = recipientLabels.value[phone] || phone;
+
+    // Prioritas: firstName dari kontak, lalu defaultStudentName
+    const finalName = contactFirstName || defaultName;
+    const isContact = !!contactFirstName;
+    const usesDefault = !contactFirstName && !!defaultName;
+    const hasName = !!finalName;
+
+    return {
+      phone,
+      firstName: contactFirstName,
+      defaultName,
+      finalName,
+      label,
+      isContact,
+      usesDefault,
+      hasName,
+      displayName: hasName ? toTitleCase(finalName) : "Tidak ada nama",
+      nameSource: isContact ? "(dari kontak)" : usesDefault ? "(nama default)" : "",
+    };
+  });
+});
+
 // 🆕 Fungsi helper untuk mengubah string menjadi Title Case
 const toTitleCase = (str) => {
   if (!str) return "";
@@ -718,6 +862,7 @@ const toTitleCase = (str) => {
 
 const form = ref({
   studentName: "",
+  defaultStudentName: "", // 🆕 Nama default untuk penerima non-kontak
   courseName: "",
   month: null,
   duration: "",
@@ -732,7 +877,7 @@ const form = ref({
 });
 
 const STORAGE_KEYS = {
-  STUDENT_NAME: "monthlyFeedback_studentName",
+  DEFAULT_STUDENT_NAME: "monthlyFeedback_defaultStudentName", // 🆕
   COURSE_NAME: "monthlyFeedback_courseName",
   MONTH: "monthlyFeedback_month",
   YOUTUBE_LINK: "monthlyFeedback_youtubeLink",
@@ -745,7 +890,9 @@ const STORAGE_KEYS = {
 
 const loadSavedData = () => {
   try {
-    const savedStudentName = localStorage.getItem(STORAGE_KEYS.STUDENT_NAME);
+    const savedDefaultStudentName = localStorage.getItem(
+      STORAGE_KEYS.DEFAULT_STUDENT_NAME
+    );
     const savedCourseName = localStorage.getItem(STORAGE_KEYS.COURSE_NAME);
     const savedMonth = localStorage.getItem(STORAGE_KEYS.MONTH);
     const savedYoutubeLink = localStorage.getItem(STORAGE_KEYS.YOUTUBE_LINK);
@@ -755,7 +902,7 @@ const loadSavedData = () => {
     const savedSelectedComments = localStorage.getItem(STORAGE_KEYS.SELECTED_COMMENTS);
     const savedCustomComments = localStorage.getItem(STORAGE_KEYS.CUSTOM_COMMENTS);
 
-    if (savedStudentName) form.value.studentName = savedStudentName;
+    if (savedDefaultStudentName) form.value.defaultStudentName = savedDefaultStudentName;
     if (savedCourseName) form.value.courseName = savedCourseName;
     if (savedMonth) form.value.month = parseInt(savedMonth);
     if (savedYoutubeLink) form.value.youtubeLink = savedYoutubeLink;
@@ -785,8 +932,11 @@ const loadSavedData = () => {
 
 const saveDataToStorage = () => {
   try {
-    if (form.value.studentName) {
-      localStorage.setItem(STORAGE_KEYS.STUDENT_NAME, form.value.studentName);
+    if (form.value.defaultStudentName) {
+      localStorage.setItem(
+        STORAGE_KEYS.DEFAULT_STUDENT_NAME,
+        form.value.defaultStudentName
+      );
     }
     if (form.value.courseName) {
       localStorage.setItem(STORAGE_KEYS.COURSE_NAME, form.value.courseName);
@@ -832,6 +982,7 @@ const clearSavedData = () => {
       localStorage.removeItem(key);
     });
     form.value.studentName = "";
+    form.value.defaultStudentName = "";
     form.value.courseName = "";
     form.value.month = null;
     form.value.youtubeLink = "";
@@ -842,11 +993,34 @@ const clearSavedData = () => {
     commentCategories.value.custom.forEach((comment) => {
       comment.text = "";
     });
+    // 🆕 Reset juga recipientContactMap
+    recipientContactMap.value = {};
+    recipientsPicker.value?.resetRecipients();
     toast.success("Data tersimpan berhasil dihapus");
   } catch (e) {}
 };
 
-watch(() => form.value.studentName, saveDataToStorage);
+// 🆕 Handler untuk ketika kontak dipilih - simpan firstName ke map
+const onContactSelected = (contactData) => {
+  if (contactData && contactData.firstName) {
+    // Simpan firstName ke map untuk recipient ini
+    // TIDAK update form.value.studentName - itu hanya dari input manual
+    recipientContactMap.value[contactData.phone] = contactData.firstName;
+
+    toast.success(`Kontak ditambahkan: ${toTitleCase(contactData.firstName)}`);
+  }
+};
+
+// 🆕 Handler untuk ketika kontak dihapus
+const onContactRemoved = (contactData) => {
+  // Hapus dari map - TIDAK mengubah form.value.studentName
+  if (contactData && contactData.phone) {
+    delete recipientContactMap.value[contactData.phone];
+  }
+};
+
+// Watch untuk storage
+watch(() => form.value.defaultStudentName, saveDataToStorage);
 watch(() => form.value.courseName, saveDataToStorage);
 watch(() => form.value.month, saveDataToStorage);
 watch(() => form.value.youtubeLink, saveDataToStorage);
@@ -941,8 +1115,27 @@ const replaceNameInComment = (text, studentName) => {
   return text.replace(/M\. Alghifari Setyawan/g, formattedName);
 };
 
+// Nama untuk preview di template komentar
+// Prioritas: defaultStudentName > firstName kontak (jika 1) > "Siswa"
 const formattedStudentName = computed(() => {
-  return toTitleCase(form.value.studentName);
+  // Jika ada nama default yang diisi manual, gunakan itu
+  if (form.value.defaultStudentName?.trim()) {
+    return toTitleCase(form.value.defaultStudentName);
+  }
+
+  // Cek jumlah kontak yang dipilih (yang punya firstName)
+  const contactPhones = Object.keys(recipientContactMap.value);
+
+  if (contactPhones.length === 1) {
+    // Jika hanya 1 kontak, tampilkan nama kontak tersebut
+    const firstName = recipientContactMap.value[contactPhones[0]];
+    if (firstName) {
+      return toTitleCase(firstName);
+    }
+  }
+
+  // Jika tidak ada kontak atau lebih dari 1, tampilkan "Siswa"
+  return "Siswa";
 });
 
 const formattedReportBy = computed(() => {
@@ -957,12 +1150,32 @@ const selectedCommentsText = computed(() => {
   const selectedIds = form.value.selectedComments.slice(0, 3);
   const comments = [];
 
+  // Tentukan nama untuk preview:
+  // - Jika 1 kontak: gunakan nama kontak
+  // - Jika banyak kontak: gunakan {{firstname}} untuk custom, nama format untuk non-custom
+  const contactPhones = Object.keys(recipientContactMap.value);
+  const hasMultipleRecipients = recipients.value.length > 1;
+  const singleContactName =
+    contactPhones.length === 1
+      ? toTitleCase(recipientContactMap.value[contactPhones[0]])
+      : null;
+
   Object.values(commentCategories.value).forEach((category) => {
     category.forEach((comment) => {
       if (selectedIds.includes(comment.id)) {
-        const text = comment.isCustom
-          ? comment.text
-          : replaceNameInComment(comment.text, formattedStudentName.value || "Siswa");
+        let text = comment.text;
+
+        if (comment.isCustom) {
+          // Custom comment: biarkan {{firstname}} jika banyak penerima, replace jika 1
+          if (!hasMultipleRecipients && singleContactName) {
+            text = text.replace(/\{\{firstname\}\}/gi, singleContactName);
+          }
+          // Jika banyak penerima, biarkan {{firstname}} apa adanya
+        } else {
+          // Non-custom comment: replace dengan nama yang sesuai
+          text = replaceNameInComment(text, formattedStudentName.value || "Siswa");
+        }
+
         if (text) {
           comments.push(text);
         }
@@ -1043,8 +1256,13 @@ const getRecipientDisplayName = (recipient) => {
 
 const isFormValid = computed(() => {
   const deviceId = devicePicker.value?.selectedDeviceId;
+
+  // Cek apakah semua recipient memiliki nama (dari kontak ATAU nama default)
+  const allRecipientsHaveNames =
+    recipients.value.length > 0 && recipientsWithNames.value.every((r) => r.hasName);
+
   return (
-    form.value.studentName &&
+    allRecipientsHaveNames && // Semua penerima harus punya nama
     form.value.courseName &&
     form.value.month &&
     form.value.youtubeLink &&
@@ -1155,8 +1373,14 @@ const handleGenerateAndSend = async () => {
   savedRecipientLabels.value = { ...recipientLabels.value };
 
   try {
+    // 🆕 Kirim recipients beserta nama masing-masing (dari kontak atau default)
+    const recipientsData = recipientsWithNames.value.map((r) => ({
+      phone: r.phone,
+      studentName: r.displayName, // Sudah di-titleCase dan handle default
+    }));
+
     const payload = {
-      studentName: formattedStudentName.value,
+      // studentName tidak lagi single value, tapi per-recipient
       courseName: previewData.value.courseName,
       month: Number(previewData.value.month),
       duration: previewData.value.duration,
@@ -1167,9 +1391,9 @@ const handleGenerateAndSend = async () => {
       skillsAcquired: previewData.value.skillsAcquired,
       youtubeLink: previewData.value.youtubeLink,
       referralLink: previewData.value.referralLink,
-      tutorComment: selectedCommentsText.value,
-      recipients: recipients.value,
-      // deviceId tidak perlu - sudah dari token deviceApi
+      tutorComment: form.value.selectedComments, // Kirim ID komentar, bukan text
+      commentCategories: JSON.parse(JSON.stringify(commentCategories.value)), // Kirim template komentar
+      recipients: recipientsData, // 🆕 Array of {phone, studentName}
       rating: previewData.value.rating,
       reportBy: previewData.value.reportBy,
     };
@@ -1208,6 +1432,9 @@ const handleGenerateAndSend = async () => {
 
     form.value.duration = "";
     recipientsPicker.value?.resetRecipients();
+    // 🆕 Reset juga recipientContactMap setelah berhasil kirim
+    recipientContactMap.value = {};
+    form.value.studentName = "";
 
     showPreview.value = false;
   } catch (e) {
@@ -1239,15 +1466,15 @@ const handleDownloadPDF = async () => {
   if (!previewData.value || !pdfTemplate.value) return;
 
   generating.value = true;
-  
+
   // 🔧 Create a separate container for PDF rendering
   let pdfContainer = null;
-  
+
   try {
     // 🔧 Clone the element and append to a visible but off-screen container
     const originalElement = pdfTemplate.value.$el;
-    pdfContainer = document.createElement('div');
-    pdfContainer.id = 'pdf-render-container';
+    pdfContainer = document.createElement("div");
+    pdfContainer.id = "pdf-render-container";
     pdfContainer.style.cssText = `
       position: fixed;
       left: 0;
@@ -1259,7 +1486,7 @@ const handleDownloadPDF = async () => {
       opacity: 1;
     `;
     document.body.appendChild(pdfContainer);
-    
+
     // 🔧 Clone and append to container
     const element = originalElement.cloneNode(true);
     element.style.cssText = `
@@ -1268,7 +1495,7 @@ const handleDownloadPDF = async () => {
       display: block;
     `;
     pdfContainer.appendChild(element);
-    
+
     // 🔧 Copy all styles from original to clone (including scoped styles)
     const copyComputedStyles = (source, target) => {
       const sourceStyles = window.getComputedStyle(source);
@@ -1279,10 +1506,10 @@ const handleDownloadPDF = async () => {
         } catch (e) {}
       }
     };
-    
+
     // Apply computed styles to all elements
-    const sourceElements = originalElement.querySelectorAll('*');
-    const targetElements = element.querySelectorAll('*');
+    const sourceElements = originalElement.querySelectorAll("*");
+    const targetElements = element.querySelectorAll("*");
     sourceElements.forEach((src, idx) => {
       if (targetElements[idx]) {
         copyComputedStyles(src, targetElements[idx]);
@@ -1296,7 +1523,7 @@ const handleDownloadPDF = async () => {
     // Get dimensions after styles are applied
     const elementWidth = element.offsetWidth || 794;
     const elementHeight = element.scrollHeight || element.offsetHeight || 1123;
-    
+
     const studentNameClean = formattedStudentName.value.replace(/\s+/g, "_");
     const monthNum = previewData.value.month;
     const fileName = "Feedback_" + studentNameClean + "_Bulan" + monthNum + ".pdf";
@@ -1334,7 +1561,7 @@ const handleDownloadPDF = async () => {
     };
 
     await html2pdf().set(opt).from(element).save();
-    
+
     toast.success("PDF berhasil didownload!");
   } catch (e) {
     toast.error("Gagal generate PDF: " + (e.message || "Unknown error"));
@@ -1349,6 +1576,9 @@ const handleDownloadPDF = async () => {
 
 const onDeviceChanged = () => {
   recipientsPicker.value?.resetRecipients();
+  // 🆕 Reset juga recipientContactMap
+  recipientContactMap.value = {};
+  form.value.studentName = "";
   toast.success(
     "Device berhasil diganti. Data kontak, grup, dan label telah di-refresh."
   );
@@ -1564,6 +1794,76 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+/* 🆕 Form Hint */
+.form-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.form-hint svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #94a3b8;
+}
+
+/* 🆕 Optional Badge */
+.optional-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-left: 8px;
+}
+
+/* 🆕 Custom Comment Hint */
+.custom-comment-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.custom-comment-hint svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.custom-comment-hint code {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 12px;
+  color: #b45309;
+}
+
 /* Auto-filled Section */
 .auto-filled-section {
   margin-top: 20px;
@@ -1571,6 +1871,184 @@ onMounted(async () => {
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   border: 1px solid #bae6fd;
   border-radius: 12px;
+}
+
+/* 🆕 Student Name Auto-fill Display */
+.auto-label-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #166534;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-left: 8px;
+}
+
+.student-name-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.student-name-display.has-name {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 2px solid #86efac;
+  border-style: solid;
+}
+
+.student-name-display svg {
+  width: 24px;
+  height: 24px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.student-name-display.has-name svg {
+  color: #22c55e;
+}
+
+.student-name-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.student-name-placeholder {
+  font-size: 14px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* 🆕 Recipients Info & Name List Styles */
+.recipients-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #1e40af;
+  line-height: 1.5;
+}
+
+.recipients-info-box svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.recipients-name-list {
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #86efac;
+  border-radius: 12px;
+}
+
+.recipients-list-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.recipients-list-title svg {
+  width: 18px;
+  height: 18px;
+}
+
+.recipients-name-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recipient-name-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #86efac;
+  min-width: 120px;
+}
+
+.recipient-name-chip.uses-default {
+  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  border-color: #facc15;
+}
+
+.recipient-name-chip.no-name {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.chip-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.recipient-name-chip.uses-default .chip-name {
+  color: #a16207;
+}
+
+.recipient-name-chip.no-name .chip-name {
+  color: #dc2626;
+}
+
+.chip-source {
+  font-size: 10px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.recipient-name-chip.uses-default .chip-source {
+  color: #ca8a04;
+}
+
+.chip-phone {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.recipients-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #dc2626;
+  line-height: 1.4;
+}
+
+.recipients-warning svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .auto-filled-header {
