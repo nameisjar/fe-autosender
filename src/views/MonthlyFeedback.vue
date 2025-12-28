@@ -1034,39 +1034,54 @@ const onContactRemoved = (contactData) => {
   }
 };
 
-// 🆕 Watch recipients untuk sync firstName dari kontak yang sudah ada di device
-// Ini berguna ketika nomor dimasukkan manual tapi sebenarnya ada di kontak
-watch(recipients, async (newRecipients) => {
-  if (!newRecipients || newRecipients.length === 0) return;
+// 🚀 OPTIMIZED: Batch sync firstName dengan debounce
+// Sebelumnya: 1 API call per recipient (N calls)
+// Sesudah: 1 batch API call untuk semua recipient yang belum ada firstName
+import { debounce } from "../utils/debounce";
+
+const syncContactFirstNames = debounce(async () => {
+  if (!recipients.value || recipients.value.length === 0) return;
   
-  // Ambil device ID
   const deviceId = devicePicker.value?.selectedDeviceId;
   if (!deviceId) return;
   
-  // Cek setiap recipient yang belum ada firstName-nya
-  for (const phone of newRecipients) {
-    if (recipientContactMap.value[phone]) continue; // Sudah ada firstName
-    
-    // Coba cari di API kontak
-    try {
-      const { data } = await userApi.get("/contacts", {
-        params: {
-          deviceId,
-          q: phone,
-          pageSize: 5
-        }
-      });
-      
-      const contacts = data?.data || data || [];
-      const found = contacts.find(c => c.phone === phone);
-      
-      if (found && found.firstName) {
-        recipientContactMap.value[phone] = found.firstName;
+  // Filter recipient yang belum ada firstName dan bukan label/group
+  const phonesNeedSync = recipients.value.filter(phone => {
+    if (recipientContactMap.value[phone]) return false; // Sudah ada firstName
+    if (phone.startsWith('label_')) return false; // Label akan di-expand di backend
+    if (phone.includes('@g.us')) return false; // Group tidak perlu firstName
+    return true;
+  });
+  
+  if (phonesNeedSync.length === 0) return;
+  
+  // 🚀 Batch: ambil semua kontak device, lalu filter di client
+  // Lebih efisien daripada N API calls terpisah
+  try {
+    const { data } = await userApi.get("/contacts", {
+      params: {
+        deviceId,
+        pageSize: 200 // Ambil banyak sekaligus
       }
-    } catch (e) {
-      // Silent fail - tidak perlu error handling
+    });
+    
+    const contacts = data?.data || data || [];
+    
+    // Update map untuk phone numbers yang cocok
+    for (const phone of phonesNeedSync) {
+      const contact = contacts.find(c => c.phone === phone);
+      if (contact && contact.firstName) {
+        recipientContactMap.value[contact.phone] = contact.firstName;
+      }
     }
+  } catch (e) {
+    // Silent fail
   }
+}, 500); // Debounce 500ms
+
+// Watch recipients dan trigger batch sync
+watch(recipients, () => {
+  syncContactFirstNames();
 }, { deep: true });
 
 // Watch untuk storage
