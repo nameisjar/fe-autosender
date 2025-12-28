@@ -319,19 +319,29 @@ const handleContactSelect = async (option) => {
   const phone = option.value;
   if (!recipients.value.includes(phone)) {
     recipients.value.push(phone);
-    const found = contacts.value.find((c) => c.phone === phone);
+    // 🔧 Gunakan option.raw langsung (dari SearchableSelect) atau cari di contacts
+    const found = option.raw || contacts.value.find((c) => c.phone === phone);
     if (found) {
       const labelNames = (found.ContactLabel || [])
         .map((cl) => cl?.label?.name)
         .filter((n) => n && !String(n).startsWith("device_"))
         .join(", ");
-      recipientLabels.value[phone] = `Contact: ${found.firstName} ${found.lastName || ""}${labelNames ? " [" + labelNames + "]" : ""}`;
+      recipientLabels.value[phone] = `Contact: ${found.firstName || ''} ${found.lastName || ""}${labelNames ? " [" + labelNames + "]" : ""}`.trim();
       // Emit event with contact details
       emit('contact-selected', {
         phone,
-        firstName: found.firstName,
+        firstName: found.firstName || '',
         lastName: found.lastName || '',
         contact: found
+      });
+    } else {
+      // Kontak tidak ditemukan - masih emit event tanpa firstName
+      recipientLabels.value[phone] = phone;
+      emit('contact-selected', {
+        phone,
+        firstName: '',
+        lastName: '',
+        contact: null
       });
     }
   }

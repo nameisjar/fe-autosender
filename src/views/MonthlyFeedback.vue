@@ -1019,6 +1019,41 @@ const onContactRemoved = (contactData) => {
   }
 };
 
+// 🆕 Watch recipients untuk sync firstName dari kontak yang sudah ada di device
+// Ini berguna ketika nomor dimasukkan manual tapi sebenarnya ada di kontak
+watch(recipients, async (newRecipients) => {
+  if (!newRecipients || newRecipients.length === 0) return;
+  
+  // Ambil device ID
+  const deviceId = devicePicker.value?.selectedDeviceId;
+  if (!deviceId) return;
+  
+  // Cek setiap recipient yang belum ada firstName-nya
+  for (const phone of newRecipients) {
+    if (recipientContactMap.value[phone]) continue; // Sudah ada firstName
+    
+    // Coba cari di API kontak
+    try {
+      const { data } = await userApi.get("/contacts", {
+        params: {
+          deviceId,
+          q: phone,
+          pageSize: 5
+        }
+      });
+      
+      const contacts = data?.data || data || [];
+      const found = contacts.find(c => c.phone === phone);
+      
+      if (found && found.firstName) {
+        recipientContactMap.value[phone] = found.firstName;
+      }
+    } catch (e) {
+      // Silent fail - tidak perlu error handling
+    }
+  }
+}, { deep: true });
+
 // Watch untuk storage
 watch(() => form.value.defaultStudentName, saveDataToStorage);
 watch(() => form.value.courseName, saveDataToStorage);
