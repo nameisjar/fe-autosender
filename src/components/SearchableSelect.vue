@@ -305,10 +305,13 @@ const selectOption = (option) => {
     const values = Array.isArray(props.modelValue) ? [...props.modelValue] : [];
     const index = values.indexOf(option.value);
     if (index === -1) {
+      // Adding new item
       values.push(option.value);
       emit('select', option);
     } else {
+      // 🔧 FIX: Removing existing item - emit remove event!
       values.splice(index, 1);
+      emit('remove', option);
     }
     emit('update:modelValue', values);
     // Don't clear search query in multi-select mode, so user can continue selecting
