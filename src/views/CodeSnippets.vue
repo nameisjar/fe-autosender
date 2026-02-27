@@ -9,7 +9,7 @@
           </svg>
           Code Snippets
         </h2>
-        <p class="subtitle">Kelola dan bagikan code snippets ke murid</p>
+        <p class="subtitle">Kelola dan bagikan kode program ke murid</p>
       </div>
       <div class="stats-row">
         <div class="stat-card">
