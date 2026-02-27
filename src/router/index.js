@@ -18,6 +18,7 @@ import Contacts from '../views/Contacts.vue';
 import Groups from '../views/Groups.vue';
 import CodeSnippets from '../views/CodeSnippets.vue';
 import SnippetView from '../views/SnippetView.vue';
+import Inbox from '../views/Inbox.vue';
 import { useAuthStore } from '../stores/auth.js';
 
 const routes = [
@@ -32,6 +33,7 @@ const routes = [
             { path: 'add-device', name: 'add-device', component: AddDevice },
             { path: 'contacts', name: 'contacts', component: Contacts },
             { path: 'groups', name: 'groups', component: Groups },
+            { path: 'inbox', name: 'inbox', component: Inbox },
             { path: 'schedule-feedback', name: 'schedule-feedback', component: ScheduleFeedback },
             { path: 'schedule-reminder', name: 'schedule-reminder', component: ScheduleReminder },
             { path: 'reminder-algo', name: 'reminder-algo', component: ReminderAlgo },

@@ -198,7 +198,6 @@ const renderStars = (rating) => {
   width: calc(100% - 20mm);
   margin: 5px auto 8px auto;
   border-radius: 0;
-  overflow: hidden;
 }
 
 .header-banner img {

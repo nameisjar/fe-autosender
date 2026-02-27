@@ -626,22 +626,39 @@ const loadFeedbacks = async () => {
   loading.value = true;
   err.value = "";
   try {
-    // console.log('🔍 Loading templates...');
-
     if (fbFilter.value) {
       const { data } = await userApi.get(
         `/course/feedback/${encodeURIComponent(fbFilter.value)}`
       );
       feedbacks.value = data.feedbacks || [];
     } else {
-      const { data } = await userApi.get("/course/feedbacks");
-      feedbacks.value = data.feedbacks || [];
+      // Fetch all pages to get complete data (backend defaults to 100 per page)
+      const PAGE_SIZE = 500;
+      let page = 1;
+      let allFeedbacks = [];
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data } = await userApi.get("/course/feedbacks", {
+          params: { page, pageSize: PAGE_SIZE },
+        });
+        const items = data.feedbacks || [];
+        allFeedbacks = allFeedbacks.concat(items);
+
+        const meta = data.meta;
+        if (meta && meta.totalPages) {
+          hasMore = page < meta.totalPages;
+        } else {
+          hasMore = items.length === PAGE_SIZE;
+        }
+        page++;
+      }
+
+      feedbacks.value = allFeedbacks;
     }
 
-    // console.log('✅ Templates loaded:', feedbacks.value.length);
     collapsed.value = {};
   } catch (e) {
-    // console.error("❌ Error loading templates:", e);
     toast.error(e?.response?.data?.message || e?.message || "Gagal memuat template");
   } finally {
     loading.value = false;

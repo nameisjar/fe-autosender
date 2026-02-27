@@ -537,7 +537,7 @@
           type="button"
           class="btn-preview-compact"
           @click="showPreview = true"
-          :disabled="!isFormValid || generating"
+          :disabled="!isPreviewValid || generating"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1357,6 +1357,21 @@ const getRecipientDisplayName = (recipient, studentName = '', label = '') => {
   return recipient;
 };
 
+// Validasi untuk Preview: tidak wajib ada penerima & device
+const isPreviewValid = computed(() => {
+  return (
+    form.value.courseName &&
+    form.value.month &&
+    form.value.youtubeLink &&
+    form.value.referralLink &&
+    form.value.rating &&
+    form.value.reportBy &&
+    form.value.selectedComments.length > 0 &&
+    selectedTemplate.value
+  );
+});
+
+// Validasi untuk Kirim PDF: wajib ada penerima dengan nama + device
 const isFormValid = computed(() => {
   const deviceId = devicePicker.value?.selectedDeviceId;
 
@@ -1365,27 +1380,26 @@ const isFormValid = computed(() => {
     recipients.value.length > 0 && recipientsWithNames.value.every((r) => r.hasName);
 
   return (
+    isPreviewValid.value &&
     allRecipientsHaveNames && // Semua penerima harus punya nama
-    form.value.courseName &&
-    form.value.month &&
-    form.value.youtubeLink &&
-    form.value.referralLink &&
-    form.value.rating &&
-    form.value.reportBy &&
-    form.value.selectedComments.length > 0 &&
     recipients.value.length > 0 &&
-    deviceId &&
-    selectedTemplate.value
+    deviceId
   );
 });
 
 const previewData = computed(() => {
-  if (!isFormValid.value || !selectedTemplate.value) return null;
+  if (!isPreviewValid.value || !selectedTemplate.value) return null;
 
   const durationText = form.value.duration || "Bulan ke-" + form.value.month;
 
+  // Gunakan nama default atau placeholder jika belum ada penerima
+  const previewStudentName =
+    recipients.value.length > 0
+      ? formattedStudentName.value
+      : form.value.defaultStudentName || 'Nama Siswa';
+
   return {
-    studentName: formattedStudentName.value,
+    studentName: previewStudentName,
     courseName: form.value.courseName,
     month: form.value.month,
     duration: durationText,
@@ -1397,7 +1411,7 @@ const previewData = computed(() => {
     youtubeLink: form.value.youtubeLink,
     referralLink: form.value.referralLink,
     tutorComment: form.value.tutorComment,
-    recipients: recipients.value,
+    recipients: recipients.value.length > 0 ? recipients.value : ['preview'],
     rating: form.value.rating,
     reportBy: formattedReportBy.value,
     selectedComments: selectedCommentsText.value,
@@ -1634,6 +1648,37 @@ const handleDownloadPDF = async () => {
       }
     });
     copyComputedStyles(originalElement, element);
+
+    // 🔧 Fix header banner: reset dimensions so image renders at natural aspect ratio
+    const headerBanner = element.querySelector('.header-banner');
+    if (headerBanner) {
+      headerBanner.style.overflow = 'visible';
+      headerBanner.style.height = 'auto';
+      headerBanner.style.maxHeight = 'none';
+      const headerImg = headerBanner.querySelector('img');
+      if (headerImg) {
+        headerImg.style.width = '100%';
+        headerImg.style.height = 'auto';
+        headerImg.style.maxHeight = 'none';
+        headerImg.style.objectFit = 'contain';
+      }
+    }
+
+    // 🔧 Wait for all images in clone to fully load
+    const cloneImages = element.querySelectorAll('img');
+    await Promise.all(
+      Array.from(cloneImages).map(
+        (img) =>
+          new Promise((resolve) => {
+            if (img.complete && img.naturalHeight > 0) {
+              resolve();
+            } else {
+              img.onload = resolve;
+              img.onerror = resolve;
+            }
+          })
+      )
+    );
 
     // Wait for styles to apply
     await new Promise((resolve) => setTimeout(resolve, 500));
