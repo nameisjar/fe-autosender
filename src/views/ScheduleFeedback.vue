@@ -308,9 +308,29 @@ const extractCourseOptions = (items) => {
 
 const loadTemplates = async () => {
   try {
-    const res = await userApi.get("/course/feedbacks");
-    const data = res.data;
-    templates.value = data.feedbacks || [];
+    // Fetch all pages to get complete data (backend defaults to 100 per page)
+    const PAGE_SIZE = 500;
+    let page = 1;
+    let allFeedbacks = [];
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data } = await userApi.get("/course/feedbacks", {
+        params: { page, pageSize: PAGE_SIZE },
+      });
+      const items = data.feedbacks || [];
+      allFeedbacks = allFeedbacks.concat(items);
+
+      const meta = data.meta;
+      if (meta && meta.totalPages) {
+        hasMore = page < meta.totalPages;
+      } else {
+        hasMore = items.length === PAGE_SIZE;
+      }
+      page++;
+    }
+
+    templates.value = allFeedbacks;
     extractCourseOptions(templates.value);
   } catch (e) {
     const errorMsg = e?.response?.data?.message || e?.message || "Gagal memuat templates";
