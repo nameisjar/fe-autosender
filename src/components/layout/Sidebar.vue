@@ -20,7 +20,7 @@
             d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1"
           />
         </svg>
-        <h3>Autosender</h3>
+        <h3>Algosender</h3>
       </div>
       <button class="close-btn" @click="$emit('close')">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

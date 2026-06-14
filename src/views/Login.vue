@@ -21,7 +21,7 @@
             />
           </svg>
         </div>
-        <h1>Autosender</h1>
+        <h1>Algosender</h1>
       </div>
 
       <div class="login-header">
