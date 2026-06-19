@@ -130,11 +130,49 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label"> Pesan <span class="required">*</span> </label>
+            <label class="form-label">
+              Pesan <span class="required">*</span>
+              <button
+                type="button"
+                class="badge-template badge-template-reminder"
+                @click="applyTemplate('d-1')"
+                title="Klik untuk mengisi template pengingat H-1 (1 hari sebelum kelas)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                D-1
+              </button>
+              <button
+                type="button"
+                class="badge-template badge-template-warning"
+                @click="applyTemplate('h-3')"
+                title="Klik untuk mengisi template pengingat H-3 (3 jam sebelum kelas)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                H-3
+              </button>
+            </label>
             <textarea
               v-model.trim="form.message"
               rows="4"
-              placeholder="Tulis pesan reminder yang akan dikirim..."
+              placeholder="Tulis pesan reminder yang akan dikirim...&#10;&#10;💡 Gunakan {{siswa}} untuk nama depan penerima (hanya berlaku untuk kontak)"
               required
               class="form-textarea"
             />
@@ -264,6 +302,34 @@ import {
 } from "../utils/datetime.js";
 
 const toast = useToast();
+
+// Message templates
+const messageTemplates = {
+  "d-1": `Halo Parents dan adik-adik! 🌟
+Pengingat bahwa *besok kita ada kelas pukul 19.00 WIB* sesuai jadwal.
+Sampai bertemu di kelas besok! 😊✨
+
+🔗 *Link Zoom:*
+
+
+*(PESAN OTOMATIS)*`,
+  "h-3": `Halo Parents dan adik-adik! ⏰
+Pengingat bahwa kelas akan dimulai *3 jam lagi, pukul 19.00 WIB*.
+Sampai ketemu di Zoom nanti! 😊
+
+*(PESAN OTOMATIS)*`,
+};
+
+// Apply template to message textarea
+function applyTemplate(templateId) {
+  const template = messageTemplates[templateId];
+  if (template) {
+    form.value.message = template;
+    toast.success(
+      "Template berhasil diterapkan! Variabel {{siswa}} akan diganti dengan nama depan kontak saat pengiriman."
+    );
+  }
+}
 
 // Template refs
 const recipientsPicker = ref(null);
@@ -561,6 +627,62 @@ function onDeviceChanged() {
 
 .required {
   color: #ef4444;
+}
+
+/* Template Badge */
+.badge-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  margin-left: 8px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.badge-template:hover {
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+.badge-template:active {
+  transform: translateY(0);
+}
+
+.badge-template svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Reminder badge variant - blue/cyan color */
+.badge-template-reminder {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  color: #0369a1;
+  border: 1px solid #38bdf8;
+}
+
+.badge-template-reminder:hover {
+  background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
+  box-shadow: 0 2px 6px rgba(56, 189, 248, 0.3);
+}
+
+/* Warning badge variant - orange/red for urgency */
+.badge-template-warning {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #b91c1c;
+  border: 1px solid #f87171;
+}
+
+.badge-template-warning:hover {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  box-shadow: 0 2px 6px rgba(248, 113, 113, 0.3);
 }
 
 .form-input,
