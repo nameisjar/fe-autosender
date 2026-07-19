@@ -290,7 +290,7 @@
           </button>
         </div>
         <div class="modal-body chat-body">
-          <div class="chat-messages">
+          <div class="chat-messages" ref="chatMessagesContainer">
             <div
               v-for="msg in selectedConversation.messages"
               :key="msg.pkId"
@@ -304,6 +304,57 @@
                 <div class="bubble-time">{{ formatFullTime(msg.receivedAt) }}</div>
               </div>
             </div>
+            
+            <!-- Outgoing messages (sent replies) -->
+            <div
+              v-for="sentMsg in sentMessages"
+              :key="sentMsg.tempId"
+              class="chat-bubble outgoing"
+            >
+              <div class="bubble-content">
+                <div class="bubble-text">{{ sentMsg.text }}</div>
+                <div class="bubble-time">
+                  <svg v-if="sentMsg.status === 'sending'" class="status-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                  <svg v-else-if="sentMsg.status === 'sent'" class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <svg v-else-if="sentMsg.status === 'error'" class="status-icon error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {{ formatTime(sentMsg.timestamp) }}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Reply Input -->
+          <div class="reply-input-container">
+            <textarea
+              v-model="replyText"
+              placeholder="Ketik pesan..."
+              class="reply-textarea"
+              @keydown.enter.exact="handleEnterKey"
+              rows="1"
+              ref="replyTextarea"
+            ></textarea>
+            <button
+              class="btn-send-reply"
+              @click="sendReply"
+              :disabled="!replyText.trim() || sendingReply"
+              title="Kirim pesan"
+            >
+              <svg v-if="sendingReply" class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -355,6 +406,13 @@ const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
 const loading = ref(false);
 const err = ref('');
 const selectedConversation = ref(null);
+
+// Reply functionality
+const replyText = ref('');
+const sendingReply = ref(false);
+const sentMessages = ref([]);
+const replyTextarea = ref(null);
+const chatMessagesContainer = ref(null);
 
 // Search & pagination
 const q = ref('');
@@ -514,6 +572,110 @@ const setupSocketListener = () => {
 
 const viewConversation = (conv) => {
   selectedConversation.value = conv;
+  sentMessages.value = []; // Reset sent messages when opening new conversation
+  replyText.value = ''; // Reset reply text
+  
+  // Scroll to bottom after conversation is rendered
+  setTimeout(() => {
+    scrollToBottom();
+  }, 100);
+};
+
+// Auto-resize textarea
+const autoResizeTextarea = () => {
+  const textarea = replyTextarea.value;
+  if (textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+  }
+};
+
+// Watch reply text for auto-resize
+watch(replyText, () => {
+  autoResizeTextarea();
+});
+
+// Scroll chat to bottom
+const scrollToBottom = () => {
+  const container = chatMessagesContainer.value;
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+};
+
+// Handle Enter key: Send on Enter, new line on Shift+Enter
+const handleEnterKey = (event) => {
+  if (!event.shiftKey) {
+    event.preventDefault();
+    sendReply();
+  }
+};
+
+// Send reply message
+const sendReply = async () => {
+  if (!replyText.value.trim() || sendingReply.value || !selectedConversation.value) {
+    return;
+  }
+
+  const messageText = replyText.value.trim();
+  const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Add optimistic message
+  const optimisticMessage = {
+    tempId,
+    text: messageText,
+    timestamp: new Date().toISOString(),
+    status: 'sending',
+  };
+  
+  sentMessages.value.push(optimisticMessage);
+  replyText.value = '';
+  
+  // Scroll to bottom
+  setTimeout(() => scrollToBottom(), 50);
+  
+  sendingReply.value = true;
+
+  try {
+    const device = devices.value.find(d => d.id === selectedDeviceId.value);
+    if (!device) {
+      throw new Error('Device not found');
+    }
+
+    const recipient = selectedConversation.value.from;
+    const isGroup = selectedConversation.value.isGroup;
+    
+    // Send via device API
+    const response = await userApi.post(`/messages/${device.sessionId}/send`, [
+      {
+        recipient: recipient.replace(/@s\.whatsapp\.net|@g\.us/g, ''),
+        type: isGroup ? 'group' : 'number',
+        message: messageText,
+        delay: 0,
+      }
+    ]);
+
+    // Update message status to sent
+    const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
+    if (msgIndex !== -1) {
+      sentMessages.value[msgIndex].status = 'sent';
+    }
+    
+    toast.success('Pesan berhasil dikirim');
+    
+    // Scroll to bottom after message sent
+    setTimeout(() => scrollToBottom(), 50);
+  } catch (e) {
+    // Update message status to error
+    const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
+    if (msgIndex !== -1) {
+      sentMessages.value[msgIndex].status = 'error';
+    }
+    
+    toast.error(e?.response?.data?.message || 'Gagal mengirim pesan');
+  } finally {
+    sendingReply.value = false;
+  }
 };
 
 // Delete functionality
@@ -1340,6 +1502,7 @@ onUnmounted(() => {
   background: #f1f5f9;
   display: flex;
   flex-direction: column;
+  max-height: calc(80vh - 140px);
 }
 
 .chat-messages {
@@ -1365,12 +1528,25 @@ onUnmounted(() => {
   align-self: flex-start;
 }
 
+.chat-bubble.outgoing {
+  align-self: flex-end;
+}
+
 .bubble-content {
   background: #ffffff;
   padding: 12px 16px;
   border-radius: 16px;
-  border-top-left-radius: 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.chat-bubble.incoming .bubble-content {
+  border-top-left-radius: 4px;
+}
+
+.chat-bubble.outgoing .bubble-content {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border-top-right-radius: 4px;
 }
 
 .bubble-sender {
@@ -1388,11 +1564,103 @@ onUnmounted(() => {
   word-break: break-word;
 }
 
+.chat-bubble.outgoing .bubble-text {
+  color: #ffffff;
+}
+
 .bubble-time {
   font-size: 11px;
   color: #94a3b8;
   margin-top: 6px;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.chat-bubble.outgoing .bubble-time {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.status-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.status-icon.error {
+  color: #fca5a5;
+}
+
+/* Reply Input */
+.reply-input-container {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  align-items: flex-end;
+}
+
+.reply-textarea {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+}
+
+.reply-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.reply-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.btn-send-reply {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-send-reply:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-send-reply:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-send-reply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-send-reply svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Message Count Badge */
@@ -1648,6 +1916,25 @@ onUnmounted(() => {
   .pagination {
     flex-direction: column;
     text-align: center;
+  }
+  
+  .conversation-modal {
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .chat-body {
+    max-height: calc(100vh - 140px);
+  }
+  
+  .chat-bubble {
+    max-width: 90%;
+  }
+  
+  .reply-input-container {
+    padding: 12px 16px;
   }
 }
 </style>
