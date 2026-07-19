@@ -1530,6 +1530,7 @@ onMounted(async () => {
 .btn-delete-all {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 10px 18px;
   border: 1.5px solid;
@@ -2886,7 +2887,8 @@ onMounted(async () => {
   .btn-add,
   .btn-reload,
   .btn-import,
-  .btn-export {
+  .btn-export,
+  .btn-delete-all {
     width: 100%;
     justify-content: center;
   }
