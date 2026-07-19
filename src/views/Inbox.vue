@@ -394,7 +394,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
-import { userApi } from '../api/http.js';
+import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 
@@ -486,7 +486,13 @@ const conversations = computed(() => {
 const fetchDevices = async () => {
   try {
     const { data } = await userApi.get('/devices');
-    devices.value = Array.isArray(data) ? data : [];
+    const rawDevices = Array.isArray(data) ? data : [];
+    
+    // Add isConnected property based on status
+    devices.value = rawDevices.map(d => ({
+      ...d,
+      isConnected: d.status === 'open',
+    }));
   } catch {
     devices.value = [];
   }
@@ -639,21 +645,35 @@ const sendReply = async () => {
   try {
     const device = devices.value.find(d => d.id === selectedDeviceId.value);
     if (!device) {
-      throw new Error('Device not found');
+      throw new Error('Device tidak ditemukan');
+    }
+
+    if (!device.isConnected) {
+      throw new Error('Device tidak terhubung. Silakan pilih device lain atau hubungkan kembali WhatsApp.');
     }
 
     const recipient = selectedConversation.value.from;
-    const isGroup = selectedConversation.value.isGroup;
+    const isGroup = selectedConversation.value.isGroup || recipient.includes('@g.us');
     
-    // Send via device API
-    const response = await userApi.post(`/messages/${device.sessionId}/send`, [
+    // Format recipient - remove domain for API
+    const recipientFormatted = recipient.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+    
+    // Send via device API using the same format as broadcast
+    // deviceApi uses device access token automatically via interceptor
+    const response = await deviceApi.post('/messages/send', [
       {
-        recipient: recipient.replace(/@s\.whatsapp\.net|@g\.us/g, ''),
+        recipient: recipientFormatted,
         type: isGroup ? 'group' : 'number',
         message: messageText,
         delay: 0,
       }
     ]);
+
+    // Check if there are any errors in the response
+    const errors = response?.data?.errors || [];
+    if (errors.length > 0) {
+      throw new Error(errors[0]?.error || 'Gagal mengirim pesan');
+    }
 
     // Update message status to sent
     const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
@@ -666,13 +686,21 @@ const sendReply = async () => {
     // Scroll to bottom after message sent
     setTimeout(() => scrollToBottom(), 50);
   } catch (e) {
+    console.error('Send reply error:', e);
+    
     // Update message status to error
     const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
     if (msgIndex !== -1) {
       sentMessages.value[msgIndex].status = 'error';
     }
     
-    toast.error(e?.response?.data?.message || 'Gagal mengirim pesan');
+    const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message;
+    
+    if (errorMsg?.includes('Session not found') || errorMsg?.includes('unauthorized') || e?.response?.status === 401) {
+      toast.error('Session WhatsApp tidak ditemukan. Device perlu di-pairing ulang atau pilih device lain yang aktif.');
+    } else {
+      toast.error(errorMsg || 'Gagal mengirim pesan. Pastikan WhatsApp sudah terhubung.');
+    }
   } finally {
     sendingReply.value = false;
   }
