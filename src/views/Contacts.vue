@@ -134,6 +134,19 @@
             </svg>
             {{ exportBusy ? "Mengekspor..." : "Export XLSX" }}
           </button>
+          <button
+            @click="showDeleteAllModal = true"
+            :disabled="!selectedDeviceId || contacts.length === 0"
+            class="btn-delete-all"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+            Hapus Semua Kontak
+          </button>
           <input
             ref="fileInput"
             type="file"
@@ -695,6 +708,83 @@
       </div>
     </div>
 
+    <!-- Delete All Contacts Modal -->
+    <div
+      v-if="showDeleteAllModal"
+      class="modal-overlay delete-modal-overlay"
+      @click="cancelDeleteAll"
+    >
+      <div class="delete-modal" @click.stop>
+        <div class="delete-modal-icon">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="delete-modal-content">
+          <h3>⚠️ Hapus SEMUA Kontak?</h3>
+          <p class="delete-warning">
+            <strong>Peringatan:</strong> Tindakan ini akan menghapus <strong>SEMUA {{ meta.totalContacts || contacts.length }} kontak</strong> 
+            dari perangkat ini secara permanen dan <strong>TIDAK DAPAT DIBATALKAN!</strong>
+          </p>
+
+          <div class="warning-details">
+            <div class="warning-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+              </svg>
+              <span>{{ meta.totalContacts || contacts.length }} kontak akan dihapus</span>
+            </div>
+            <div class="warning-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                <line x1="7" y1="7" x2="7.01" y2="7" />
+              </svg>
+              <span>Semua label akan ikut terhapus</span>
+            </div>
+            <div class="warning-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 9v4m0 4h.01" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              <span>Data tidak dapat dipulihkan</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="delete-modal-actions">
+          <button
+            type="button"
+            class="btn-keep"
+            @click="cancelDeleteAll"
+            :disabled="deletingAll"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+            Batal
+          </button>
+          <button
+            type="button"
+            class="btn-delete-confirm"
+            @click="confirmDeleteAll"
+            :disabled="deletingAll"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+            {{ deletingAll ? "Menghapus..." : "Ya, Hapus Semua!" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <p v-if="msg" class="success-message">{{ msg }}</p>
     <p v-if="err" class="error-message">{{ err }}</p>
   </div>
@@ -721,6 +811,10 @@ const err = ref("");
 const showDeleteModal = ref(false);
 const contactToDelete = ref(null);
 const deleting = ref(false);
+
+// New: Delete All confirmation modal state
+const showDeleteAllModal = ref(false);
+const deletingAll = ref(false);
 
 // New: Import modal state
 const showImportModal = ref(false);
@@ -1071,6 +1165,44 @@ const cancelDelete = () => {
   contactToDelete.value = null;
 };
 
+// New: Delete All handler
+const confirmDeleteAll = async () => {
+  if (!selectedDeviceId.value) {
+    toast.error("Pilih perangkat terlebih dahulu");
+    return;
+  }
+
+  deletingAll.value = true;
+
+  try {
+    const { data } = await userApi.delete("/contacts/all", {
+      data: { deviceId: selectedDeviceId.value },
+    });
+
+    const deletedCount = data?.deletedCount || 0;
+    toast.success(`Berhasil menghapus ${deletedCount} kontak`);
+
+    // Close modal
+    showDeleteAllModal.value = false;
+
+    // Reload contacts (should be empty now)
+    await loadContacts();
+    
+    // Invalidate cache and refresh labels
+    invalidateLabelsCache();
+    await fetchAllLabels(true);
+  } catch (e) {
+    toast.error(e?.response?.data?.message || "Gagal menghapus semua kontak");
+  } finally {
+    deletingAll.value = false;
+  }
+};
+
+// New: Cancel delete all action
+const cancelDeleteAll = () => {
+  showDeleteAllModal.value = false;
+};
+
 // New: Import handlers
 const triggerImport = () => {
   if (!selectedDeviceId.value) {
@@ -1394,7 +1526,8 @@ onMounted(async () => {
 .btn-add,
 .btn-reload,
 .btn-import,
-.btn-export {
+.btn-export,
+.btn-delete-all {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1452,10 +1585,23 @@ onMounted(async () => {
   transform: translateY(-1px);
 }
 
+.btn-delete-all {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.btn-delete-all:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
 .btn-add:disabled,
 .btn-reload:disabled,
 .btn-import:disabled,
-.btn-export:disabled {
+.btn-export:disabled,
+.btn-delete-all:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -1463,7 +1609,8 @@ onMounted(async () => {
 .btn-add svg,
 .btn-reload svg,
 .btn-import svg,
-.btn-export svg {
+.btn-export svg,
+.btn-delete-all svg {
   width: 16px;
   height: 16px;
 }
@@ -2229,6 +2376,33 @@ onMounted(async () => {
   color: #64748b;
   font-size: 14px;
   line-height: 1.6;
+}
+
+.warning-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1.5px solid #fbbf24;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.warning-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.warning-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #d97706;
 }
 
 .contact-preview {
