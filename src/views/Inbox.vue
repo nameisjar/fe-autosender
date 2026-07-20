@@ -675,10 +675,20 @@ const setupSocketListener = () => {
     
     // ✅ NEW: Handle profile picture update from background fetch
     const handleProfileUpdate = (data) => {
+      console.log('🔄 Profile picture update received:', data.id, data.profilePicUrl?.substring(0, 50));
+      
       // Update message in messages list
       const msgIndex = messages.value.findIndex(m => m.id === data.id);
       if (msgIndex !== -1) {
-        messages.value[msgIndex] = { ...messages.value[msgIndex], profilePicUrl: data.profilePicUrl };
+        // ✅ Force reactivity by creating new object
+        messages.value[msgIndex] = { 
+          ...messages.value[msgIndex], 
+          profilePicUrl: data.profilePicUrl,
+          groupPicUrl: data.groupPicUrl 
+        };
+        // Trigger reactivity
+        messages.value = [...messages.value];
+        console.log('✅ Updated message in list:', msgIndex);
       }
       
       // Update in conversation if open
@@ -687,8 +697,12 @@ const setupSocketListener = () => {
         if (convMsgIndex !== -1) {
           selectedConversation.value.messages[convMsgIndex] = {
             ...selectedConversation.value.messages[convMsgIndex],
-            profilePicUrl: data.profilePicUrl
+            profilePicUrl: data.profilePicUrl,
+            groupPicUrl: data.groupPicUrl
           };
+          // Trigger reactivity
+          selectedConversation.value.messages = [...selectedConversation.value.messages];
+          console.log('✅ Updated message in conversation:', convMsgIndex);
         }
       }
     };
@@ -745,6 +759,12 @@ const setupSocketListener = () => {
     socket.on(incomingEventName, handleIncoming);
     socket.on(profileUpdateEventName, handleProfileUpdate); // ✅ NEW: Listen for profile picture updates
     socket.on(statusEventName, handleMessageStatus);
+    
+    console.log('✅ Socket listeners registered:', {
+      incoming: incomingEventName,
+      profileUpdate: profileUpdateEventName,
+      status: statusEventName
+    });
     
     socketCleanup = () => {
       socket.off(incomingEventName, handleIncoming);

@@ -49,6 +49,12 @@ export function useGlobalNotifications() {
     const socket = getSocket();
     if (!socket) return;
 
+    // ✅ CRITICAL: Cleanup previous listeners first to prevent duplicates
+    if (socketCleanup) {
+      socketCleanup();
+      socketCleanup = null;
+    }
+
     // Fetch user devices
     const userDevices = await fetchUserDevices();
     if (userDevices.length === 0) return;
@@ -95,13 +101,17 @@ export function useGlobalNotifications() {
     // Setup global listener
     const socket = getSocket();
     if (socket) {
+      // ✅ CRITICAL: Remove connect listener first to prevent duplicate setup
+      socket.off('connect');
+      
       if (socket.connected) {
         await setupGlobalListener();
-      } else {
-        socket.on('connect', async () => {
-          await setupGlobalListener();
-        });
       }
+      
+      // Setup listener for reconnection
+      socket.on('connect', async () => {
+        await setupGlobalListener();
+      });
     }
   });
 
