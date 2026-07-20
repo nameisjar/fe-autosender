@@ -132,16 +132,23 @@
           @click="viewConversation(conv)"
         >
           <div class="message-avatar">
+            <!-- Personal chat with profile picture -->
+            <img
+              v-if="!conv.isGroup && conv.profilePicUrl"
+              :src="conv.profilePicUrl"
+              class="avatar-image"
+              @error="(e) => e.target.style.display = 'none'"
+            />
             <!-- Group with picture -->
             <img
-              v-if="conv.isGroup && conv.groupPicUrl"
+              v-else-if="conv.isGroup && conv.groupPicUrl"
               :src="conv.groupPicUrl"
               class="avatar-image"
               @error="(e) => e.target.style.display = 'none'"
             />
             <!-- Fallback avatar circle -->
             <div
-              v-if="!conv.isGroup || !conv.groupPicUrl"
+              v-else
               class="avatar-circle"
               :style="{ backgroundColor: conv.contact?.colorCode || getRandomColor(conv.from) }"
             >
@@ -179,7 +186,6 @@
               {{ truncateMessage(conv.latestMessage.message, 100) }}
             </div>
             <div class="message-meta">
-              <span class="phone-number">{{ formatPhoneOrId(conv.from) }}</span>
               <span v-if="conv.messageCount > 1" class="message-count">
                 {{ conv.messageCount }} pesan
               </span>
@@ -246,20 +252,27 @@
     </div>
 
     <!-- Message Detail Modal -->
-    <div v-if="selectedConversation" class="modal-overlay" @click="selectedConversation = null">
+    <div v-if="selectedConversation" class="modal-overlay" @click="closeConversation">
       <div class="modal conversation-modal" @click.stop>
         <div class="modal-header">
           <div class="modal-header-info">
+            <!-- Personal chat with profile picture -->
+            <img
+              v-if="!selectedConversation.isGroup && selectedConversation.profilePicUrl"
+              :src="selectedConversation.profilePicUrl"
+              class="avatar-image modal-avatar"
+              @error="(e) => e.target.style.display = 'none'"
+            />
             <!-- Group with picture -->
             <img
-              v-if="selectedConversation.isGroup && selectedConversation.groupPicUrl"
+              v-else-if="selectedConversation.isGroup && selectedConversation.groupPicUrl"
               :src="selectedConversation.groupPicUrl"
               class="avatar-image modal-avatar"
               @error="(e) => e.target.style.display = 'none'"
             />
             <!-- Fallback avatar circle -->
             <div
-              v-if="!selectedConversation.isGroup || !selectedConversation.groupPicUrl"
+              v-else
               class="avatar-circle"
               :style="{ backgroundColor: selectedConversation.contact?.colorCode || getRandomColor(selectedConversation.from) }"
             >
@@ -279,10 +292,10 @@
             </div>
             <div>
               <h3>{{ getSenderName(selectedConversation) }}</h3>
-              <span class="modal-subtitle">{{ formatPhoneOrId(selectedConversation.from) }} • {{ selectedConversation.messages.length }} pesan</span>
+              <span class="modal-subtitle">{{ selectedConversation.messages.length }} pesan</span>
             </div>
           </div>
-          <button class="btn-close" @click="selectedConversation = null">
+          <button class="btn-close" @click="closeConversation">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -291,41 +304,66 @@
         </div>
         <div class="modal-body chat-body">
           <div class="chat-messages" ref="chatMessagesContainer">
+            <!-- All messages (incoming + outgoing) sorted by timestamp -->
             <div
-              v-for="msg in selectedConversation.messages"
-              :key="msg.pkId"
-              class="chat-bubble incoming"
+              v-for="msg in allMessages"
+              :key="msg.pkId || msg.tempId"
+              class="chat-bubble"
+              :class="msg.type === 'incoming' ? 'incoming' : 'outgoing'"
             >
               <div class="bubble-content">
-                <div v-if="selectedConversation.isGroup" class="bubble-sender">
+                <!-- Sender name for group incoming messages -->
+                <div v-if="msg.type === 'incoming' && selectedConversation.isGroup" class="bubble-sender">
                   {{ msg.pushName || formatPhoneOrId(msg.participant) || 'Tidak dikenal' }}
                 </div>
-                <div class="bubble-text">{{ msg.message }}</div>
-                <div class="bubble-time">{{ formatFullTime(msg.receivedAt) }}</div>
-              </div>
-            </div>
-            
-            <!-- Outgoing messages (sent replies) -->
-            <div
-              v-for="sentMsg in sentMessages"
-              :key="sentMsg.tempId"
-              class="chat-bubble outgoing"
-            >
-              <div class="bubble-content">
-                <div class="bubble-text">{{ sentMsg.text }}</div>
+                
+                <!-- Message text -->
+                <div class="bubble-text">{{ msg.type === 'incoming' ? msg.message : msg.text }}</div>
+                
+                <!-- Time with status for outgoing -->
                 <div class="bubble-time">
-                  <svg v-if="sentMsg.status === 'sending'" class="status-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10" />
-                  </svg>
-                  <svg v-else-if="sentMsg.status === 'sent'" class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <svg v-else-if="sentMsg.status === 'error'" class="status-icon error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="15" y1="9" x2="9" y2="15" />
-                    <line x1="9" y1="9" x2="15" y2="15" />
-                  </svg>
-                  {{ formatTime(sentMsg.timestamp) }}
+                  <!-- Status icons for outgoing messages -->
+                  <template v-if="msg.type === 'outgoing'">
+                    <!-- Loading icon for sending/pending -->
+                    <svg v-if="msg.status === 'sending'" class="status-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                    </svg>
+                    
+                    <!-- Single checkmark for server_ack (terkirim ke server) -->
+                    <svg v-else-if="msg.status === 'server_ack'" class="status-icon checkmark-single" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    
+                    <!-- Double checkmark (gray) for delivery_ack (terkirim ke penerima) -->
+                    <svg v-else-if="msg.status === 'delivery_ack'" class="status-icon checkmark-double" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="16 6 5 17 0 12" />
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    
+                    <!-- Double checkmark (blue) for read (dibaca penerima) -->
+                    <svg v-else-if="msg.status === 'read'" class="status-icon checkmark-double-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="16 6 5 17 0 12" />
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    
+                    <!-- Error icon (X red) -->
+                    <svg v-else-if="msg.status === 'error'" class="status-icon error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                  </template>
+                  
+                  {{ msg.type === 'incoming' ? formatFullTime(msg.receivedAt) : formatTime(msg.timestamp) }}
+                  
+                  <!-- ✅ Read count badge untuk grup messages -->
+                  <span v-if="msg.type === 'outgoing' && msg.isGroup && msg.readCount > 0" class="read-count-badge" :title="`Dibaca oleh ${msg.readCount} orang`">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    {{ msg.readCount }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -429,6 +467,30 @@ const todayCount = computed(() => {
   return messages.value.filter(m => new Date(m.receivedAt).toDateString() === today).length;
 });
 
+// Merge incoming and outgoing messages, sorted by timestamp
+const allMessages = computed(() => {
+  if (!selectedConversation.value) return [];
+  
+  const incoming = selectedConversation.value.messages.map(msg => ({
+    ...msg,
+    type: 'incoming',
+    timestamp: msg.receivedAt,
+  }));
+  
+  const outgoing = sentMessages.value.map(msg => ({
+    ...msg,
+    type: 'outgoing',
+    timestamp: msg.timestamp,
+  }));
+  
+  // Merge incoming and outgoing messages, sorted by timestamp
+  const merged = [...incoming, ...outgoing].sort((a, b) => 
+    new Date(a.timestamp) - new Date(b.timestamp)
+  );
+  
+  return merged;
+});
+
 // Group messages by sender (from) to create conversations
 const conversations = computed(() => {
   const grouped = {};
@@ -443,6 +505,7 @@ const conversations = computed(() => {
         pushName: msg.pushName, // Add pushName from first message
         groupName: msg.groupName, // Add groupName for group messages
         groupPicUrl: msg.groupPicUrl, // Add group picture URL
+        profilePicUrl: msg.profilePicUrl, // Add profile picture URL for personal chat
         isGroup: msg.isGroup || msg.from?.includes('@g.us'),
         messages: [],
         latestMessage: msg,
@@ -465,6 +528,11 @@ const conversations = computed(() => {
     // Update groupPicUrl if newer message has it
     if (msg.groupPicUrl && !grouped[key].groupPicUrl) {
       grouped[key].groupPicUrl = msg.groupPicUrl;
+    }
+    
+    // Update profilePicUrl if newer message has it (for personal chat)
+    if (msg.profilePicUrl && !grouped[key].profilePicUrl) {
+      grouped[key].profilePicUrl = msg.profilePicUrl;
     }
     
     // Keep track of latest message
@@ -547,44 +615,213 @@ const setupSocketListener = () => {
     socketCleanup = null;
   }
 
-  if (!selectedDeviceId.value) return;
+  if (!selectedDeviceId.value) {
+    return;
+  }
 
   const device = devices.value.find(d => d.id === selectedDeviceId.value);
-  if (!device?.sessionId) return;
+  
+  if (!device) {
+    return;
+  }
+
+  // Get sessionId directly from device object (not from sessions array)
+  const sessionId = device.sessionId;
+  
+  if (!sessionId) {
+    return;
+  }
 
   try {
     const socket = getSocket();
-    if (!socket) return;
+    if (!socket) {
+      return;
+    }
 
-    const eventName = `incoming:${device.sessionId}`;
+    const incomingEventName = `incoming:${sessionId}`;
+    const statusEventName = `device:${selectedDeviceId.value}:message-status`;
     
     const handleIncoming = (data) => {
-      // Add to top of list
+      // Add to messages list
       messages.value.unshift(data);
       meta.value.totalMessages++;
       
-      toast.info(`Pesan baru dari ${data.contact?.firstName || formatPhone(data.from)}`);
+      // ✅ Notifikasi sudah ditangani oleh useGlobalNotifications di App.vue
+      // Tidak perlu duplikat notifikasi di sini
+      
+      // If conversation is open, add to chat
+      if (selectedConversation.value && selectedConversation.value.from === data.from) {
+        selectedConversation.value.messages.push(data);
+        selectedConversation.value.messageCount++;
+        setTimeout(() => scrollToBottom(), 100);
+      }
     };
 
-    socket.on(eventName, handleIncoming);
+    const handleMessageStatus = (data) => {
+      // Update sentMessages array
+      // Match by waMessageId first, fallback to tempId (id field)
+      const msgIndex = sentMessages.value.findIndex(m => 
+        (m.waMessageId && m.waMessageId === data.waMessageId) || 
+        (m.tempId && m.tempId === data.waMessageId)
+      );
+      
+      if (msgIndex !== -1) {
+        const currentStatus = sentMessages.value[msgIndex].status;
+        const newStatus = data.status;
+        
+        const statusHierarchy = {
+          error: 0,
+          sending: 1,
+          server_ack: 2,
+          delivery_ack: 3,
+          read: 4,
+          played: 5
+        };
+        
+        const currentLevel = statusHierarchy[currentStatus] || 0;
+        const newLevel = statusHierarchy[newStatus] || 0;
+        
+        if (newLevel > currentLevel) {
+          sentMessages.value[msgIndex].status = newStatus;
+          
+          // Also update waMessageId if it was null before
+          if (!sentMessages.value[msgIndex].waMessageId && data.waMessageId) {
+            sentMessages.value[msgIndex].waMessageId = data.waMessageId;
+          }
+          
+          if (data.readCount !== undefined) {
+            sentMessages.value[msgIndex].readCount = data.readCount;
+            sentMessages.value[msgIndex].readBy = data.readBy || [];
+          }
+          
+          sentMessages.value = [...sentMessages.value];
+        } else if (newLevel === currentLevel) {
+          if (data.readCount !== undefined && data.readCount > (sentMessages.value[msgIndex].readCount || 0)) {
+            sentMessages.value[msgIndex].readCount = data.readCount;
+            sentMessages.value[msgIndex].readBy = data.readBy || [];
+            sentMessages.value = [...sentMessages.value];
+          }
+        }
+      }
+    };
+
+    // Register listeners
+    socket.on(incomingEventName, handleIncoming);
+    socket.on(statusEventName, handleMessageStatus);
     
     socketCleanup = () => {
-      socket.off(eventName, handleIncoming);
+      socket.off(incomingEventName, handleIncoming);
+      socket.off(statusEventName, handleMessageStatus);
     };
   } catch (e) {
-    console.warn('Failed to setup socket listener:', e);
+    // Socket setup failed, silently ignore
   }
 };
 
-const viewConversation = (conv) => {
-  selectedConversation.value = conv;
-  sentMessages.value = []; // Reset sent messages when opening new conversation
-  replyText.value = ''; // Reset reply text
+const viewConversation = async (conv) => {
+  const isSameConversation = selectedConversation.value?.from === conv.from;
   
-  // Scroll to bottom after conversation is rendered
-  setTimeout(() => {
-    scrollToBottom();
-  }, 100);
+  selectedConversation.value = conv;
+  
+  // Jangan reload jika conversation yang sama (preserve real-time messages)
+  if (isSameConversation) {
+    replyText.value = '';
+    setTimeout(() => scrollToBottom(), 100);
+    return;
+  }
+  
+  // Load from database untuk conversation baru
+  await loadSentMessagesFromDatabase(conv.from);
+  
+  replyText.value = '';
+  setTimeout(() => scrollToBottom(), 100);
+};
+
+// Load sent messages from database (OutgoingMessage)
+const loadSentMessagesFromDatabase = async (conversationFrom) => {
+  try {
+    const device = devices.value.find(d => d.id === selectedDeviceId.value);
+    if (!device) {
+      sentMessages.value = [];
+      return;
+    }
+
+    // ✅ CRITICAL: Add timestamp + random to FORCE bypass ALL caches
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(7);
+    
+    // Fetch outgoing messages for this conversation from database
+    const { data } = await userApi.get(`/devices/${selectedDeviceId.value}/outbox`, {
+      params: {
+        to: conversationFrom,
+        limit: 50,
+        _t: timestamp, // ✅ Timestamp cache buster
+        _r: random,    // ✅ Random cache buster
+      },
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '-1',
+        'X-Requested-With': 'XMLHttpRequest', // Some proxies respect this
+      },
+    });
+    
+    // ✅ CRITICAL: Handle different response formats
+    let messages = [];
+    if (Array.isArray(data)) {
+      messages = data;
+    } else if (data && Array.isArray(data.data)) {
+      messages = data.data;
+    } else if (data && data.results && Array.isArray(data.results)) {
+      messages = data.results;
+    }
+    
+    // ✅ CRITICAL: Reverse karena backend query DESC (newest first)
+    // Kita perlu oldest first untuk chat UI
+    messages = messages.reverse();
+    
+    // Transform to sentMessages format
+    sentMessages.value = messages.map((msg, index) => {
+      const dbStatus = msg.status?.toLowerCase() || '';
+      
+      // Map database status to UI status
+      let uiStatus = 'server_ack';
+      
+      if (dbStatus === 'delivery_ack') {
+        uiStatus = 'delivery_ack';
+      } else if (dbStatus === 'read') {
+        uiStatus = 'read';
+      } else if (dbStatus === 'played') {
+        uiStatus = 'read';
+      } else if (dbStatus === 'failed' || dbStatus === 'error') {
+        uiStatus = 'error';
+      } else if (dbStatus === 'pending') {
+        uiStatus = 'sending';
+      }
+      
+      return {
+        tempId: msg.id,
+        text: msg.message || '',
+        timestamp: msg.createdAt,
+        status: uiStatus,
+        waMessageId: msg.waMessageId,
+        isGroup: msg.isGroup || false,
+        readBy: Array.isArray(msg.readBy) ? msg.readBy : [],
+        readCount: Array.isArray(msg.readBy) ? msg.readBy.length : 0,
+      };
+    });
+    
+    // ✅ CRITICAL: Force Vue reactivity trigger
+    // Ensure Vue detects array change and re-renders UI
+    sentMessages.value = [...sentMessages.value];
+  } catch (e) {
+    sentMessages.value = [];
+  }
+};
+
+// Close conversation
+const closeConversation = () => {
+  selectedConversation.value = null;
 };
 
 // Auto-resize textarea
@@ -626,18 +863,18 @@ const sendReply = async () => {
   const messageText = replyText.value.trim();
   const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
-  // Add optimistic message
   const optimisticMessage = {
     tempId,
     text: messageText,
     timestamp: new Date().toISOString(),
     status: 'sending',
+    isGroup: selectedConversation.value.isGroup || false,
+    readBy: [],
+    readCount: 0,
   };
   
   sentMessages.value.push(optimisticMessage);
   replyText.value = '';
-  
-  // Scroll to bottom
   setTimeout(() => scrollToBottom(), 50);
   
   sendingReply.value = true;
@@ -654,12 +891,8 @@ const sendReply = async () => {
 
     const recipient = selectedConversation.value.from;
     const isGroup = selectedConversation.value.isGroup || recipient.includes('@g.us');
+    const recipientFormatted = recipient;
     
-    // Format recipient - remove domain for API
-    const recipientFormatted = recipient.replace(/@s\.whatsapp\.net|@g\.us/g, '');
-    
-    // Send via device API using the same format as broadcast
-    // deviceApi uses device access token automatically via interceptor
     const response = await deviceApi.post('/messages/send', [
       {
         recipient: recipientFormatted,
@@ -669,25 +902,53 @@ const sendReply = async () => {
       }
     ]);
 
-    // Check if there are any errors in the response
     const errors = response?.data?.errors || [];
     if (errors.length > 0) {
       throw new Error(errors[0]?.error || 'Gagal mengirim pesan');
     }
 
-    // Update message status to sent
+    const results = response?.data?.results || [];
+    
+    if (results.length === 0) {
+      throw new Error('Tidak ada hasil dari pengiriman pesan');
+    }
+    
+    const waMessageId = results[0]?.result?.key?.id;
+    const messageTimestamp = results[0]?.result?.messageTimestamp;
+
     const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
+    
     if (msgIndex !== -1) {
-      sentMessages.value[msgIndex].status = 'sent';
+      sentMessages.value[msgIndex] = {
+        ...sentMessages.value[msgIndex],
+        status: 'server_ack',
+        waMessageId: waMessageId,
+        tempId: waMessageId,
+        timestamp: messageTimestamp ? new Date(Number(messageTimestamp) * 1000).toISOString() : sentMessages.value[msgIndex].timestamp,
+      };
+      
+      sentMessages.value = [...sentMessages.value];
+    } else {
+      if (waMessageId) {
+        const newMessage = {
+          tempId: waMessageId,
+          text: messageText,
+          timestamp: messageTimestamp ? new Date(Number(messageTimestamp) * 1000).toISOString() : new Date().toISOString(),
+          status: 'server_ack',
+          waMessageId: waMessageId,
+          isGroup: selectedConversation.value.isGroup || false,
+          readBy: [],
+          readCount: 0,
+        };
+        
+        sentMessages.value.push(newMessage);
+        sentMessages.value = [...sentMessages.value];
+      }
     }
     
     toast.success('Pesan berhasil dikirim');
-    
-    // Scroll to bottom after message sent
     setTimeout(() => scrollToBottom(), 50);
   } catch (e) {
-    console.error('Send reply error:', e);
-    
     // Update message status to error
     const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
     if (msgIndex !== -1) {
@@ -873,23 +1134,50 @@ watch(q, () => {
 
 // Lifecycle
 onMounted(async () => {
-  await fetchDevices();
-  if (selectedDeviceId.value) {
-    loadMessages();
+  // Connect socket and setup listeners
+  const socket = connectSocket();
+  
+  socket.on('connect', () => {
+    if (selectedDeviceId.value) {
+      setupSocketListener();
+    }
+  });
+  
+  socket.on('disconnect', (reason) => {
+    // Socket disconnected
+  });
+  
+  socket.on('connect_error', (error) => {
+    // Socket connection error
+  });
+  
+  // If already connected, setup immediately
+  if (socket.connected && selectedDeviceId.value) {
     setupSocketListener();
   }
   
-  // Initialize socket connection
-  try {
-    connectSocket();
-  } catch (e) {
-    console.warn('Socket connection failed:', e);
+  // Fetch data
+  await fetchDevices();
+  
+  // Load messages if device selected
+  if (selectedDeviceId.value) {
+    loadMessages();
+    
+    if (socket.connected) {
+      setupSocketListener();
+    }
   }
 });
 
 onUnmounted(() => {
   if (socketCleanup) {
     socketCleanup();
+  }
+  
+  // Cleanup socket connect listener
+  const socket = getSocket();
+  if (socket) {
+    socket.off('connect');
   }
 });
 </script>
@@ -1305,12 +1593,6 @@ onUnmounted(() => {
   margin-top: 8px;
 }
 
-.phone-number {
-  font-size: 12px;
-  color: #94a3b8;
-  font-family: monospace;
-}
-
 /* Loading State - Konsisten dengan Schedules */
 .loading-state {
   display: flex;
@@ -1610,6 +1892,30 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.8);
 }
 
+/* Read Count Badge for Group Messages */
+.read-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.read-count-badge svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.chat-bubble.incoming .read-count-badge {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
 .status-icon {
   width: 14px;
   height: 14px;
@@ -1618,6 +1924,19 @@ onUnmounted(() => {
 
 .status-icon.error {
   color: #fca5a5;
+}
+
+/* Checkmark styles */
+.status-icon.checkmark-single {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.status-icon.checkmark-double {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.status-icon.checkmark-double-blue {
+  color: #60a5fa; /* Blue color for read status */
 }
 
 /* Reply Input */

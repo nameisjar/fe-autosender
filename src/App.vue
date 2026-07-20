@@ -7,6 +7,7 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { useGroups } from "./composables/useGroups.js";
 import { useDevices } from "./composables/useDevices.js";
+import { useGlobalNotifications } from "./composables/useGlobalNotifications.js";
 import { clearDeviceAccessTokenCache, userApi } from "./api/http.js";
 import ToastContainer from "./components/ToastContainer.vue";
 import { setToastInstance } from "./composables/useToast.js";
@@ -14,6 +15,9 @@ import { setToastInstance } from "./composables/useToast.js";
 const { loadGroups } = useGroups();
 const { loadDevices } = useDevices();
 const toastContainer = ref(null);
+
+// ✅ Setup global notifications untuk semua page
+useGlobalNotifications();
 
 // 🔔 Handle device session closed event
 function handleDeviceSessionClosed(event) {
