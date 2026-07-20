@@ -55,12 +55,15 @@ export function useGlobalNotifications() {
 
     const handlers = [];
 
-    // Listen ke semua sessions milik user
-    userDevices.forEach(device => {
-      const sessionId = device.sessionId;
-      if (!sessionId) return;
+    // ✅ FIXED: Only listen to unique sessionIds (avoid duplicate notifications if user has multiple devices with same session)
+    const uniqueSessionIds = [...new Set(userDevices.map(d => d.sessionId).filter(Boolean))];
 
+    // Listen ke semua sessions milik user
+    uniqueSessionIds.forEach(sessionId => {
       const incomingEventName = `incoming:${sessionId}`;
+      
+      // ✅ FIXED: Remove existing listener first to prevent duplicates
+      socket.off(incomingEventName);
       
       const handler = (data) => {
         const senderName = getSenderName(data);

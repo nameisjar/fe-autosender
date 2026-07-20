@@ -639,9 +639,21 @@ const setupSocketListener = () => {
     }
 
     const incomingEventName = `incoming:${sessionId}`;
+    const profileUpdateEventName = `incoming:${sessionId}:profile-updated`;
     const statusEventName = `device:${selectedDeviceId.value}:message-status`;
     
+    // ✅ CRITICAL: Remove any existing listeners FIRST before adding new ones
+    socket.off(incomingEventName);
+    socket.off(profileUpdateEventName);
+    socket.off(statusEventName);
+    
     const handleIncoming = (data) => {
+      // ✅ CRITICAL: Check for duplicates before adding
+      const isDuplicate = messages.value.some(m => m.id === data.id);
+      if (isDuplicate) {
+        return; // Skip duplicate message
+      }
+      
       // Add to messages list
       messages.value.unshift(data);
       meta.value.totalMessages++;
@@ -651,9 +663,33 @@ const setupSocketListener = () => {
       
       // If conversation is open, add to chat
       if (selectedConversation.value && selectedConversation.value.from === data.from) {
-        selectedConversation.value.messages.push(data);
-        selectedConversation.value.messageCount++;
-        setTimeout(() => scrollToBottom(), 100);
+        // ✅ Check duplicate in conversation messages too
+        const isConvDuplicate = selectedConversation.value.messages.some(m => m.id === data.id);
+        if (!isConvDuplicate) {
+          selectedConversation.value.messages.push(data);
+          selectedConversation.value.messageCount++;
+          setTimeout(() => scrollToBottom(), 100);
+        }
+      }
+    };
+    
+    // ✅ NEW: Handle profile picture update from background fetch
+    const handleProfileUpdate = (data) => {
+      // Update message in messages list
+      const msgIndex = messages.value.findIndex(m => m.id === data.id);
+      if (msgIndex !== -1) {
+        messages.value[msgIndex] = { ...messages.value[msgIndex], profilePicUrl: data.profilePicUrl };
+      }
+      
+      // Update in conversation if open
+      if (selectedConversation.value && selectedConversation.value.from === data.from) {
+        const convMsgIndex = selectedConversation.value.messages.findIndex(m => m.id === data.id);
+        if (convMsgIndex !== -1) {
+          selectedConversation.value.messages[convMsgIndex] = {
+            ...selectedConversation.value.messages[convMsgIndex],
+            profilePicUrl: data.profilePicUrl
+          };
+        }
       }
     };
 
@@ -707,10 +743,12 @@ const setupSocketListener = () => {
 
     // Register listeners
     socket.on(incomingEventName, handleIncoming);
+    socket.on(profileUpdateEventName, handleProfileUpdate); // ✅ NEW: Listen for profile picture updates
     socket.on(statusEventName, handleMessageStatus);
     
     socketCleanup = () => {
       socket.off(incomingEventName, handleIncoming);
+      socket.off(profileUpdateEventName, handleProfileUpdate); // ✅ Cleanup profile update listener
       socket.off(statusEventName, handleMessageStatus);
     };
   } catch (e) {
@@ -1151,11 +1189,6 @@ onMounted(async () => {
     // Socket connection error
   });
   
-  // If already connected, setup immediately
-  if (socket.connected && selectedDeviceId.value) {
-    setupSocketListener();
-  }
-  
   // Fetch data
   await fetchDevices();
   
@@ -1163,6 +1196,7 @@ onMounted(async () => {
   if (selectedDeviceId.value) {
     loadMessages();
     
+    // ✅ FIXED: Only setup listener once - either if already connected OR wait for 'connect' event above
     if (socket.connected) {
       setupSocketListener();
     }
