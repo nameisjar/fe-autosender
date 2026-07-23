@@ -276,7 +276,9 @@ const recipientsPicker = ref(null);
 
 // Message templates
 const messageTemplates = {
-  "offer-ec": `Halo Ayah/Bunda 👋
+  "offer-ec": `🤖 Pengingat Extra Class (EC)
+
+Halo Ayah/Bunda 👋
 
 Sebagai pengganti pertemuan sebelumnya, {{siswa}} telah dijadwalkan mengikuti Extra Class (EC) yang akan dilaksanakan pada:
 
