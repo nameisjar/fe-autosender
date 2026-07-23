@@ -276,9 +276,44 @@ const recipientsPicker = ref(null);
 
 // Message templates
 const messageTemplates = {
-  "offer-ec": `Selamat pagi Ayah/Bunda, mohon maaf mengganggu waktunya. Saya ingin menginformasikan bahwa sebagai pengganti pertemuan sebelumnya, {{siswa}} telah saya daftarkan ke kelas tambahan atau Extra Class (EC), yang akan diadakan pada hari Minggu pukul 08.00 WIB. Apakah {{siswa}} dapat mengikuti kelas pada waktu tersebut? Terima kasih atas perhatian dan kerjasamanya. 🙏`,
-  "reminder-ec": `Selamat pagi Ayah/Bunda, mohon maaf mengganggu waktunya. Sebagai pengingat, kelas tambahan atau Extra Class (EC) untuk {{siswa}} akan segera dimulai hari ini pukul 08.00 WIB. Mohon bantuan Ayah/Bunda untuk mengingatkan {{siswa}} agar dapat segera bergabung ke Zoom tepat waktu. Terima kasih atas perhatian dan kerja samanya. 🙏`,
-  "reminder-class": `Selamat pagi Ayah/Bunda, mohon maaf mengganggu. Saya ingin menginformasikan bahwa hingga saat ini {{siswa}} belum bergabung ke kelas yang sedang berlangsung. Mohon bantuan Ayah/Bunda untuk mengingatkan {{siswa}} agar dapat segera bergabung ke Zoom. Terima kasih atas perhatian dan kerja samanya. 🙏`,
+  "offer-ec": `Halo Ayah/Bunda 👋
+
+Sebagai pengganti pertemuan sebelumnya, {{siswa}} telah dijadwalkan mengikuti Extra Class (EC) yang akan dilaksanakan pada:
+
+📅 Hari: Minggu
+🕔 Pukul: 17.00 WIB
+
+Mohon konfirmasi apakah {{siswa}} dapat mengikuti kelas tersebut.
+
+📝 Catatan: Link Zoom akan dibagikan oleh tutor yang bertugas mengajar kelas pengganti sebelum kelas dimulai.
+
+Terima kasih atas perhatian dan kerja samanya. 🙏
+
+(Pesan Otomatis)`,
+  "reminder-ec": `🤖 Pengingat Kelas Hari Ini
+
+Halo Ayah/Bunda,
+
+Ini adalah pengingat bahwa {{siswa}} dijadwalkan mengikuti Extra Class (EC) hari ini pukul 08.00 WIB.
+
+Mohon membantu mengingatkan {{siswa}} untuk bergabung ke Zoom tepat waktu.
+
+📝 Link Zoom.
+
+Terima kasih. 🙏
+
+(Pesan Otomatis)`,
+  "reminder-class": `🤖 Pengingat Kehadiran Kelas
+
+Halo Ayah/Bunda 👋
+
+Berdasarkan data kehadiran, hingga saat ini {{siswa}} belum bergabung ke kelas yang sedang berlangsung.
+
+Mohon bantuan Ayah/Bunda untuk mengingatkan {{siswa}} agar dapat segera bergabung ke Zoom apabila memungkinkan.
+
+Terima kasih atas perhatian dan kerja samanya. 🙏
+
+(Pesan Otomatis)`,
   "invit-grad": `Selamat pagi Ayah/Bunda,
 
 Dengan hormat, kami mengundang Ayah/Bunda untuk menghadiri Acara Graduation (to next level) sebagai bentuk apresiasi atas proses belajar yang telah diikuti oleh {{siswa}}.
