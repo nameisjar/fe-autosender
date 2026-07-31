@@ -134,17 +134,11 @@
           <div class="message-avatar">
             <!-- Personal chat with profile picture -->
             <img
-              v-if="!conv.isGroup && conv.profilePicUrl"
-              :src="conv.profilePicUrl"
+              v-if="getConversationAvatar(conv)"
+              :src="getConversationAvatar(conv)"
               class="avatar-image"
-              @error="(e) => e.target.style.display = 'none'"
-            />
-            <!-- Group with picture -->
-            <img
-              v-else-if="conv.isGroup && conv.groupPicUrl"
-              :src="conv.groupPicUrl"
-              class="avatar-image"
-              @error="(e) => e.target.style.display = 'none'"
+              referrerpolicy="no-referrer"
+              @error="(e) => handleAvatarError(conv, e)"
             />
             <!-- Fallback avatar circle -->
             <div
@@ -269,17 +263,11 @@
           <div class="modal-header-info">
             <!-- Personal chat with profile picture -->
             <img
-              v-if="!selectedConversation.isGroup && selectedConversation.profilePicUrl"
-              :src="selectedConversation.profilePicUrl"
+              v-if="getConversationAvatar(selectedConversation)"
+              :src="getConversationAvatar(selectedConversation)"
               class="avatar-image modal-avatar"
-              @error="(e) => e.target.style.display = 'none'"
-            />
-            <!-- Group with picture -->
-            <img
-              v-else-if="selectedConversation.isGroup && selectedConversation.groupPicUrl"
-              :src="selectedConversation.groupPicUrl"
-              class="avatar-image modal-avatar"
-              @error="(e) => e.target.style.display = 'none'"
+              referrerpolicy="no-referrer"
+              @error="(e) => handleAvatarError(selectedConversation, e)"
             />
             <!-- Fallback avatar circle -->
             <div
@@ -559,6 +547,9 @@ const chatMessagesContainer = ref(null);
 const attachmentInput = ref(null);
 const selectedAttachment = ref(null);
 const attachmentPreviewUrl = ref('');
+const conversationAvatarUrls = ref({});
+const failedAvatarKeys = ref(new Set());
+const loadingAvatarKeys = new Set();
 
 const attachmentKind = computed(() => {
   const type = selectedAttachment.value?.type || '';
@@ -690,10 +681,10 @@ const conversations = computed(() => {
       grouped[key] = {
         from: key,
         contact: outgoing.contact,
-        pushName: null,
-        groupName: null,
-        groupPicUrl: null,
-        profilePicUrl: null,
+        pushName: outgoing.pushName || null,
+        groupName: outgoing.groupName || null,
+        groupPicUrl: outgoing.groupPicUrl || null,
+        profilePicUrl: outgoing.profilePicUrl || null,
         isGroup: outgoing.isGroup || key.includes('@g.us'),
         messages: [],
         latestMessage: normalizedMessage,
@@ -707,6 +698,9 @@ const conversations = computed(() => {
     conversation.messageCount += Number(outgoing.messageCount) || 1;
     if (!conversation.contact && outgoing.contact) {
       conversation.contact = outgoing.contact;
+    }
+    if (!conversation.pushName && outgoing.pushName) {
+      conversation.pushName = outgoing.pushName;
     }
     if (
       new Date(normalizedMessage.receivedAt) >
@@ -742,6 +736,7 @@ const fetchDevices = async () => {
 };
 
 const onDeviceChange = () => {
+  clearConversationAvatars();
   localStorage.setItem('device_selected_id', selectedDeviceId.value);
   window.dispatchEvent(new Event('deviceChanged'));
   page.value = 1;
@@ -825,6 +820,18 @@ const loadMessages = async () => {
       ...realtimeOutgoing,
       ...outgoingList.filter(message => !realtimeOutgoingIds.has(message.id)),
     ];
+    void loadConversationAvatars([
+      ...messages.value.map(message => ({
+        from: message.from,
+        isGroup: message.isGroup || message.from?.includes('@g.us'),
+        profilePicUrl: message.profilePicUrl,
+        groupPicUrl: message.groupPicUrl,
+      })),
+      ...outgoingConversationSummaries.value.map(message => ({
+        from: message.to,
+        isGroup: message.isGroup || message.to?.includes('@g.us'),
+      })),
+    ]);
     meta.value = {
       totalMessages: data?.metadata?.totalMessages || data?.total || list.length,
       currentPage: page.value,
@@ -979,6 +986,13 @@ const setupSocketListener = () => {
           console.log('✅ Updated message in conversation:', convMsgIndex);
         }
       }
+
+      void loadConversationAvatar({
+        from: data.from,
+        isGroup: data.isGroup || data.from?.includes('@g.us'),
+        profilePicUrl: data.profilePicUrl,
+        groupPicUrl: data.groupPicUrl,
+      });
     };
 
     const handleMessageStatus = (data) => {
@@ -1663,7 +1677,7 @@ const getSenderName = (conv) => {
   if (conv.isGroup) {
     return `Grup ${formatPhoneOrId(conv.from)}`;
   }
-  return formatPhoneOrId(conv.from);
+  return formatWhatsAppIdentity(conv.from) ? 'Kontak WhatsApp' : 'Kontak';
 };
 
 // Linked IDs are internal WhatsApp identifiers and must not be exposed as
@@ -1700,6 +1714,89 @@ const getConversationPhone = (conversation) => {
 
 const getMessageSenderPhone = (message) => {
   return formatWhatsAppIdentity(message?.participant);
+};
+
+const getAvatarKey = (conversation) =>
+  `${selectedDeviceId.value}:${conversation?.from || conversation?.to || ''}`;
+
+const getConversationAvatar = (conversation) => {
+  if (!conversation) return '';
+  const key = getAvatarKey(conversation);
+  if (failedAvatarKeys.value.has(key)) return '';
+
+  return conversationAvatarUrls.value[key]
+    || (conversation.isGroup ? conversation.groupPicUrl : conversation.profilePicUrl)
+    || '';
+};
+
+const handleAvatarError = (conversation, event) => {
+  const key = getAvatarKey(conversation);
+  const objectUrl = conversationAvatarUrls.value[key];
+  if (objectUrl?.startsWith('blob:')) URL.revokeObjectURL(objectUrl);
+
+  const nextUrls = { ...conversationAvatarUrls.value };
+  delete nextUrls[key];
+  conversationAvatarUrls.value = nextUrls;
+  failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
+
+  if (event?.target) event.target.removeAttribute('src');
+};
+
+const loadConversationAvatar = async (conversation) => {
+  const recipient = conversation?.from || conversation?.to;
+  if (!recipient || !selectedDeviceId.value || recipient.includes('@lid')) return;
+
+  const key = getAvatarKey(conversation);
+  if (conversationAvatarUrls.value[key] || loadingAvatarKeys.has(key)) return;
+  loadingAvatarKeys.add(key);
+
+  try {
+    const { data } = await deviceApi.get('/messages/get-profile', {
+      params: {
+        recipient,
+        resolution: 'high',
+        download: '1',
+      },
+      responseType: 'blob',
+    });
+    if (!(data instanceof Blob) || data.size === 0 || !data.type.startsWith('image/')) return;
+
+    const objectUrl = URL.createObjectURL(data);
+    const previousUrl = conversationAvatarUrls.value[key];
+    if (previousUrl?.startsWith('blob:')) URL.revokeObjectURL(previousUrl);
+    conversationAvatarUrls.value = {
+      ...conversationAvatarUrls.value,
+      [key]: objectUrl,
+    };
+
+    if (failedAvatarKeys.value.has(key)) {
+      const nextFailed = new Set(failedAvatarKeys.value);
+      nextFailed.delete(key);
+      failedAvatarKeys.value = nextFailed;
+    }
+  } catch {
+    // Keep the WhatsApp CDN URL as fallback when proxy loading is unavailable.
+  } finally {
+    loadingAvatarKeys.delete(key);
+  }
+};
+
+const loadConversationAvatars = async (items) => {
+  const unique = new Map();
+  for (const item of items || []) {
+    const recipient = item?.from || item?.to;
+    if (recipient && !unique.has(recipient)) unique.set(recipient, item);
+  }
+  await Promise.allSettled([...unique.values()].map(loadConversationAvatar));
+};
+
+const clearConversationAvatars = () => {
+  Object.values(conversationAvatarUrls.value).forEach((url) => {
+    if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url);
+  });
+  conversationAvatarUrls.value = {};
+  failedAvatarKeys.value = new Set();
+  loadingAvatarKeys.clear();
 };
 
 // Watchers
@@ -1751,6 +1848,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearAttachment();
+  clearConversationAvatars();
   if (socketCleanup) {
     socketCleanup();
     socketCleanup = null;
