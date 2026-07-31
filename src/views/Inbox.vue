@@ -550,6 +550,7 @@ const attachmentPreviewUrl = ref('');
 const conversationAvatarUrls = ref({});
 const failedAvatarKeys = ref(new Set());
 const loadingAvatarKeys = new Set();
+const avatarRecoveryAttempts = new Map();
 
 const attachmentKind = computed(() => {
   const type = selectedAttachment.value?.type || '';
@@ -1772,14 +1773,25 @@ const handleAvatarError = (conversation, event) => {
   failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
 
   if (event?.target) event.target.removeAttribute('src');
+  const recoveryAttempts = avatarRecoveryAttempts.get(key) || 0;
+  if (recoveryAttempts < 2) {
+    avatarRecoveryAttempts.set(key, recoveryAttempts + 1);
+    void loadConversationAvatar(conversation, true);
+  }
 };
 
-const loadConversationAvatar = async (conversation) => {
+const loadConversationAvatar = async (conversation, force = false) => {
   const recipient = conversation?.from || conversation?.to;
   if (!recipient || !selectedDeviceId.value || recipient.includes('@lid')) return;
 
   const key = getAvatarKey(conversation);
-  if (conversationAvatarUrls.value[key] || loadingAvatarKeys.has(key)) return;
+  const directUrl = conversation.isGroup
+    ? conversation.groupPicUrl
+    : conversation.profilePicUrl;
+  // Prefer the URL already returned with Inbox data. Proxy it only when it is
+  // missing or the browser reports that the URL can no longer be loaded.
+  if (!force && directUrl) return;
+  if ((!force && conversationAvatarUrls.value[key]) || loadingAvatarKeys.has(key)) return;
   loadingAvatarKeys.add(key);
 
   try {
@@ -1800,6 +1812,7 @@ const loadConversationAvatar = async (conversation) => {
       ...conversationAvatarUrls.value,
       [key]: objectUrl,
     };
+    avatarRecoveryAttempts.delete(key);
 
     if (failedAvatarKeys.value.has(key)) {
       const nextFailed = new Set(failedAvatarKeys.value);
@@ -1841,7 +1854,17 @@ const loadConversationAvatars = async (items) => {
     const recipient = item?.from || item?.to;
     if (recipient && !unique.has(recipient)) unique.set(recipient, item);
   }
-  await Promise.allSettled([...unique.values()].map(loadConversationAvatar));
+  // Avoid flooding WhatsApp with profile-picture queries. Production accounts
+  // can rate-limit a burst even though the same calls appear safe locally.
+  const queue = [...unique.values()];
+  const worker = async () => {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      await loadConversationAvatar(item);
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+  };
+  await Promise.allSettled([worker(), worker(), worker()]);
 };
 
 const clearConversationAvatars = () => {
@@ -1851,6 +1874,7 @@ const clearConversationAvatars = () => {
   conversationAvatarUrls.value = {};
   failedAvatarKeys.value = new Set();
   loadingAvatarKeys.clear();
+  avatarRecoveryAttempts.clear();
 };
 
 // Watchers
