@@ -3,35 +3,67 @@ import { connectSocket, getSocket } from '../api/socket.js';
 import { useToast } from './useToast.js';
 import { userApi } from '../api/http.js';
 
-/**
- * Global notification service untuk incoming WhatsApp messages
- * Bisa digunakan di semua component untuk menerima notifikasi
- */
+/** Global toast and sound notifications for incoming WhatsApp messages. */
 export function useGlobalNotifications() {
   const toast = useToast();
-  let socketCleanup = null;
   const devices = ref([]);
+  let socketCleanup = null;
+  let connectionCleanup = null;
+  let refreshTimer = null;
+  let setupGeneration = 0;
+  let audioContext = null;
 
   const formatPhone = (jid) => {
     if (!jid) return '';
-    const cleaned = jid.replace(/@s\.whatsapp\.net|@g\.us|@lid/g, '');
-    if (jid.includes('@lid')) {
-      return `ID: ${cleaned.slice(-8)}...`;
-    }
-    return cleaned;
+    if (jid.includes('@lid')) return 'Kontak WhatsApp';
+    return jid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
   };
 
   const getSenderName = (data) => {
-    // Prioritas: contact > pushName > groupName > formatted phone
     if (data.contact) {
       return `${data.contact.firstName} ${data.contact.lastName || ''}`.trim();
-    } else if (data.pushName) {
-      return data.pushName;
-    } else if (data.isGroup && data.groupName) {
-      return data.groupName;
-    } else {
-      return formatPhone(data.from);
     }
+    if (data.pushName) return data.pushName;
+    if (data.isGroup && data.groupName) return data.groupName;
+    return formatPhone(data.from);
+  };
+
+  const getAudioContext = () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!audioContext || audioContext.state === 'closed') {
+      audioContext = new AudioContextClass();
+    }
+    return audioContext;
+  };
+
+  // Browsers allow sound only after a user gesture. Unlock one shared context
+  // on pointer/keyboard input so later incoming messages can play reliably.
+  const unlockNotificationSound = async () => {
+    try {
+      const context = getAudioContext();
+      if (context?.state === 'suspended') await context.resume();
+    } catch (_) {}
+  };
+
+  const playNotificationSound = async () => {
+    try {
+      const context = getAudioContext();
+      if (!context) return;
+      if (context.state === 'suspended') await context.resume();
+
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+
+      oscillator.frequency.setValueAtTime(800, context.currentTime);
+      oscillator.frequency.setValueAtTime(600, context.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, context.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+      oscillator.start(context.currentTime);
+      oscillator.stop(context.currentTime + 0.3);
+    } catch (_) {}
   };
 
   const fetchUserDevices = async () => {
@@ -39,9 +71,9 @@ export function useGlobalNotifications() {
       const { data } = await userApi.get('/devices');
       devices.value = Array.isArray(data) ? data : [];
       return devices.value;
-    } catch (e) {
-      console.error('Failed to fetch devices for global notifications:', e);
-      return [];
+    } catch (error) {
+      console.error('Failed to fetch devices for global notifications:', error);
+      return null;
     }
   };
 
@@ -49,79 +81,100 @@ export function useGlobalNotifications() {
     const socket = getSocket();
     if (!socket) return;
 
-    // ✅ CRITICAL: Cleanup previous listeners first to prevent duplicates
+    const generation = ++setupGeneration;
+    const userDevices = await fetchUserDevices();
+    if (generation !== setupGeneration) return;
+
+    // A temporary API failure must not remove listeners that are still valid.
+    if (userDevices === null) return;
+
     if (socketCleanup) {
       socketCleanup();
       socketCleanup = null;
     }
-
-    // Fetch user devices
-    const userDevices = await fetchUserDevices();
     if (userDevices.length === 0) return;
 
     const handlers = [];
+    const uniqueSessionIds = [...new Set(userDevices.map(device => device.sessionId).filter(Boolean))];
 
-    // ✅ FIXED: Only listen to unique sessionIds (avoid duplicate notifications if user has multiple devices with same session)
-    const uniqueSessionIds = [...new Set(userDevices.map(d => d.sessionId).filter(Boolean))];
-
-    // Listen ke semua sessions milik user
-    uniqueSessionIds.forEach(sessionId => {
-      const incomingEventName = `incoming:${sessionId}`;
-      
-      // ✅ FIXED: Remove existing listener first to prevent duplicates
-      socket.off(incomingEventName);
-      
+    uniqueSessionIds.forEach((sessionId) => {
+      const eventName = `incoming:${sessionId}`;
       const handler = (data) => {
         const senderName = getSenderName(data);
-        const preview = data.message?.substring(0, 50) || '📎 Media/File';
-        
-        // Show notification dengan nama pengirim
+        const preview = data.message?.substring(0, 50) || 'Media/File';
         toast.info(`💬 ${senderName}: ${preview}`);
+        void playNotificationSound();
       };
 
-      socket.on(incomingEventName, handler);
-      handlers.push({ eventName: incomingEventName, handler });
+      socket.on(eventName, handler);
+      handlers.push({ eventName, handler });
     });
 
     socketCleanup = () => {
-      handlers.forEach(({ eventName, handler }) => {
-        socket.off(eventName, handler);
-      });
+      handlers.forEach(({ eventName, handler }) => socket.off(eventName, handler));
     };
   };
 
-  onMounted(async () => {
-    // Only setup if user is logged in
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    // Connect socket jika belum
+  const scheduleListenerRefresh = () => {
+    if (!localStorage.getItem('token')) return;
     connectSocket();
-    
-    // Setup global listener
-    const socket = getSocket();
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
+      void setupGlobalListener();
+    }, 100);
+  };
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') scheduleListenerRefresh();
+  };
+
+  onMounted(async () => {
+    // Register lifecycle events even on the login page. App.vue remains
+    // mounted after login, so returning before this point would permanently
+    // disable global notifications for that browser session.
+    window.addEventListener('deviceChanged', scheduleListenerRefresh);
+    window.addEventListener('device:changed', scheduleListenerRefresh);
+    window.addEventListener('devices:loaded', scheduleListenerRefresh);
+    window.addEventListener('user:logged-in', scheduleListenerRefresh);
+    window.addEventListener('wa:device-session-closed', scheduleListenerRefresh);
+    window.addEventListener('focus', scheduleListenerRefresh);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('pointerdown', unlockNotificationSound);
+    document.addEventListener('keydown', unlockNotificationSound);
+
+    if (!localStorage.getItem('token')) return;
+
+    const socket = connectSocket();
     if (socket) {
-      // ✅ CRITICAL: Remove connect listener first to prevent duplicate setup
-      socket.off('connect');
-      
-      if (socket.connected) {
-        await setupGlobalListener();
-      }
-      
-      // Setup listener for reconnection
-      socket.on('connect', async () => {
-        await setupGlobalListener();
-      });
+      const handleConnect = () => scheduleListenerRefresh();
+      if (socket.connected) await setupGlobalListener();
+      socket.on('connect', handleConnect);
+      connectionCleanup = () => socket.off('connect', handleConnect);
     }
   });
 
   onUnmounted(() => {
-    if (socketCleanup) {
-      socketCleanup();
+    if (socketCleanup) socketCleanup();
+    if (connectionCleanup) connectionCleanup();
+    if (refreshTimer) clearTimeout(refreshTimer);
+    setupGeneration++;
+
+    window.removeEventListener('deviceChanged', scheduleListenerRefresh);
+    window.removeEventListener('device:changed', scheduleListenerRefresh);
+    window.removeEventListener('devices:loaded', scheduleListenerRefresh);
+    window.removeEventListener('user:logged-in', scheduleListenerRefresh);
+    window.removeEventListener('wa:device-session-closed', scheduleListenerRefresh);
+    window.removeEventListener('focus', scheduleListenerRefresh);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.removeEventListener('pointerdown', unlockNotificationSound);
+    document.removeEventListener('keydown', unlockNotificationSound);
+
+    if (audioContext && audioContext.state !== 'closed') {
+      void audioContext.close().catch(() => {});
     }
+    audioContext = null;
   });
 
-  return {
-    devices,
-  };
+  return { devices };
 }

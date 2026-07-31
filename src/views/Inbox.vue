@@ -104,8 +104,8 @@
         <button
           class="btn-delete-all"
           @click="confirmDeleteAll"
-          :disabled="loading || !selectedDeviceId || messages.length === 0"
-          title="Hapus Semua Pesan Masuk"
+          :disabled="loading || !selectedDeviceId || conversations.length === 0"
+          title="Hapus semua pesan masuk dan keluar"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6" />
@@ -177,13 +177,24 @@
           </div>
           <div class="message-content">
             <div class="message-header">
-              <span class="sender-name">
-                {{ getSenderName(conv) }}
-              </span>
-              <span class="message-time">{{ formatTime(conv.latestMessage.receivedAt) }}</span>
+              <div class="sender-identity">
+                <span class="sender-name">
+                  {{ getSenderName(conv) }}
+                </span>
+                <span v-if="getConversationPhone(conv)" class="sender-phone">
+                  {{ getConversationPhone(conv) }}
+                </span>
+              </div>
+              <div class="message-header-right">
+                <span class="message-time">{{ formatTime(conv.latestMessage.receivedAt) }}</span>
+                <!-- Unread badge -->
+                <span v-if="conv.unreadCount > 0" class="unread-badge">
+                  {{ conv.unreadCount > 99 ? '99+' : conv.unreadCount }}
+                </span>
+              </div>
             </div>
             <div class="message-preview">
-              {{ truncateMessage(conv.latestMessage.message, 100) }}
+              {{ getMessagePreview(conv.latestMessage) }}
             </div>
             <div class="message-meta">
               <span v-if="conv.messageCount > 1" class="message-count">
@@ -292,7 +303,10 @@
             </div>
             <div>
               <h3>{{ getSenderName(selectedConversation) }}</h3>
-              <span class="modal-subtitle">{{ selectedConversation.messages.length }} pesan</span>
+              <span v-if="getConversationPhone(selectedConversation)" class="modal-phone">
+                {{ getConversationPhone(selectedConversation) }}
+              </span>
+              <span class="modal-subtitle">{{ selectedConversation.messageCount }} pesan</span>
             </div>
           </div>
           <button class="btn-close" @click="closeConversation">
@@ -314,11 +328,66 @@
               <div class="bubble-content">
                 <!-- Sender name for group incoming messages -->
                 <div v-if="msg.type === 'incoming' && selectedConversation.isGroup" class="bubble-sender">
-                  {{ msg.pushName || formatPhoneOrId(msg.participant) || 'Tidak dikenal' }}
+                  <span>{{ msg.pushName || 'Tidak dikenal' }}</span>
+                  <span v-if="getMessageSenderPhone(msg)" class="bubble-sender-phone">
+                    {{ getMessageSenderPhone(msg) }}
+                  </span>
                 </div>
                 
+                <!-- Incoming WhatsApp sticker (static or animated WebP) -->
+                <img
+                  v-if="isStickerMessage(msg) && msg.mediaPath"
+                  :src="mediaUrl(msg.mediaPath)"
+                  alt="Stiker"
+                  class="sticker-message"
+                  loading="lazy"
+                  @error="handleStickerError($event, msg)"
+                />
+
+                <img
+                  v-else-if="isImageMedia(msg)"
+                  :src="mediaUrl(msg.mediaPath)"
+                  alt="Gambar WhatsApp"
+                  class="chat-image"
+                  loading="lazy"
+                  @error="handleMediaError($event, msg)"
+                />
+
+                <video
+                  v-else-if="isVideoMedia(msg)"
+                  :src="mediaUrl(msg.mediaPath)"
+                  class="chat-video"
+                  controls
+                  preload="metadata"
+                ></video>
+
+                <audio
+                  v-else-if="isAudioMedia(msg)"
+                  :src="mediaUrl(msg.mediaPath)"
+                  class="chat-audio"
+                  controls
+                  preload="metadata"
+                ></audio>
+
+                <a
+                  v-else-if="isDocumentMedia(msg)"
+                  :href="mediaUrl(msg.mediaPath)"
+                  class="chat-document"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  <span>{{ getMediaFileName(msg) }}</span>
+                </a>
+
                 <!-- Message text -->
-                <div class="bubble-text">{{ msg.type === 'incoming' ? msg.message : msg.text }}</div>
+                <div v-if="getVisibleMessageText(msg)" class="bubble-text">
+                  {{ getVisibleMessageText(msg) }}
+                </div>
                 
                 <!-- Time with status for outgoing -->
                 <div class="bubble-time">
@@ -371,28 +440,62 @@
           
           <!-- Reply Input -->
           <div class="reply-input-container">
-            <textarea
-              v-model="replyText"
-              placeholder="Ketik pesan..."
-              class="reply-textarea"
-              @keydown.enter.exact="handleEnterKey"
-              rows="1"
-              ref="replyTextarea"
-            ></textarea>
-            <button
-              class="btn-send-reply"
-              @click="sendReply"
-              :disabled="!replyText.trim() || sendingReply"
-              title="Kirim pesan"
-            >
-              <svg v-if="sendingReply" class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </button>
+            <div v-if="selectedAttachment" class="attachment-preview">
+              <img
+                v-if="attachmentKind === 'image'"
+                :src="attachmentPreviewUrl"
+                alt="Preview lampiran"
+              />
+              <div v-else class="attachment-file-icon">{{ attachmentKindLabel }}</div>
+              <div class="attachment-info">
+                <strong>{{ selectedAttachment.name }}</strong>
+                <span>{{ formatFileSize(selectedAttachment.size) }}</span>
+              </div>
+              <button type="button" @click="clearAttachment" title="Hapus lampiran">×</button>
+            </div>
+
+            <div class="reply-input-row">
+              <input
+                ref="attachmentInput"
+                type="file"
+                class="attachment-input"
+                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/ogg,audio/wav,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                @change="handleAttachmentChange"
+              />
+              <button
+                type="button"
+                class="btn-attachment"
+                :disabled="sendingReply"
+                title="Lampirkan gambar, video, audio, atau dokumen"
+                @click="attachmentInput?.click()"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+              </button>
+              <textarea
+                v-model="replyText"
+                :placeholder="selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan...'"
+                class="reply-textarea"
+                @keydown.enter.exact="handleEnterKey"
+                rows="1"
+                ref="replyTextarea"
+              ></textarea>
+              <button
+                class="btn-send-reply"
+                @click="sendReply"
+                :disabled="(!replyText.trim() && !selectedAttachment) || sendingReply"
+                title="Kirim pesan"
+              >
+                <svg v-if="sendingReply" class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -435,10 +538,12 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
+import { mediaUrl } from '../utils/mediaUrl.js';
 
 const toast = useToast();
 
 const messages = ref([]);
+const outgoingConversationSummaries = ref([]);
 const devices = ref([]);
 const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
 const loading = ref(false);
@@ -451,6 +556,24 @@ const sendingReply = ref(false);
 const sentMessages = ref([]);
 const replyTextarea = ref(null);
 const chatMessagesContainer = ref(null);
+const attachmentInput = ref(null);
+const selectedAttachment = ref(null);
+const attachmentPreviewUrl = ref('');
+
+const attachmentKind = computed(() => {
+  const type = selectedAttachment.value?.type || '';
+  if (type.startsWith('image/')) return 'image';
+  if (type.startsWith('video/')) return 'video';
+  if (type.startsWith('audio/')) return 'audio';
+  return 'document';
+});
+
+const attachmentKindLabel = computed(() => ({
+  image: 'Gambar',
+  video: 'Video',
+  audio: 'Audio',
+  document: 'Dokumen',
+}[attachmentKind.value]));
 
 // Search & pagination
 const q = ref('');
@@ -460,6 +583,8 @@ const meta = ref({ totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: fal
 
 let searchTimer;
 let socketCleanup = null;
+let socketConnectionCleanup = null;
+let latestLoadRequest = 0;
 
 // Computed
 const todayCount = computed(() => {
@@ -510,16 +635,22 @@ const conversations = computed(() => {
         messages: [],
         latestMessage: msg,
         messageCount: 0,
+        unreadCount: 0, // Track unread messages
       };
     }
     grouped[key].messages.push(msg);
     grouped[key].messageCount++;
+
+    // Count unread messages (messages not yet read by user)
+    if (!msg.isRead) {
+      grouped[key].unreadCount++;
+    }
     
     // Update pushName if newer message has it
     if (msg.pushName && !grouped[key].pushName) {
       grouped[key].pushName = msg.pushName;
     }
-    
+
     // Update groupName if newer message has it
     if (msg.groupName && !grouped[key].groupName) {
       grouped[key].groupName = msg.groupName;
@@ -538,6 +669,50 @@ const conversations = computed(() => {
     // Keep track of latest message
     if (new Date(msg.receivedAt) > new Date(grouped[key].latestMessage.receivedAt)) {
       grouped[key].latestMessage = msg;
+    }
+  });
+
+  // Add recipients that only have outgoing messages (broadcast, campaign,
+  // direct send, etc.) and merge them with existing incoming conversations.
+  outgoingConversationSummaries.value.forEach(outgoing => {
+    const key = outgoing.to;
+    if (!key) return;
+
+    const normalizedMessage = {
+      ...outgoing,
+      from: key,
+      message: outgoing.message || '',
+      receivedAt: outgoing.createdAt,
+      isOutgoing: true,
+    };
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        from: key,
+        contact: outgoing.contact,
+        pushName: null,
+        groupName: null,
+        groupPicUrl: null,
+        profilePicUrl: null,
+        isGroup: outgoing.isGroup || key.includes('@g.us'),
+        messages: [],
+        latestMessage: normalizedMessage,
+        messageCount: Number(outgoing.messageCount) || 1,
+        unreadCount: 0,
+      };
+      return;
+    }
+
+    const conversation = grouped[key];
+    conversation.messageCount += Number(outgoing.messageCount) || 1;
+    if (!conversation.contact && outgoing.contact) {
+      conversation.contact = outgoing.contact;
+    }
+    if (
+      new Date(normalizedMessage.receivedAt) >
+      new Date(conversation.latestMessage.receivedAt)
+    ) {
+      conversation.latestMessage = normalizedMessage;
     }
   });
   
@@ -577,22 +752,79 @@ const onDeviceChange = () => {
 const loadMessages = async () => {
   if (!selectedDeviceId.value) return;
 
+  const requestId = ++latestLoadRequest;
+  const requestedDeviceId = selectedDeviceId.value;
+  const messageIdsBeforeRequest = new Set(messages.value.map(message => message.id));
+  const outgoingIdsBeforeRequest = new Set(
+    outgoingConversationSummaries.value.map(message => message.id),
+  );
+
   loading.value = true;
   err.value = '';
 
   try {
     // Use userApi (JWT auth) instead of deviceApi (session-based auth)
     // This works even when device is disconnected from WhatsApp
-    const { data } = await userApi.get(`/devices/${selectedDeviceId.value}/inbox`, {
+    const inboxRequest = userApi.get(`/devices/${selectedDeviceId.value}/inbox`, {
       params: {
         ...(q.value ? { message: q.value } : {}),
         page: page.value,
         pageSize: pageSize.value,
+        _t: Date.now(),
+      },
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        Pragma: 'no-cache',
       },
     });
+    const outboxConversationRequest = userApi
+      .get(`/devices/${selectedDeviceId.value}/outbox/conversations`, {
+        params: {
+          ...(q.value ? { search: q.value } : {}),
+          _t: Date.now(),
+        },
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          Pragma: 'no-cache',
+        },
+      })
+      .catch(() => ({ data: [] }));
+
+    const [{ data }, { data: outgoingData }] = await Promise.all([
+      inboxRequest,
+      outboxConversationRequest,
+    ]);
+
+    // Ignore responses from a device/search request that is no longer current.
+    if (requestId !== latestLoadRequest || requestedDeviceId !== selectedDeviceId.value) return;
 
     const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-    messages.value = list;
+
+    // A socket message can arrive while this request is in flight. Preserve it so
+    // a slower HTTP response cannot make a real-time message disappear again.
+    const realtimeMessages = q.value
+      ? []
+      : messages.value.filter(message => !messageIdsBeforeRequest.has(message.id));
+    const realtimeIds = new Set(realtimeMessages.map(message => message.id));
+    messages.value = [
+      ...realtimeMessages,
+      ...list.filter(message => !realtimeIds.has(message.id)),
+    ];
+    const outgoingList = Array.isArray(outgoingData)
+      ? outgoingData
+      : Array.isArray(outgoingData?.data)
+        ? outgoingData.data
+        : [];
+    const realtimeOutgoing = q.value
+      ? []
+      : outgoingConversationSummaries.value.filter(
+          message => !outgoingIdsBeforeRequest.has(message.id),
+        );
+    const realtimeOutgoingIds = new Set(realtimeOutgoing.map(message => message.id));
+    outgoingConversationSummaries.value = [
+      ...realtimeOutgoing,
+      ...outgoingList.filter(message => !realtimeOutgoingIds.has(message.id)),
+    ];
     meta.value = {
       totalMessages: data?.metadata?.totalMessages || data?.total || list.length,
       currentPage: page.value,
@@ -600,11 +832,16 @@ const loadMessages = async () => {
       hasMore: data?.metadata?.hasMore || list.length === pageSize.value,
     };
   } catch (e) {
-    err.value = e?.response?.data?.message || 'Gagal memuat pesan masuk';
-    messages.value = [];
-    meta.value = { totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: false };
+    if (requestId === latestLoadRequest) {
+      err.value = e?.response?.data?.message || 'Gagal memuat pesan masuk';
+      messages.value = [];
+      outgoingConversationSummaries.value = [];
+      meta.value = { totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: false };
+    }
   } finally {
-    loading.value = false;
+    if (requestId === latestLoadRequest) {
+      loading.value = false;
+    }
   }
 };
 
@@ -639,13 +876,9 @@ const setupSocketListener = () => {
     }
 
     const incomingEventName = `incoming:${sessionId}`;
+    const outgoingEventName = `outgoing:${sessionId}`;
     const profileUpdateEventName = `incoming:${sessionId}:profile-updated`;
     const statusEventName = `device:${selectedDeviceId.value}:message-status`;
-    
-    // ✅ CRITICAL: Remove any existing listeners FIRST before adding new ones
-    socket.off(incomingEventName);
-    socket.off(profileUpdateEventName);
-    socket.off(statusEventName);
     
     const handleIncoming = (data) => {
       // ✅ CRITICAL: Check for duplicates before adding
@@ -654,23 +887,64 @@ const setupSocketListener = () => {
         return; // Skip duplicate message
       }
       
+      const isOpenConversation = selectedConversation.value?.from === data.from;
+      const incomingMessage = data;
+
       // Add to messages list
-      messages.value.unshift(data);
+      messages.value.unshift(incomingMessage);
       meta.value.totalMessages++;
       
-      // ✅ Notifikasi sudah ditangani oleh useGlobalNotifications di App.vue
+      // ✅ Notifikasi toast & suara sudah ditangani oleh useGlobalNotifications di App.vue
       // Tidak perlu duplikat notifikasi di sini
       
+      // ✅ Auto-scroll conversation list to top to show new message
+      scrollConversationListToTop();
+
       // If conversation is open, add to chat
-      if (selectedConversation.value && selectedConversation.value.from === data.from) {
+      if (isOpenConversation) {
         // ✅ Check duplicate in conversation messages too
         const isConvDuplicate = selectedConversation.value.messages.some(m => m.id === data.id);
         if (!isConvDuplicate) {
-          selectedConversation.value.messages.push(data);
+          selectedConversation.value.messages.push(incomingMessage);
           selectedConversation.value.messageCount++;
           setTimeout(() => scrollToBottom(), 100);
         }
+
+        // The backend stores every incoming message as unread first. Persist the
+        // read state immediately when its conversation is already being viewed.
+        markConversationAsRead(data.from);
       }
+    };
+
+    const handleOutgoing = (data) => {
+      if (!data?.to || !data?.id) return;
+
+      const existingIndex = outgoingConversationSummaries.value.findIndex(
+        message => message.to === data.to,
+      );
+      const existing = existingIndex >= 0
+        ? outgoingConversationSummaries.value[existingIndex]
+        : null;
+      const isSameMessage = existing?.id === data.id;
+      const normalized = {
+        ...existing,
+        ...data,
+        createdAt: data.createdAt || new Date().toISOString(),
+        messageCount: existing
+          ? (Number(existing.messageCount) || 1) + (isSameMessage ? 0 : 1)
+          : 1,
+        contact: data.contact || existing?.contact || null,
+      };
+
+      if (existingIndex >= 0) {
+        outgoingConversationSummaries.value.splice(existingIndex, 1);
+      }
+      outgoingConversationSummaries.value.unshift(normalized);
+
+      if (selectedConversation.value?.from === data.to) {
+        void loadSentMessagesFromDatabase(data.to);
+      }
+      scrollConversationListToTop();
     };
     
     // ✅ NEW: Handle profile picture update from background fetch
@@ -745,6 +1019,9 @@ const setupSocketListener = () => {
           }
           
           sentMessages.value = [...sentMessages.value];
+
+          // ✅ Toast notification untuk status update dinonaktifkan
+          // Status sudah terlihat dari icon checkmark di chat bubble
         } else if (newLevel === currentLevel) {
           if (data.readCount !== undefined && data.readCount > (sentMessages.value[msgIndex].readCount || 0)) {
             sentMessages.value[msgIndex].readCount = data.readCount;
@@ -757,17 +1034,20 @@ const setupSocketListener = () => {
 
     // Register listeners
     socket.on(incomingEventName, handleIncoming);
+    socket.on(outgoingEventName, handleOutgoing);
     socket.on(profileUpdateEventName, handleProfileUpdate); // ✅ NEW: Listen for profile picture updates
     socket.on(statusEventName, handleMessageStatus);
     
     console.log('✅ Socket listeners registered:', {
       incoming: incomingEventName,
+      outgoing: outgoingEventName,
       profileUpdate: profileUpdateEventName,
       status: statusEventName
     });
     
     socketCleanup = () => {
       socket.off(incomingEventName, handleIncoming);
+      socket.off(outgoingEventName, handleOutgoing);
       socket.off(profileUpdateEventName, handleProfileUpdate); // ✅ Cleanup profile update listener
       socket.off(statusEventName, handleMessageStatus);
     };
@@ -780,6 +1060,9 @@ const viewConversation = async (conv) => {
   const isSameConversation = selectedConversation.value?.from === conv.from;
   
   selectedConversation.value = conv;
+
+  // ✅ Mark all messages in this conversation as read
+  await markConversationAsRead(conv.from);
   
   // Jangan reload jika conversation yang sama (preserve real-time messages)
   if (isSameConversation) {
@@ -793,6 +1076,51 @@ const viewConversation = async (conv) => {
   
   replyText.value = '';
   setTimeout(() => scrollToBottom(), 100);
+};
+
+// ✅ NEW: Mark conversation as read (clear unread badge) - persisten ke database
+const markConversationAsRead = async (from) => {
+  const unreadMessages = messages.value.filter(msg => msg.from === from && !msg.isRead);
+  if (unreadMessages.length === 0) return true;
+
+  try {
+    // Update UI immediately (optimistic update)
+    messages.value = messages.value.map(msg => {
+      if (msg.from === from) {
+        return { ...msg, isRead: true };
+      }
+      return msg;
+    });
+
+    // Also update in selectedConversation if open
+    if (selectedConversation.value && selectedConversation.value.from === from) {
+      selectedConversation.value.messages = selectedConversation.value.messages.map(msg => ({
+        ...msg,
+        isRead: true
+      }));
+    }
+
+    // Call API to persist to database
+    await userApi.put(`/devices/${selectedDeviceId.value}/inbox/conversation/read`, {
+      from: from,
+    });
+    return true;
+  } catch (e) {
+    console.error('Failed to mark conversation as read:', e);
+    // Restore only messages that were unread before this request. This prevents
+    // the UI from claiming the badge is cleared when persistence failed.
+    const unreadIds = new Set(unreadMessages.map(msg => msg.id));
+    messages.value = messages.value.map(msg =>
+      unreadIds.has(msg.id) ? { ...msg, isRead: false } : msg
+    );
+    if (selectedConversation.value?.from === from) {
+      selectedConversation.value.messages = selectedConversation.value.messages.map(msg =>
+        unreadIds.has(msg.id) ? { ...msg, isRead: false } : msg
+      );
+    }
+    toast.error(e?.response?.data?.message || 'Gagal menyimpan status pesan dibaca');
+    return false;
+  }
 };
 
 // Load sent messages from database (OutgoingMessage)
@@ -860,6 +1188,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
       return {
         tempId: msg.id,
         text: msg.message || '',
+        mediaPath: msg.mediaPath || '',
         timestamp: msg.createdAt,
         status: uiStatus,
         waMessageId: msg.waMessageId,
@@ -879,6 +1208,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 
 // Close conversation
 const closeConversation = () => {
+  clearAttachment();
   selectedConversation.value = null;
 };
 
@@ -904,6 +1234,14 @@ const scrollToBottom = () => {
   }
 };
 
+// ✅ NEW: Scroll conversation list to top (for new incoming messages)
+const scrollConversationListToTop = () => {
+  const listContainer = document.querySelector('.messages-list');
+  if (listContainer) {
+    listContainer.scrollTop = 0;
+  }
+};
+
 // Handle Enter key: Send on Enter, new line on Shift+Enter
 const handleEnterKey = (event) => {
   if (!event.shiftKey) {
@@ -912,11 +1250,142 @@ const handleEnterKey = (event) => {
   }
 };
 
-// Send reply message
-const sendReply = async () => {
-  if (!replyText.value.trim() || sendingReply.value || !selectedConversation.value) {
+const formatFileSize = (bytes) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB';
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const clearAttachment = () => {
+  if (attachmentPreviewUrl.value) URL.revokeObjectURL(attachmentPreviewUrl.value);
+  attachmentPreviewUrl.value = '';
+  selectedAttachment.value = null;
+  if (attachmentInput.value) attachmentInput.value.value = '';
+};
+
+const handleAttachmentChange = (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 25 * 1024 * 1024) {
+    toast.error('Ukuran lampiran maksimal 25 MB');
+    event.target.value = '';
     return;
   }
+
+  if (attachmentPreviewUrl.value) URL.revokeObjectURL(attachmentPreviewUrl.value);
+  selectedAttachment.value = file;
+  attachmentPreviewUrl.value = URL.createObjectURL(file);
+};
+
+const sendMediaReply = async () => {
+  const file = selectedAttachment.value;
+  if (!file || !selectedConversation.value) return;
+
+  const caption = replyText.value.trim();
+  const recipient = selectedConversation.value.from;
+  const isGroup = selectedConversation.value.isGroup || recipient.includes('@g.us');
+  const kind = attachmentKind.value;
+  const localPreviewUrl = attachmentPreviewUrl.value;
+  const placeholders = {
+    image: '[Gambar]',
+    video: '[Video]',
+    audio: '[Audio]',
+    document: file.name,
+  };
+  const tempId = `media-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const optimisticMessage = {
+    tempId,
+    text: caption || placeholders[kind],
+    mediaPath: localPreviewUrl,
+    fileName: file.name,
+    timestamp: new Date().toISOString(),
+    status: 'sending',
+    isGroup,
+    readBy: [],
+    readCount: 0,
+  };
+
+  sentMessages.value.push(optimisticMessage);
+  selectedAttachment.value = null;
+  attachmentPreviewUrl.value = '';
+  if (attachmentInput.value) attachmentInput.value.value = '';
+  replyText.value = '';
+  sendingReply.value = true;
+  setTimeout(() => scrollToBottom(), 50);
+
+  try {
+    const formData = new FormData();
+    formData.append('recipient', recipient);
+    formData.append('caption', caption);
+    formData.append('media', file);
+
+    const { data } = await deviceApi.post('/messages/send/media', formData);
+    const saved = data?.message;
+    if (!saved?.id) throw new Error('Media terkirim tetapi data pesan tidak ditemukan');
+
+    const msgIndex = sentMessages.value.findIndex(message => message.tempId === tempId);
+    if (msgIndex >= 0) {
+      sentMessages.value[msgIndex] = {
+        ...sentMessages.value[msgIndex],
+        tempId: saved.id,
+        waMessageId: saved.waMessageId || saved.id,
+        text: saved.message || optimisticMessage.text,
+        mediaPath: saved.mediaPath || localPreviewUrl,
+        timestamp: saved.createdAt || optimisticMessage.timestamp,
+        status: 'server_ack',
+      };
+      sentMessages.value = [...sentMessages.value];
+    }
+    if (saved.mediaPath && localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+
+    const summaryIndex = outgoingConversationSummaries.value.findIndex(
+      message => message.to === recipient,
+    );
+    const previousSummary = summaryIndex >= 0
+      ? outgoingConversationSummaries.value[summaryIndex]
+      : null;
+    const summary = {
+      ...previousSummary,
+      ...saved,
+      to: recipient,
+      message: saved.message || optimisticMessage.text,
+      createdAt: saved.createdAt || optimisticMessage.timestamp,
+      messageCount:
+        (Number(previousSummary?.messageCount) || 0) +
+        (previousSummary?.id === saved.id ? 0 : 1),
+      contact: saved.contact || selectedConversation.value.contact || previousSummary?.contact || null,
+    };
+    if (summaryIndex >= 0) outgoingConversationSummaries.value.splice(summaryIndex, 1);
+    outgoingConversationSummaries.value.unshift(summary);
+
+    toast.success('Media berhasil dikirim');
+    setTimeout(() => scrollToBottom(), 50);
+  } catch (error) {
+    const msgIndex = sentMessages.value.findIndex(message => message.tempId === tempId);
+    if (msgIndex >= 0) {
+      sentMessages.value[msgIndex].status = 'error';
+      sentMessages.value = [...sentMessages.value];
+    }
+    toast.error(
+      error?.response?.data?.message || error?.message || 'Gagal mengirim media',
+    );
+  } finally {
+    sendingReply.value = false;
+  }
+};
+
+// Send reply message
+const sendReply = async () => {
+  if (sendingReply.value || !selectedConversation.value) {
+    return;
+  }
+
+  if (selectedAttachment.value) {
+    await sendMediaReply();
+    return;
+  }
+
+  if (!replyText.value.trim()) return;
 
   const messageText = replyText.value.trim();
   const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1005,6 +1474,33 @@ const sendReply = async () => {
     }
     
     toast.success('Pesan berhasil dikirim');
+
+    const existingSummaryIndex = outgoingConversationSummaries.value.findIndex(
+      message => message.to === recipient,
+    );
+    const existingSummary = existingSummaryIndex >= 0
+      ? outgoingConversationSummaries.value[existingSummaryIndex]
+      : null;
+    const summary = {
+      ...existingSummary,
+      id: waMessageId || tempId,
+      waMessageId: waMessageId || null,
+      to: recipient,
+      message: messageText,
+      createdAt: messageTimestamp
+        ? new Date(Number(messageTimestamp) * 1000).toISOString()
+        : new Date().toISOString(),
+      status: 'server_ack',
+      isGroup,
+      contact: selectedConversation.value.contact || existingSummary?.contact || null,
+      messageCount:
+        (Number(existingSummary?.messageCount) || 0) +
+        (existingSummary?.id === (waMessageId || tempId) ? 0 : 1),
+    };
+    if (existingSummaryIndex >= 0) {
+      outgoingConversationSummaries.value.splice(existingSummaryIndex, 1);
+    }
+    outgoingConversationSummaries.value.unshift(summary);
     setTimeout(() => scrollToBottom(), 50);
   } catch (e) {
     // Update message status to error
@@ -1049,8 +1545,8 @@ const confirmDeleteConversation = (conv) => {
 const confirmDeleteAll = () => {
   deleteModal.value = {
     show: true,
-    title: 'Hapus Semua Pesan Masuk',
-    description: `Apakah Anda yakin ingin menghapus seluruh ${meta.value.totalMessages} pesan masuk? Tindakan ini tidak dapat dibatalkan.`,
+    title: 'Hapus Semua Pesan',
+    description: 'Apakah Anda yakin ingin menghapus seluruh pesan masuk dan keluar pada device ini? Tindakan ini tidak dapat dibatalkan.',
     type: 'all',
     from: null,
     loading: false,
@@ -1061,13 +1557,13 @@ const executeDelete = async () => {
   deleteModal.value.loading = true;
   try {
     if (deleteModal.value.type === 'conversation') {
-      await userApi.delete(`/devices/${selectedDeviceId.value}/inbox/conversation`, {
+      const { data } = await userApi.delete(`/devices/${selectedDeviceId.value}/inbox/conversation`, {
         data: { from: deleteModal.value.from },
       });
-      toast.success('Percakapan berhasil dihapus');
+      toast.success(data?.message || 'Pesan masuk dan keluar berhasil dihapus');
     } else {
-      await userApi.delete(`/devices/${selectedDeviceId.value}/inbox`);
-      toast.success('Semua pesan masuk berhasil dihapus');
+      const { data } = await userApi.delete(`/devices/${selectedDeviceId.value}/inbox`);
+      toast.success(data?.message || 'Semua pesan masuk dan keluar berhasil dihapus');
     }
     deleteModal.value.show = false;
     selectedConversation.value = null;
@@ -1170,17 +1666,40 @@ const getSenderName = (conv) => {
   return formatPhoneOrId(conv.from);
 };
 
-// Format phone number, or show ID info if it's a LID format
+// Linked IDs are internal WhatsApp identifiers and must not be exposed as
+// recipient numbers in the Inbox.
 const formatPhoneOrId = (jid) => {
   if (!jid) return '';
+  if (jid.includes('@lid')) return '';
+
   const cleaned = jid.replace(/@s\.whatsapp\.net|@g\.us|@lid/g, '');
-  
-  // Check if it's a LID (Linked ID) format
-  if (jid.includes('@lid')) {
-    return `ID: ${cleaned.slice(-8)}...`; // Show last 8 chars of LID
-  }
-  
   return cleaned;
+};
+
+const formatWhatsAppIdentity = (jid) => {
+  if (!jid) return '';
+
+  const raw = String(jid).trim();
+  const cleaned = raw.replace(/@s\.whatsapp\.net|@g\.us|@lid/g, '');
+
+  if (raw.includes('@lid')) return '';
+
+  const digits = cleaned.replace(/\D/g, '');
+  return digits ? `+${digits}` : cleaned;
+};
+
+const getConversationPhone = (conversation) => {
+  if (!conversation || conversation.isGroup) return '';
+
+  if (conversation.contact?.phone) {
+    return String(conversation.contact.phone);
+  }
+
+  return formatWhatsAppIdentity(conversation.from);
+};
+
+const getMessageSenderPhone = (message) => {
+  return formatWhatsAppIdentity(message?.participant);
 };
 
 // Watchers
@@ -1194,20 +1713,27 @@ watch(q, () => {
 onMounted(async () => {
   // Connect socket and setup listeners
   const socket = connectSocket();
-  
-  socket.on('connect', () => {
+
+  const handleSocketConnect = () => {
     if (selectedDeviceId.value) {
       setupSocketListener();
     }
-  });
-  
-  socket.on('disconnect', (reason) => {
+  };
+  const handleSocketDisconnect = (reason) => {
     // Socket disconnected
-  });
-  
-  socket.on('connect_error', (error) => {
+  };
+  const handleSocketConnectError = (error) => {
     // Socket connection error
-  });
+  };
+
+  socket.on('connect', handleSocketConnect);
+  socket.on('disconnect', handleSocketDisconnect);
+  socket.on('connect_error', handleSocketConnectError);
+  socketConnectionCleanup = () => {
+    socket.off('connect', handleSocketConnect);
+    socket.off('disconnect', handleSocketDisconnect);
+    socket.off('connect_error', handleSocketConnectError);
+  };
   
   // Fetch data
   await fetchDevices();
@@ -1224,16 +1750,78 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  clearAttachment();
   if (socketCleanup) {
     socketCleanup();
+    socketCleanup = null;
   }
-  
-  // Cleanup socket connect listener
-  const socket = getSocket();
-  if (socket) {
-    socket.off('connect');
+  if (socketConnectionCleanup) {
+    socketConnectionCleanup();
+    socketConnectionCleanup = null;
   }
 });
+
+const isStickerMessage = (message) => {
+  const text = message?.type === 'outgoing' ? message?.text : message?.message;
+  return text === '[Stiker]';
+};
+
+const getMediaExtension = (message) => {
+  const path = String(message?.mediaPath || '').split(/[?#]/)[0].toLowerCase();
+  return path.includes('.') ? path.substring(path.lastIndexOf('.') + 1) : '';
+};
+
+const isImageMedia = (message) =>
+  Boolean(message?.mediaPath) && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(getMediaExtension(message));
+const isVideoMedia = (message) =>
+  Boolean(message?.mediaPath) && ['mp4', 'mov', 'webm', 'mkv'].includes(getMediaExtension(message));
+const isAudioMedia = (message) =>
+  Boolean(message?.mediaPath) && ['mp3', 'ogg', 'wav', 'm4a', 'aac', 'opus'].includes(getMediaExtension(message));
+const isDocumentMedia = (message) =>
+  Boolean(message?.mediaPath) &&
+  !isStickerMessage(message) &&
+  !isImageMedia(message) &&
+  !isVideoMedia(message) &&
+  !isAudioMedia(message);
+
+const getMediaFileName = (message) => {
+  if (message?.fileName) return message.fileName;
+  const path = String(message?.mediaPath || '').replace(/\\/g, '/');
+  const fileName = decodeURIComponent(path.split('/').pop() || 'Dokumen');
+  return fileName.replace(/^[a-zA-Z0-9_]+-/, '') || 'Dokumen';
+};
+
+const getVisibleMessageText = (message) => {
+  const text = message?.type === 'incoming' ? message?.message : message?.text;
+  if (!text) return '';
+  if (message?.mediaPath && ['[Stiker]', '[Gambar]', '[Video]', '[Audio]'].includes(text)) return '';
+  return text;
+};
+
+const getMessagePreview = (message) => {
+  const preview = isStickerMessage(message)
+    ? 'Stiker'
+    : isImageMedia(message)
+      ? 'Gambar'
+      : isVideoMedia(message)
+        ? 'Video'
+        : isAudioMedia(message)
+          ? 'Audio'
+          : isDocumentMedia(message)
+            ? `Dokumen: ${getMediaFileName(message)}`
+            : truncateMessage(message?.message || '', 100);
+  return message?.isOutgoing ? `Anda: ${preview}` : preview;
+};
+
+const handleStickerError = (event, message) => {
+  event.currentTarget.style.display = 'none';
+  message.mediaPath = '';
+};
+
+const handleMediaError = (event, message) => {
+  event.currentTarget.style.display = 'none';
+  message.mediaPath = '';
+};
 </script>
 
 <style scoped>
@@ -1626,6 +2214,44 @@ onUnmounted(() => {
   font-size: 15px;
 }
 
+.sender-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sender-phone {
+  margin-top: 2px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
 .message-time {
   font-size: 12px;
   color: #94a3b8;
@@ -1860,6 +2486,18 @@ onUnmounted(() => {
   color: #64748b;
 }
 
+.modal-phone {
+  display: block;
+  margin-top: 2px;
+  color: #475569;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.modal-phone + .modal-subtitle::before {
+  content: ' · ';
+}
+
 .chat-body {
   flex: 1;
   padding: 0;
@@ -1920,12 +2558,77 @@ onUnmounted(() => {
   margin-bottom: 4px;
 }
 
+.bubble-sender-phone {
+  display: block;
+  margin-top: 1px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .bubble-text {
   color: #1e293b;
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.sticker-message {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(180px, 45vw);
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.chat-image,
+.chat-video {
+  display: block;
+  width: min(320px, 60vw);
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.chat-audio {
+  display: block;
+  width: min(300px, 65vw);
+  max-width: 100%;
+}
+
+.chat-document {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 210px;
+  max-width: 320px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #1e293b;
+  text-decoration: none;
+}
+
+.chat-bubble.outgoing .chat-document {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.chat-document svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.chat-document span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chat-bubble.outgoing .bubble-text {
@@ -1996,11 +2699,112 @@ onUnmounted(() => {
 /* Reply Input */
 .reply-input-container {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   padding: 16px 20px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
+}
+
+.reply-input-row {
+  display: flex;
   align-items: flex-end;
+  gap: 10px;
+}
+
+.attachment-input {
+  display: none;
+}
+
+.btn-attachment {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-attachment:hover:not(:disabled) {
+  border-color: #93c5fd;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.btn-attachment:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-attachment svg {
+  width: 20px;
+  height: 20px;
+}
+
+.attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #eff6ff;
+}
+
+.attachment-preview > img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.attachment-file-icon {
+  min-width: 52px;
+  padding: 7px;
+  border-radius: 8px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.attachment-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.attachment-info strong {
+  overflow: hidden;
+  color: #1e293b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-info span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.attachment-preview > button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font-size: 22px;
+  cursor: pointer;
 }
 
 .reply-textarea {
@@ -2064,13 +2868,13 @@ onUnmounted(() => {
   height: 20px;
 }
 
-/* Message Count Badge */
+/* Message Count Badge - Gray (bukan unread indicator) */
 .message-count {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
+  background: #e2e8f0;
+  color: #64748b;
   font-size: 11px;
   font-weight: 600;
   border-radius: 10px;
