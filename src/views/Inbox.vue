@@ -885,6 +885,7 @@ const setupSocketListener = () => {
     const incomingEventName = `incoming:${sessionId}`;
     const outgoingEventName = `outgoing:${sessionId}`;
     const profileUpdateEventName = `incoming:${sessionId}:profile-updated`;
+    const mediaUpdateEventName = `incoming:${sessionId}:media-updated`;
     const statusEventName = `device:${selectedDeviceId.value}:message-status`;
     
     const handleIncoming = (data) => {
@@ -995,6 +996,34 @@ const setupSocketListener = () => {
       });
     };
 
+    const handleMediaUpdate = (data) => {
+      if (!data?.id || !data?.mediaPath) return;
+
+      const recoveredData = { ...data, mediaLoadFailed: false };
+
+      const messageIndex = messages.value.findIndex(message => message.id === data.id);
+      if (messageIndex !== -1) {
+        messages.value[messageIndex] = {
+          ...messages.value[messageIndex],
+          ...recoveredData,
+        };
+        messages.value = [...messages.value];
+      }
+
+      if (selectedConversation.value?.from === data.from) {
+        const conversationMessageIndex = selectedConversation.value.messages.findIndex(
+          message => message.id === data.id,
+        );
+        if (conversationMessageIndex !== -1) {
+          selectedConversation.value.messages[conversationMessageIndex] = {
+            ...selectedConversation.value.messages[conversationMessageIndex],
+            ...recoveredData,
+          };
+          selectedConversation.value.messages = [...selectedConversation.value.messages];
+        }
+      }
+    };
+
     const handleMessageStatus = (data) => {
       // Update sentMessages array
       // Match by waMessageId first, fallback to tempId (id field)
@@ -1050,12 +1079,14 @@ const setupSocketListener = () => {
     socket.on(incomingEventName, handleIncoming);
     socket.on(outgoingEventName, handleOutgoing);
     socket.on(profileUpdateEventName, handleProfileUpdate); // ✅ NEW: Listen for profile picture updates
+    socket.on(mediaUpdateEventName, handleMediaUpdate);
     socket.on(statusEventName, handleMessageStatus);
     
     console.log('✅ Socket listeners registered:', {
       incoming: incomingEventName,
       outgoing: outgoingEventName,
       profileUpdate: profileUpdateEventName,
+      mediaUpdate: mediaUpdateEventName,
       status: statusEventName
     });
     
@@ -1063,6 +1094,7 @@ const setupSocketListener = () => {
       socket.off(incomingEventName, handleIncoming);
       socket.off(outgoingEventName, handleOutgoing);
       socket.off(profileUpdateEventName, handleProfileUpdate); // ✅ Cleanup profile update listener
+      socket.off(mediaUpdateEventName, handleMediaUpdate);
       socket.off(statusEventName, handleMessageStatus);
     };
   } catch (e) {
@@ -1892,7 +1924,11 @@ const getMediaFileName = (message) => {
 const getVisibleMessageText = (message) => {
   const text = message?.type === 'incoming' ? message?.message : message?.text;
   if (!text) return '';
-  if (message?.mediaPath && ['[Stiker]', '[Gambar]', '[Video]', '[Audio]'].includes(text)) return '';
+  if (
+    message?.mediaPath &&
+    !message?.mediaLoadFailed &&
+    ['[Stiker]', '[Gambar]', '[Video]', '[Audio]'].includes(text)
+  ) return '';
   return text;
 };
 
@@ -1912,8 +1948,20 @@ const getMessagePreview = (message) => {
 };
 
 const handleStickerError = (event, message) => {
-  event.currentTarget.style.display = 'none';
-  message.mediaPath = '';
+  const image = event.currentTarget;
+  const retryCount = Number(image.dataset.retryCount || 0);
+  if (retryCount < 3 && message.mediaPath) {
+    image.dataset.retryCount = String(retryCount + 1);
+    image.style.visibility = 'hidden';
+    setTimeout(() => {
+      image.style.visibility = '';
+      image.src = mediaUrl(message.mediaPath);
+    }, 750 * (retryCount + 1));
+    return;
+  }
+
+  image.style.display = 'none';
+  message.mediaLoadFailed = true;
 };
 
 const handleMediaError = (event, message) => {
