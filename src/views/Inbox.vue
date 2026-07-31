@@ -1807,7 +1807,29 @@ const loadConversationAvatar = async (conversation) => {
       failedAvatarKeys.value = nextFailed;
     }
   } catch {
-    // Keep the WhatsApp CDN URL as fallback when proxy loading is unavailable.
+    try {
+      // The backend may be unable to proxy WhatsApp's CDN from a datacenter,
+      // while the user's browser can still load the freshly generated URL.
+      const { data } = await deviceApi.get('/messages/get-profile', {
+        params: {
+          recipient,
+          resolution: 'high',
+        },
+      });
+      if (data?.profilePictureUrl) {
+        conversationAvatarUrls.value = {
+          ...conversationAvatarUrls.value,
+          [key]: data.profilePictureUrl,
+        };
+        if (failedAvatarKeys.value.has(key)) {
+          const nextFailed = new Set(failedAvatarKeys.value);
+          nextFailed.delete(key);
+          failedAvatarKeys.value = nextFailed;
+        }
+      }
+    } catch {
+      // WhatsApp privacy settings may make a profile photo unavailable.
+    }
   } finally {
     loadingAvatarKeys.delete(key);
   }
