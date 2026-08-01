@@ -557,6 +557,9 @@ const conversationAvatarUrls = ref({});
 const failedAvatarKeys = ref(new Set());
 const loadingAvatarKeys = new Set();
 const avatarRecoveryAttempts = new Map();
+const avatarRetryAt = new Map();
+const AVATAR_NEGATIVE_CACHE_MS = 15 * 60 * 1000;
+const AVATAR_TRANSIENT_RETRY_MS = 5 * 60 * 1000;
 
 const attachmentKind = computed(() => {
   const type = selectedAttachment.value?.type || '';
@@ -929,6 +932,11 @@ const setupSocketListener = () => {
       return;
     }
 
+    socket.emit('session:subscribe', {
+      deviceId: selectedDeviceId.value,
+      sessionId,
+    });
+
     const incomingEventName = `incoming:${sessionId}`;
     const outgoingEventName = `outgoing:${sessionId}`;
     const profileUpdateEventName = `incoming:${sessionId}:profile-updated`;
@@ -1036,7 +1044,7 @@ const setupSocketListener = () => {
         isGroup: data.isGroup || data.from?.includes('@g.us'),
         profilePicUrl: data.profilePicUrl,
         groupPicUrl: data.groupPicUrl,
-      });
+      }, true);
     };
 
     const handleMediaUpdate = (data) => {
@@ -1837,6 +1845,7 @@ const handleAvatarError = (conversation, event) => {
   delete nextUrls[key];
   conversationAvatarUrls.value = nextUrls;
   failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
+  avatarRetryAt.set(key, Date.now() + AVATAR_TRANSIENT_RETRY_MS);
 
   if (event?.target) event.target.removeAttribute('src');
   const directUrl = conversation?.isGroup
@@ -1862,11 +1871,14 @@ const loadConversationAvatar = async (conversation, force = false) => {
     : conversation.profilePicUrl;
   if (isWhatsAppProfileCdnUrl(directUrl)) return;
   const isSignedProfileUrl = String(directUrl || '').includes('/inbox-profile/');
-  if (directUrl && failedAvatarKeys.value.has(key)) {
+  const retryAt = avatarRetryAt.get(key) || 0;
+  if (!force && retryAt > Date.now()) return;
+  if (directUrl && failedAvatarKeys.value.has(key) && retryAt <= Date.now()) {
     const nextFailed = new Set(failedAvatarKeys.value);
     nextFailed.delete(key);
     failedAvatarKeys.value = nextFailed;
     avatarRecoveryAttempts.delete(key);
+    avatarRetryAt.delete(key);
   }
   if (directUrl && !isSignedProfileUrl) return;
   if (!directUrl) return;
@@ -1874,12 +1886,26 @@ const loadConversationAvatar = async (conversation, force = false) => {
   loadingAvatarKeys.add(key);
 
   try {
-    const { data } = await userApi.get(mediaUrl(directUrl), {
-      responseType: 'blob',
+    // Signed image URLs authorize themselves. Avoid the global Authorization
+    // header here so cross-origin image requests remain simple GET requests.
+    const response = await fetch(mediaUrl(directUrl), {
+      method: 'GET',
+      credentials: 'omit',
       headers: { Accept: 'image/*' },
     });
+    if (!response.ok || response.status === 204) {
+      const retryAfter = Number(response.headers.get('Retry-After'));
+      const retryDelay = Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : AVATAR_NEGATIVE_CACHE_MS;
+      failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
+      avatarRetryAt.set(key, Date.now() + retryDelay);
+      return;
+    }
+    const data = await response.blob();
     if (!(data instanceof Blob) || data.size === 0 || !data.type.startsWith('image/')) {
       failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
+      avatarRetryAt.set(key, Date.now() + AVATAR_NEGATIVE_CACHE_MS);
       return;
     }
 
@@ -1891,6 +1917,7 @@ const loadConversationAvatar = async (conversation, force = false) => {
       [key]: objectUrl,
     };
     avatarRecoveryAttempts.delete(key);
+    avatarRetryAt.delete(key);
 
     if (failedAvatarKeys.value.has(key)) {
       const nextFailed = new Set(failedAvatarKeys.value);
@@ -1900,6 +1927,7 @@ const loadConversationAvatar = async (conversation, force = false) => {
   } catch {
     // Missing/private WhatsApp pictures keep the initial avatar.
     failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
+    avatarRetryAt.set(key, Date.now() + AVATAR_TRANSIENT_RETRY_MS);
   } finally {
     loadingAvatarKeys.delete(key);
   }
@@ -1932,6 +1960,7 @@ const clearConversationAvatars = () => {
   failedAvatarKeys.value = new Set();
   loadingAvatarKeys.clear();
   avatarRecoveryAttempts.clear();
+  avatarRetryAt.clear();
 };
 
 // Watchers
