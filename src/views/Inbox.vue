@@ -378,15 +378,23 @@
                   <span>{{ getMediaFileName(msg) }}</span>
                 </a>
 
+                <div v-if="isDeletedForEveryone(msg)" class="deleted-message-notice">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
+                  </svg>
+                  <em>Pesan ini telah dihapus</em>
+                </div>
+
                 <!-- Message text -->
-                <div v-if="getVisibleMessageText(msg)" class="bubble-text">
+                <div v-else-if="getVisibleMessageText(msg)" class="bubble-text">
                   {{ getVisibleMessageText(msg) }}
                 </div>
                 
                 <!-- Time with status for outgoing -->
                 <div class="bubble-time">
                   <!-- Status icons for outgoing messages -->
-                  <template v-if="msg.type === 'outgoing'">
+                  <template v-if="msg.type === 'outgoing' && !isDeletedForEveryone(msg)">
                     <!-- Loading icon for sending/pending -->
                     <svg v-if="msg.status === 'sending'" class="status-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10" />
@@ -428,6 +436,82 @@
                     {{ msg.readCount }}
                   </span>
                 </div>
+              </div>
+              <div
+                v-if="getReactionGroups(msg).length"
+                class="bubble-reactions"
+                :class="msg.type"
+              >
+                <span
+                  v-for="reaction in getReactionGroups(msg)"
+                  :key="reaction.emoji"
+                  class="reaction-chip"
+                  :title="reaction.title"
+                >
+                  <span class="reaction-emoji">{{ reaction.emoji }}</span>
+                  <span v-if="reaction.count > 1" class="reaction-count">
+                    {{ reaction.count }}
+                  </span>
+                </span>
+              </div>
+              <button
+                v-if="canReactToMessage(msg)"
+                type="button"
+                class="btn-message-reaction"
+                :class="msg.type"
+                :disabled="isSendingReaction(msg)"
+                :aria-label="`Beri reaction pada pesan ${msg.type === 'incoming' ? 'masuk' : 'keluar'}`"
+                title="Beri reaction"
+                @click.stop="toggleReactionPicker(msg)"
+              >
+                {{ isSendingReaction(msg) ? '…' : '☺' }}
+              </button>
+              <button
+                v-if="canDeleteMessage(msg)"
+                type="button"
+                class="btn-message-actions"
+                :class="msg.type"
+                :aria-label="`Opsi pesan ${msg.type === 'incoming' ? 'masuk' : 'keluar'}`"
+                title="Opsi pesan"
+                @click.stop="toggleMessageActionMenu(msg)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <ReactionPicker
+                v-if="isReactionPickerOpen(msg)"
+                :direction="msg.type"
+                :current-emoji="getOwnReaction(msg)?.emoji || ''"
+                :loading="isSendingReaction(msg)"
+                @click.stop
+                @select="emoji => sendReaction(msg, emoji)"
+              />
+              <div
+                v-if="isMessageActionMenuOpen(msg)"
+                class="message-actions-menu"
+                :class="msg.type"
+                @click.stop
+              >
+                <button type="button" @click="confirmDeleteMessage(msg, 'me')">
+                  Hapus untuk saya
+                </button>
+                <button
+                  v-if="msg.type === 'outgoing' && !isDeletedForEveryone(msg)"
+                  type="button"
+                  class="danger"
+                  @click="confirmDeleteMessage(msg, 'everyone')"
+                >
+                  Hapus untuk semua
+                </button>
               </div>
             </div>
           </div>
@@ -533,8 +617,17 @@ import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
+import ReactionPicker from '../components/ReactionPicker.vue';
+import {
+  applyMessageReactionEvent,
+  findOwnMessageReaction,
+  getMessageReactionTargetId,
+  groupMessageReactions,
+  sameConversationJid,
+} from '../utils/messageReactions.js';
 
 const toast = useToast();
+const DELETED_MESSAGE_TEXT = 'Pesan ini telah dihapus';
 
 const messages = ref([]);
 const outgoingConversationSummaries = ref([]);
@@ -543,6 +636,10 @@ const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
 const loading = ref(false);
 const err = ref('');
 const selectedConversation = ref(null);
+const conversationReactions = ref([]);
+const reactionPickerMessageKey = ref('');
+const sendingReactionMessageKey = ref('');
+const messageActionMenuKey = ref('');
 
 // Reply functionality
 const replyText = ref('');
@@ -638,6 +735,209 @@ const allMessages = computed(() => {
   
   return merged;
 });
+
+const getReactionGroups = message =>
+  groupMessageReactions(message, conversationReactions.value);
+
+const isDeletedForEveryone = message => Boolean(
+  message?.deletedForEveryone ||
+  message?.status === 'revoked' ||
+  (message?.type === 'outgoing' && message?.text === DELETED_MESSAGE_TEXT)
+);
+
+const getReactionMessageKey = message =>
+  `${message?.type || 'unknown'}:${getMessageReactionTargetId(message) || ''}`;
+
+const getOwnReaction = message =>
+  findOwnMessageReaction(message, conversationReactions.value);
+
+const canReactToMessage = message => Boolean(
+  getMessageReactionTargetId(message) &&
+  message?.status !== 'sending' &&
+  message?.status !== 'error' &&
+  !isDeletedForEveryone(message)
+);
+
+const isReactionPickerOpen = message =>
+  reactionPickerMessageKey.value === getReactionMessageKey(message);
+
+const isSendingReaction = message =>
+  sendingReactionMessageKey.value === getReactionMessageKey(message);
+
+const toggleReactionPicker = message => {
+  const messageKey = getReactionMessageKey(message);
+  messageActionMenuKey.value = '';
+  reactionPickerMessageKey.value =
+    reactionPickerMessageKey.value === messageKey ? '' : messageKey;
+};
+
+const canDeleteMessage = message => Boolean(getMessageReactionTargetId(message));
+
+const isMessageActionMenuOpen = message =>
+  messageActionMenuKey.value === getReactionMessageKey(message);
+
+const toggleMessageActionMenu = message => {
+  const messageKey = getReactionMessageKey(message);
+  reactionPickerMessageKey.value = '';
+  messageActionMenuKey.value =
+    messageActionMenuKey.value === messageKey ? '' : messageKey;
+};
+
+const sendReaction = async (message, selectedEmoji) => {
+  const targetMessageId = getMessageReactionTargetId(message);
+  if (!targetMessageId || !selectedConversation.value) return;
+
+  const device = devices.value.find(item => item.id === selectedDeviceId.value);
+  if (!device?.isConnected) {
+    toast.error('Device WhatsApp belum terhubung');
+    return;
+  }
+
+  const messageKey = getReactionMessageKey(message);
+  if (sendingReactionMessageKey.value) return;
+
+  const ownReaction = getOwnReaction(message);
+  const emoji = ownReaction?.emoji === selectedEmoji ? '' : selectedEmoji;
+  const previousReactions = [...conversationReactions.value];
+  const optimisticEvent = {
+    targetMessageId,
+    targetFromMe: message.type === 'outgoing',
+    reactorJid: 'me',
+    emoji,
+    removed: !emoji,
+    reactedAt: new Date().toISOString(),
+    conversationJid: selectedConversation.value.from,
+  };
+
+  sendingReactionMessageKey.value = messageKey;
+  reactionPickerMessageKey.value = '';
+  conversationReactions.value = applyMessageReactionEvent(
+    conversationReactions.value,
+    optimisticEvent,
+  );
+
+  try {
+    const { data } = await deviceApi.post('/messages/reaction', {
+      targetMessageId,
+      targetFromMe: message.type === 'outgoing',
+      emoji,
+    });
+    if (data?.reaction) {
+      conversationReactions.value = applyMessageReactionEvent(
+        conversationReactions.value,
+        data.reaction,
+      );
+    }
+  } catch (error) {
+    conversationReactions.value = previousReactions;
+    toast.error(
+      error?.response?.data?.message || error?.message || 'Gagal mengirim reaction',
+    );
+  } finally {
+    if (sendingReactionMessageKey.value === messageKey) {
+      sendingReactionMessageKey.value = '';
+    }
+  }
+};
+
+const removeReactionPlaceholder = reactionMessageId => {
+  if (!reactionMessageId) return;
+
+  messages.value = messages.value.filter(message => message.id !== reactionMessageId);
+  if (selectedConversation.value?.messages) {
+    const previousLength = selectedConversation.value.messages.length;
+    selectedConversation.value.messages = selectedConversation.value.messages.filter(
+      message => message.id !== reactionMessageId,
+    );
+    if (selectedConversation.value.messages.length !== previousLength) {
+      selectedConversation.value.messageCount = Math.max(
+        0,
+        Number(selectedConversation.value.messageCount || 0) - 1,
+      );
+    }
+  }
+};
+
+const applyInboxReactionEvent = event => {
+  if (
+    !selectedConversation.value ||
+    !sameConversationJid(selectedConversation.value.from, event?.conversationJid)
+  ) {
+    return;
+  }
+
+  conversationReactions.value = applyMessageReactionEvent(
+    conversationReactions.value,
+    event,
+  );
+  removeReactionPlaceholder(event.reactionMessageId);
+};
+
+const removeDeletedMessageFromState = event => {
+  if (!event?.targetMessageId) return false;
+
+  let removedFromOpenConversation = false;
+  if (event.targetFromMe) {
+    if (event.scope === 'everyone') {
+      let replacedMessage = false;
+      sentMessages.value = sentMessages.value.map(message => {
+        if (
+          getMessageReactionTargetId({ ...message, type: 'outgoing' }) !==
+          event.targetMessageId
+        ) return message;
+
+        replacedMessage = true;
+        return {
+          ...message,
+          text: event.placeholder || DELETED_MESSAGE_TEXT,
+          mediaPath: '',
+          status: 'revoked',
+          deletedForEveryone: true,
+        };
+      });
+      removedFromOpenConversation = replacedMessage;
+    } else {
+      const previousLength = sentMessages.value.length;
+      sentMessages.value = sentMessages.value.filter(message =>
+        getMessageReactionTargetId({ ...message, type: 'outgoing' }) !== event.targetMessageId
+      );
+      removedFromOpenConversation = sentMessages.value.length !== previousLength;
+    }
+  } else {
+    messages.value = messages.value.filter(message => message.id !== event.targetMessageId);
+    if (
+      selectedConversation.value?.messages &&
+      sameConversationJid(selectedConversation.value.from, event.conversationJid)
+    ) {
+      const previousLength = selectedConversation.value.messages.length;
+      selectedConversation.value.messages = selectedConversation.value.messages.filter(
+        message => message.id !== event.targetMessageId,
+      );
+      removedFromOpenConversation =
+        selectedConversation.value.messages.length !== previousLength;
+    }
+  }
+
+  conversationReactions.value = conversationReactions.value.filter(
+    reaction => !(
+      reaction.targetMessageId === event.targetMessageId &&
+      Boolean(reaction.targetFromMe) === Boolean(event.targetFromMe)
+    ),
+  );
+
+  if (
+    removedFromOpenConversation &&
+    event.scope !== 'everyone' &&
+    selectedConversation.value
+  ) {
+    selectedConversation.value.messageCount = Math.max(
+      0,
+      Number(selectedConversation.value.messageCount || 0) - 1,
+    );
+    meta.value.totalMessages = Math.max(0, Number(meta.value.totalMessages || 0) - 1);
+  }
+  return removedFromOpenConversation;
+};
 
 // Group messages by sender (from) to create conversations
 const conversations = computed(() => {
@@ -942,6 +1242,8 @@ const setupSocketListener = () => {
     const profileUpdateEventName = `incoming:${sessionId}:profile-updated`;
     const mediaUpdateEventName = `incoming:${sessionId}:media-updated`;
     const statusEventName = `device:${selectedDeviceId.value}:message-status`;
+    const reactionEventName = `reaction:${sessionId}`;
+    const deletedMessageEventName = `message-deleted:${sessionId}`;
     
     const handleIncoming = (data) => {
       // ✅ CRITICAL: Check for duplicates before adding
@@ -1126,12 +1428,23 @@ const setupSocketListener = () => {
       }
     };
 
+    const handleReaction = data => {
+      applyInboxReactionEvent(data);
+    };
+
+    const handleDeletedMessage = data => {
+      removeDeletedMessageFromState(data);
+      void loadMessages();
+    };
+
     // Register listeners
     socket.on(incomingEventName, handleIncoming);
     socket.on(outgoingEventName, handleOutgoing);
     socket.on(profileUpdateEventName, handleProfileUpdate); // ✅ NEW: Listen for profile picture updates
     socket.on(mediaUpdateEventName, handleMediaUpdate);
     socket.on(statusEventName, handleMessageStatus);
+    socket.on(reactionEventName, handleReaction);
+    socket.on(deletedMessageEventName, handleDeletedMessage);
     
     socketCleanup = () => {
       socket.off(incomingEventName, handleIncoming);
@@ -1139,6 +1452,8 @@ const setupSocketListener = () => {
       socket.off(profileUpdateEventName, handleProfileUpdate); // ✅ Cleanup profile update listener
       socket.off(mediaUpdateEventName, handleMediaUpdate);
       socket.off(statusEventName, handleMessageStatus);
+      socket.off(reactionEventName, handleReaction);
+      socket.off(deletedMessageEventName, handleDeletedMessage);
     };
   } catch (e) {
     // Socket setup failed, silently ignore
@@ -1155,16 +1470,47 @@ const viewConversation = async (conv) => {
   
   // Jangan reload jika conversation yang sama (preserve real-time messages)
   if (isSameConversation) {
+    await loadConversationReactions(conv.from);
     replyText.value = '';
     setTimeout(() => scrollToBottom(), 100);
     return;
   }
   
   // Load from database untuk conversation baru
-  await loadSentMessagesFromDatabase(conv.from);
+  await Promise.all([
+    loadSentMessagesFromDatabase(conv.from),
+    loadConversationReactions(conv.from),
+  ]);
   
   replyText.value = '';
   setTimeout(() => scrollToBottom(), 100);
+};
+
+const loadConversationReactions = async conversationFrom => {
+  try {
+    const { data } = await userApi.get(
+      `/devices/${selectedDeviceId.value}/inbox/reactions`,
+      {
+        params: {
+          conversationJid: conversationFrom,
+          _t: Date.now(),
+        },
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      },
+    );
+
+    if (!sameConversationJid(selectedConversation.value?.from, conversationFrom)) return;
+    conversationReactions.value = Array.isArray(data) ? data : [];
+    conversationReactions.value.forEach(reaction => {
+      removeReactionPlaceholder(reaction.reactionMessageId);
+    });
+  } catch {
+    // Reaction is optional metadata. Never clear or block chat messages when
+    // this endpoint is unavailable during a staggered deployment.
+    if (sameConversationJid(selectedConversation.value?.from, conversationFrom)) {
+      conversationReactions.value = [];
+    }
+  }
 };
 
 // ✅ NEW: Mark conversation as read (clear unread badge) - persisten ke database
@@ -1271,6 +1617,8 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
         uiStatus = 'error';
       } else if (dbStatus === 'pending') {
         uiStatus = 'sending';
+      } else if (dbStatus === 'revoked') {
+        uiStatus = 'revoked';
       }
       
       return {
@@ -1279,6 +1627,8 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
         mediaPath: msg.mediaPath || '',
         timestamp: msg.createdAt,
         status: uiStatus,
+        deletedForEveryone:
+          dbStatus === 'revoked' || msg.message === DELETED_MESSAGE_TEXT,
         waMessageId: msg.waMessageId,
         isGroup: msg.isGroup || false,
         readBy: Array.isArray(msg.readBy) ? msg.readBy : [],
@@ -1297,6 +1647,10 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 // Close conversation
 const closeConversation = () => {
   clearAttachment();
+  conversationReactions.value = [];
+  reactionPickerMessageKey.value = '';
+  sendingReactionMessageKey.value = '';
+  messageActionMenuKey.value = '';
   selectedConversation.value = null;
 };
 
@@ -1616,8 +1970,28 @@ const deleteModal = ref({
   description: '',
   type: '', // 'conversation' or 'all'
   from: null,
+  message: null,
+  scope: null,
   loading: false,
 });
+
+const confirmDeleteMessage = (message, scope) => {
+  messageActionMenuKey.value = '';
+  reactionPickerMessageKey.value = '';
+  const deleteForEveryone = scope === 'everyone';
+  deleteModal.value = {
+    show: true,
+    title: deleteForEveryone ? 'Hapus untuk Semua' : 'Hapus untuk Saya',
+    description: deleteForEveryone
+      ? 'Pesan akan ditarik dari WhatsApp penerima jika masih berada dalam batas waktu yang diizinkan WhatsApp.'
+      : 'Pesan akan dihapus dari Inbox Anda. Sinkronisasi ke perangkat WhatsApp akan dilakukan jika App State WhatsApp tersedia.',
+    type: 'message',
+    from: selectedConversation.value?.from || null,
+    message,
+    scope,
+    loading: false,
+  };
+};
 
 const confirmDeleteConversation = (conv) => {
   deleteModal.value = {
@@ -1626,6 +2000,8 @@ const confirmDeleteConversation = (conv) => {
     description: `Apakah Anda yakin ingin menghapus ${conv.messageCount} pesan dari ${getSenderName(conv)}? Tindakan ini tidak dapat dibatalkan.`,
     type: 'conversation',
     from: conv.from,
+    message: null,
+    scope: null,
     loading: false,
   };
 };
@@ -1637,6 +2013,8 @@ const confirmDeleteAll = () => {
     description: 'Apakah Anda yakin ingin menghapus seluruh pesan masuk dan keluar pada device ini? Tindakan ini tidak dapat dibatalkan.',
     type: 'all',
     from: null,
+    message: null,
+    scope: null,
     loading: false,
   };
 };
@@ -1644,6 +2022,30 @@ const confirmDeleteAll = () => {
 const executeDelete = async () => {
   deleteModal.value.loading = true;
   try {
+    if (deleteModal.value.type === 'message') {
+      const message = deleteModal.value.message;
+      const targetMessageId = getMessageReactionTargetId(message);
+      if (!targetMessageId) throw new Error('ID pesan WhatsApp tidak tersedia');
+
+      const { data } = await deviceApi.delete('/messages/inbox/message', {
+        data: {
+          targetMessageId,
+          targetFromMe: message.type === 'outgoing',
+          scope: deleteModal.value.scope,
+        },
+      });
+      if (data?.deleted) removeDeletedMessageFromState(data.deleted);
+      const deleteSuccessMessage = deleteModal.value.scope === 'everyone'
+        ? 'Pesan berhasil dihapus untuk semua'
+        : data?.deleted?.whatsappSynced === false
+          ? 'Pesan berhasil dihapus dari Inbox'
+          : 'Pesan berhasil dihapus untuk Anda';
+      toast.success(deleteSuccessMessage);
+      deleteModal.value.show = false;
+      void loadMessages();
+      return;
+    }
+
     if (deleteModal.value.type === 'conversation') {
       const { data } = await userApi.delete(`/devices/${selectedDeviceId.value}/inbox/conversation`, {
         data: { from: deleteModal.value.from },
@@ -2809,6 +3211,7 @@ const handleMediaError = (event, message) => {
 
 .chat-bubble {
   max-width: 85%;
+  position: relative;
   animation: fadeIn 0.2s ease;
 }
 
@@ -2842,6 +3245,170 @@ const handleMediaError = (event, message) => {
   border-top-right-radius: 4px;
 }
 
+.bubble-reactions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: -7px;
+}
+
+.bubble-reactions.incoming {
+  justify-content: flex-start;
+  padding-left: 12px;
+}
+
+.bubble-reactions.outgoing {
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  color: #475569;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.reaction-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.reaction-count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-message-reaction,
+.btn-message-actions {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14);
+  color: #64748b;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.btn-message-reaction.incoming {
+  right: -36px;
+}
+
+.btn-message-reaction.outgoing {
+  left: -36px;
+}
+
+.btn-message-actions {
+  top: 5px;
+  z-index: 21;
+  width: 30px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+}
+
+.btn-message-actions svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-message-actions.incoming {
+  left: 5px;
+  color: #64748b;
+  background: transparent;
+}
+
+.btn-message-actions.outgoing {
+  right: 5px;
+  color: #ffffff;
+  background: transparent;
+}
+
+.chat-bubble:hover .btn-message-reaction,
+.chat-bubble:focus-within .btn-message-reaction,
+.chat-bubble:hover .btn-message-actions,
+.chat-bubble:focus-within .btn-message-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.btn-message-reaction:hover {
+  background: #f8fafc;
+}
+
+.btn-message-actions.incoming:hover,
+.btn-message-actions.outgoing:hover {
+  background: transparent;
+}
+
+.btn-message-reaction:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.message-actions-menu {
+  position: absolute;
+  top: 36px;
+  z-index: 30;
+  display: flex;
+  width: 190px;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+}
+
+.message-actions-menu.incoming { left: 0; }
+.message-actions-menu.outgoing { right: 0; }
+
+.message-actions-menu button {
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.message-actions-menu button:hover { background: #f1f5f9; }
+.message-actions-menu button.danger { color: #dc2626; }
+
+@media (hover: none) {
+  .btn-message-reaction,
+  .btn-message-actions {
+    opacity: 0.78;
+    pointer-events: auto;
+  }
+}
+
 .bubble-sender {
   font-size: 12px;
   font-weight: 600;
@@ -2864,6 +3431,25 @@ const handleMediaError = (event, message) => {
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.deleted-message-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.deleted-message-notice svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+.chat-bubble.outgoing .deleted-message-notice {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .sticker-message {
