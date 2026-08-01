@@ -1802,6 +1802,15 @@ const getMessageSenderPhone = (message) => {
 const getAvatarKey = (conversation) =>
   `${selectedDeviceId.value}:${conversation?.from || conversation?.to || ''}`;
 
+const isWhatsAppProfileCdnUrl = (source) => {
+  try {
+    const hostname = new URL(String(source || '')).hostname.toLowerCase();
+    return hostname === 'pps.whatsapp.net' || hostname.endsWith('.pps.whatsapp.net');
+  } catch {
+    return false;
+  }
+};
+
 const getConversationAvatar = (conversation) => {
   if (!conversation) return '';
   const key = getAvatarKey(conversation);
@@ -1815,6 +1824,7 @@ const getConversationAvatar = (conversation) => {
   // accessible photo. Probe it as XHR first so an empty response is never
   // mounted as an <img> and does not create browser console errors.
   if (String(source).includes('/inbox-profile/')) return '';
+  if (isWhatsAppProfileCdnUrl(source)) return '';
   return source ? mediaUrl(source) : '';
 };
 
@@ -1850,6 +1860,7 @@ const loadConversationAvatar = async (conversation, force = false) => {
   const directUrl = conversation.isGroup
     ? conversation.groupPicUrl
     : conversation.profilePicUrl;
+  if (isWhatsAppProfileCdnUrl(directUrl)) return;
   const isSignedProfileUrl = String(directUrl || '').includes('/inbox-profile/');
   if (directUrl && failedAvatarKeys.value.has(key)) {
     const nextFailed = new Set(failedAvatarKeys.value);
