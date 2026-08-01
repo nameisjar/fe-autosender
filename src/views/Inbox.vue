@@ -77,6 +77,7 @@
 
           <select
             v-model.number="pageSize"
+            @change="onPageSizeChange"
             class="filter-select"
             title="Jumlah baris per halaman"
           >
@@ -220,25 +221,30 @@
         </p>
       </div>
 
-      <div v-if="meta.totalMessages > 0" class="pagination">
+      <div v-if="meta.totalConversations > 0" class="pagination">
         <div class="pagination-info">
-          Menampilkan <strong>{{ conversations.length }}</strong> percakapan dari
-          <strong>{{ meta.totalMessages }}</strong> pesan
+          Menampilkan <strong>{{ paginationStart }}-{{ paginationEnd }}</strong> dari
+          <strong>{{ meta.totalConversations }}</strong> percakapan
         </div>
         <div class="pagination-controls">
           <button class="btn-page" :disabled="page <= 1 || loading" @click="goPrev">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            Sebelumnya
+            <span class="pagination-label">Sebelumnya</span>
           </button>
-          <div class="page-indicator">
-            <span class="current-page">{{ page }}</span>
-            <span class="page-separator">/</span>
-            <span class="total-pages">{{ meta.totalPages || 1 }}</span>
-          </div>
+          <button
+            v-for="pageNumber in visiblePageNumbers"
+            :key="pageNumber"
+            class="btn-page page-number"
+            :class="{ active: pageNumber === page }"
+            :disabled="loading"
+            @click="goToPage(pageNumber)"
+          >
+            {{ pageNumber }}
+          </button>
           <button class="btn-page" :disabled="!meta.hasMore || loading" @click="goNext">
-            Berikutnya
+            <span class="pagination-label">Berikutnya</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
             </svg>
@@ -571,7 +577,14 @@ const attachmentKindLabel = computed(() => ({
 const q = ref('');
 const page = ref(1);
 const pageSize = ref(25);
-const meta = ref({ totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: false });
+const meta = ref({
+  totalMessages: 0,
+  totalConversations: 0,
+  currentPage: 1,
+  totalPages: 1,
+  hasMore: false,
+  conversationKeys: [],
+});
 
 let searchTimer;
 let socketCleanup = null;
@@ -582,6 +595,21 @@ let latestLoadRequest = 0;
 const todayCount = computed(() => {
   const today = new Date().toDateString();
   return messages.value.filter(m => new Date(m.receivedAt).toDateString() === today).length;
+});
+
+const paginationStart = computed(() =>
+  meta.value.totalConversations > 0 ? (page.value - 1) * pageSize.value + 1 : 0,
+);
+const paginationEnd = computed(() =>
+  Math.min(page.value * pageSize.value, meta.value.totalConversations || 0),
+);
+const visiblePageNumbers = computed(() => {
+  const total = Math.max(1, Number(meta.value.totalPages) || 1);
+  const current = Math.min(Math.max(1, page.value), total);
+  let start = Math.max(1, current - 2);
+  let end = Math.min(total, start + 4);
+  start = Math.max(1, end - 4);
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 });
 
 // Merge incoming and outgoing messages, sorted by timestamp
@@ -773,10 +801,21 @@ const loadMessages = async () => {
         Pragma: 'no-cache',
       },
     });
-    const outboxConversationRequest = userApi
+    const { data } = await inboxRequest;
+
+    if (requestId !== latestLoadRequest || requestedDeviceId !== selectedDeviceId.value) return;
+
+    const conversationKeys = Array.isArray(data?.metadata?.conversationKeys)
+      ? data.metadata.conversationKeys
+      : [];
+    const { data: outgoingData } = await userApi
       .get(`/devices/${selectedDeviceId.value}/outbox/conversations`, {
         params: {
-          ...(q.value ? { search: q.value } : {}),
+          ...(q.value
+            ? { search: q.value }
+            : conversationKeys.length > 0
+              ? { recipients: conversationKeys.join(',') }
+              : {}),
           _t: Date.now(),
         },
         headers: {
@@ -785,11 +824,6 @@ const loadMessages = async () => {
         },
       })
       .catch(() => ({ data: [] }));
-
-    const [{ data }, { data: outgoingData }] = await Promise.all([
-      inboxRequest,
-      outboxConversationRequest,
-    ]);
 
     // Ignore responses from a device/search request that is no longer current.
     if (requestId !== latestLoadRequest || requestedDeviceId !== selectedDeviceId.value) return;
@@ -831,20 +865,32 @@ const loadMessages = async () => {
       ...outgoingConversationSummaries.value.map(message => ({
         from: message.to,
         isGroup: message.isGroup || message.to?.includes('@g.us'),
+        profilePicUrl: message.profilePicUrl,
+        groupPicUrl: message.groupPicUrl,
       })),
     ]);
     meta.value = {
-      totalMessages: data?.metadata?.totalMessages || data?.total || list.length,
-      currentPage: page.value,
-      totalPages: data?.metadata?.totalPages || Math.ceil((data?.total || list.length) / pageSize.value),
-      hasMore: data?.metadata?.hasMore || list.length === pageSize.value,
+      totalMessages: data?.metadata?.totalMessages ?? data?.total ?? list.length,
+      totalConversations: data?.metadata?.totalConversations ?? conversations.value.length,
+      currentPage: data?.metadata?.currentPage ?? page.value,
+      totalPages: data?.metadata?.totalPages ?? 1,
+      hasMore: data?.metadata?.hasMore ?? false,
+      conversationKeys,
     };
+    page.value = meta.value.currentPage;
   } catch (e) {
     if (requestId === latestLoadRequest) {
       err.value = e?.response?.data?.message || 'Gagal memuat pesan masuk';
       messages.value = [];
       outgoingConversationSummaries.value = [];
-      meta.value = { totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: false };
+      meta.value = {
+        totalMessages: 0,
+        totalConversations: 0,
+        currentPage: 1,
+        totalPages: 1,
+        hasMore: false,
+        conversationKeys: [],
+      };
     }
   } finally {
     if (requestId === latestLoadRequest) {
@@ -958,8 +1004,6 @@ const setupSocketListener = () => {
     
     // ✅ NEW: Handle profile picture update from background fetch
     const handleProfileUpdate = (data) => {
-      console.log('🔄 Profile picture update received:', data.id, data.profilePicUrl?.substring(0, 50));
-      
       // Update message in messages list
       const msgIndex = messages.value.findIndex(m => m.id === data.id);
       if (msgIndex !== -1) {
@@ -971,7 +1015,6 @@ const setupSocketListener = () => {
         };
         // Trigger reactivity
         messages.value = [...messages.value];
-        console.log('✅ Updated message in list:', msgIndex);
       }
       
       // Update in conversation if open
@@ -985,7 +1028,6 @@ const setupSocketListener = () => {
           };
           // Trigger reactivity
           selectedConversation.value.messages = [...selectedConversation.value.messages];
-          console.log('✅ Updated message in conversation:', convMsgIndex);
         }
       }
 
@@ -1083,14 +1125,6 @@ const setupSocketListener = () => {
     socket.on(mediaUpdateEventName, handleMediaUpdate);
     socket.on(statusEventName, handleMessageStatus);
     
-    console.log('✅ Socket listeners registered:', {
-      incoming: incomingEventName,
-      outgoing: outgoingEventName,
-      profileUpdate: profileUpdateEventName,
-      mediaUpdate: mediaUpdateEventName,
-      status: statusEventName
-    });
-    
     socketCleanup = () => {
       socket.off(incomingEventName, handleIncoming);
       socket.off(outgoingEventName, handleOutgoing);
@@ -1152,8 +1186,7 @@ const markConversationAsRead = async (from) => {
       from: from,
     });
     return true;
-  } catch (e) {
-    console.error('Failed to mark conversation as read:', e);
+  } catch {
     // Restore only messages that were unread before this request. This prevents
     // the UI from claiming the badge is cleared when persistence failed.
     const unreadIds = new Set(unreadMessages.map(msg => msg.id));
@@ -1629,6 +1662,23 @@ const goPrev = () => {
   }
 };
 
+const goToPage = (targetPage) => {
+  const normalizedPage = Number(targetPage);
+  if (
+    loading.value
+    || normalizedPage < 1
+    || normalizedPage > meta.value.totalPages
+    || normalizedPage === page.value
+  ) return;
+  page.value = normalizedPage;
+  loadMessages();
+};
+
+const onPageSizeChange = () => {
+  page.value = 1;
+  loadMessages();
+};
+
 const goNext = () => {
   if (meta.value.hasMore) {
     page.value++;
@@ -1757,9 +1807,15 @@ const getConversationAvatar = (conversation) => {
   const key = getAvatarKey(conversation);
   if (failedAvatarKeys.value.has(key)) return '';
 
-  return conversationAvatarUrls.value[key]
-    || (conversation.isGroup ? conversation.groupPicUrl : conversation.profilePicUrl)
-    || '';
+  const loadedSource = conversationAvatarUrls.value[key] || '';
+  if (loadedSource) return mediaUrl(loadedSource);
+
+  const source = (conversation.isGroup ? conversation.groupPicUrl : conversation.profilePicUrl) || '';
+  // A signed profile endpoint can legitimately return 204 when WhatsApp has no
+  // accessible photo. Probe it as XHR first so an empty response is never
+  // mounted as an <img> and does not create browser console errors.
+  if (String(source).includes('/inbox-profile/')) return '';
+  return source ? mediaUrl(source) : '';
 };
 
 const handleAvatarError = (conversation, event) => {
@@ -1773,6 +1829,12 @@ const handleAvatarError = (conversation, event) => {
   failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
 
   if (event?.target) event.target.removeAttribute('src');
+  const directUrl = conversation?.isGroup
+    ? conversation?.groupPicUrl
+    : conversation?.profilePicUrl;
+  // Signed Inbox profile URLs already perform cache + WhatsApp fallback on the
+  // server. Do not retry them through the legacy device endpoint after a 204.
+  if (String(directUrl || '').includes('/inbox-profile/')) return;
   const recoveryAttempts = avatarRecoveryAttempts.get(key) || 0;
   if (recoveryAttempts < 2) {
     avatarRecoveryAttempts.set(key, recoveryAttempts + 1);
@@ -1788,22 +1850,27 @@ const loadConversationAvatar = async (conversation, force = false) => {
   const directUrl = conversation.isGroup
     ? conversation.groupPicUrl
     : conversation.profilePicUrl;
-  // Prefer the URL already returned with Inbox data. Proxy it only when it is
-  // missing or the browser reports that the URL can no longer be loaded.
-  if (!force && directUrl) return;
+  const isSignedProfileUrl = String(directUrl || '').includes('/inbox-profile/');
+  if (directUrl && failedAvatarKeys.value.has(key)) {
+    const nextFailed = new Set(failedAvatarKeys.value);
+    nextFailed.delete(key);
+    failedAvatarKeys.value = nextFailed;
+    avatarRecoveryAttempts.delete(key);
+  }
+  if (directUrl && !isSignedProfileUrl) return;
+  if (!directUrl) return;
   if ((!force && conversationAvatarUrls.value[key]) || loadingAvatarKeys.has(key)) return;
   loadingAvatarKeys.add(key);
 
   try {
-    const { data } = await deviceApi.get('/messages/get-profile', {
-      params: {
-        recipient,
-        resolution: 'high',
-        download: '1',
-      },
+    const { data } = await userApi.get(mediaUrl(directUrl), {
       responseType: 'blob',
+      headers: { Accept: 'image/*' },
     });
-    if (!(data instanceof Blob) || data.size === 0 || !data.type.startsWith('image/')) return;
+    if (!(data instanceof Blob) || data.size === 0 || !data.type.startsWith('image/')) {
+      failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
+      return;
+    }
 
     const objectUrl = URL.createObjectURL(data);
     const previousUrl = conversationAvatarUrls.value[key];
@@ -1820,29 +1887,8 @@ const loadConversationAvatar = async (conversation, force = false) => {
       failedAvatarKeys.value = nextFailed;
     }
   } catch {
-    try {
-      // The backend may be unable to proxy WhatsApp's CDN from a datacenter,
-      // while the user's browser can still load the freshly generated URL.
-      const { data } = await deviceApi.get('/messages/get-profile', {
-        params: {
-          recipient,
-          resolution: 'high',
-        },
-      });
-      if (data?.profilePictureUrl) {
-        conversationAvatarUrls.value = {
-          ...conversationAvatarUrls.value,
-          [key]: data.profilePictureUrl,
-        };
-        if (failedAvatarKeys.value.has(key)) {
-          const nextFailed = new Set(failedAvatarKeys.value);
-          nextFailed.delete(key);
-          failedAvatarKeys.value = nextFailed;
-        }
-      }
-    } catch {
-      // WhatsApp privacy settings may make a profile photo unavailable.
-    }
+    // Missing/private WhatsApp pictures keep the initial avatar.
+    failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
   } finally {
     loadingAvatarKeys.delete(key);
   }
@@ -2546,7 +2592,7 @@ const handleMediaError = (event, message) => {
 .pagination-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .btn-page {
@@ -2578,6 +2624,19 @@ const handleMediaError = (event, message) => {
 .btn-page svg {
   width: 16px;
   height: 16px;
+}
+
+.btn-page.page-number {
+  min-width: 38px;
+  justify-content: center;
+  padding: 8px 10px;
+}
+
+.btn-page.page-number.active {
+  color: #ffffff;
+  border-color: #2563eb;
+  background: #2563eb;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
 }
 
 .page-indicator {
@@ -3313,6 +3372,15 @@ const handleMediaError = (event, message) => {
   .pagination {
     flex-direction: column;
     text-align: center;
+  }
+
+  .pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .pagination-label {
+    display: none;
   }
   
   .conversation-modal {
