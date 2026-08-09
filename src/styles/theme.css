@@ -374,6 +374,15 @@ html.dark ::-webkit-scrollbar-thumb {
     border-radius: 999px;
 }
 
+html.dark .label-chip-table {
+    color: #ffffff !important;
+}
+
+html.dark .recipients-info-box,
+html.dark .recipients-info-box strong {
+    color: #ffffff !important;
+}
+
 /* Reports are print artifacts and intentionally stay in light mode. */
 html.dark :where(.pdf-template, .pdf-container, #pdf-render-container) {
     color-scheme: light !important;
