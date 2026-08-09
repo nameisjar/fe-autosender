@@ -594,7 +594,7 @@
                 ref="attachmentInput"
                 type="file"
                 class="attachment-input"
-                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/ogg,audio/wav,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/ogg,audio/wav,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp,.rtf,.json,.zip,.rar,.7z"
                 @change="handleAttachmentChange"
               />
               <button
@@ -1858,8 +1858,29 @@ const SUPPORTED_ATTACHMENT_TYPES = new Set([
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/rtf',
+  'text/rtf',
+  'application/json',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/vnd.rar',
+  'application/x-rar-compressed',
+  'application/x-7z-compressed',
   'text/csv',
   'text/plain',
+]);
+const SUPPORTED_ATTACHMENT_EXTENSIONS = new Set([
+  'jpg', 'jpeg', 'png', 'gif', 'webp',
+  'mp4', 'mov', 'webm',
+  'mp3', 'ogg', 'wav',
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt',
+  'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf', 'json',
+  'zip', 'rar', '7z',
 ]);
 const SUPPORTED_PASTED_IMAGE_TYPES = new Set([
   'image/jpeg',
@@ -1882,6 +1903,17 @@ const selectAttachment = (file) => {
   return true;
 };
 
+const getAttachmentExtension = (file) => {
+  const fileName = String(file?.name || '').toLowerCase();
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex >= 0 ? fileName.slice(dotIndex + 1) : '';
+};
+
+const isSupportedAttachment = (file) => (
+  SUPPORTED_ATTACHMENT_TYPES.has(String(file?.type || '').toLowerCase())
+  && SUPPORTED_ATTACHMENT_EXTENSIONS.has(getAttachmentExtension(file))
+);
+
 const clearAttachment = () => {
   if (attachmentPreviewUrl.value) URL.revokeObjectURL(attachmentPreviewUrl.value);
   attachmentPreviewUrl.value = '';
@@ -1892,6 +1924,12 @@ const clearAttachment = () => {
 const handleAttachmentChange = (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
+
+  if (!isSupportedAttachment(file)) {
+    toast.error('Tipe file tidak didukung');
+    event.target.value = '';
+    return;
+  }
 
   if (!selectAttachment(file)) {
     event.target.value = '';
@@ -1983,7 +2021,7 @@ const handleConversationDrop = (event) => {
   }
 
   const [file] = files;
-  if (!SUPPORTED_ATTACHMENT_TYPES.has(file.type.toLowerCase())) {
+  if (!isSupportedAttachment(file)) {
     toast.error('Tipe file tidak didukung');
     return;
   }
@@ -3593,6 +3631,7 @@ const handleMediaError = (event, message) => {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px;
   display: flex;
   flex-direction: column;

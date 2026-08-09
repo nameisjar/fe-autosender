@@ -152,6 +152,7 @@ const selectEmoji = emoji => emit('select', emoji);
   z-index: 50;
   width: max-content;
   max-width: calc(100vw - 72px);
+  box-sizing: border-box;
   margin: 0;
   padding: 6px;
   border: 1px solid var(--theme-border);
@@ -160,10 +161,10 @@ const selectEmoji = emoji => emit('select', emoji);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 
-.reaction-picker.incoming { right: 0; }
-.reaction-picker.outgoing { left: 0; }
+.reaction-picker.incoming { left: 0; }
+.reaction-picker.outgoing { right: 0; }
 .reaction-picker.expanded {
-  width: 320px;
+  width: min(320px, calc(100vw - 72px));
   border-radius: 18px;
 }
 
@@ -171,6 +172,10 @@ const selectEmoji = emoji => emit('select', emoji);
   display: flex;
   align-items: center;
   gap: 2px;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
 }
 
 .emoji-button,
