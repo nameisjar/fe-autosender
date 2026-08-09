@@ -632,13 +632,12 @@ const getInitials = (name) => {
   return name.charAt(0).toUpperCase();
 };
 
-const logout = () => {
+const logout = async () => {
   clearGroups();
-  localStorage.removeItem("token");
   localStorage.removeItem("device_selected_id");
   localStorage.removeItem("device_selected_name");
   emit("close");
-  router.push("/login");
+  await auth.logout();
 };
 </script>
 

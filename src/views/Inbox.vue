@@ -690,6 +690,7 @@ let searchTimer;
 let socketCleanup = null;
 let socketConnectionCleanup = null;
 let latestLoadRequest = 0;
+let latestSentMessagesRequest = 0;
 
 // Computed
 const todayCount = computed(() => {
@@ -1068,6 +1069,10 @@ const fetchDevices = async () => {
 };
 
 const onDeviceChange = () => {
+  latestSentMessagesRequest++;
+  selectedConversation.value = null;
+  sentMessages.value = [];
+  conversationReactions.value = [];
   clearConversationAvatars();
   localStorage.setItem('device_selected_id', selectedDeviceId.value);
   window.dispatchEvent(new Event('deviceChanged'));
@@ -1470,7 +1475,10 @@ const viewConversation = async (conv) => {
   
   // Jangan reload jika conversation yang sama (preserve real-time messages)
   if (isSameConversation) {
-    await loadConversationReactions(conv.from);
+    await Promise.all([
+      loadSentMessagesFromDatabase(conv.from),
+      loadConversationReactions(conv.from),
+    ]);
     replyText.value = '';
     setTimeout(() => scrollToBottom(), 100);
     return;
@@ -1540,7 +1548,7 @@ const markConversationAsRead = async (from) => {
       from: from,
     });
     return true;
-  } catch {
+  } catch (e) {
     // Restore only messages that were unread before this request. This prevents
     // the UI from claiming the badge is cleared when persistence failed.
     const unreadIds = new Set(unreadMessages.map(msg => msg.id));
@@ -1559,6 +1567,8 @@ const markConversationAsRead = async (from) => {
 
 // Load sent messages from database (OutgoingMessage)
 const loadSentMessagesFromDatabase = async (conversationFrom) => {
+  const requestId = ++latestSentMessagesRequest;
+  const requestedDeviceId = selectedDeviceId.value;
   try {
     const device = devices.value.find(d => d.id === selectedDeviceId.value);
     if (!device) {
@@ -1585,6 +1595,12 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
         'X-Requested-With': 'XMLHttpRequest', // Some proxies respect this
       },
     });
+
+    if (
+      requestId !== latestSentMessagesRequest
+      || requestedDeviceId !== selectedDeviceId.value
+      || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
+    ) return;
     
     // ✅ CRITICAL: Handle different response formats
     let messages = [];
@@ -1640,12 +1656,19 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
     // Ensure Vue detects array change and re-renders UI
     sentMessages.value = [...sentMessages.value];
   } catch (e) {
-    sentMessages.value = [];
+    if (
+      requestId === latestSentMessagesRequest
+      && requestedDeviceId === selectedDeviceId.value
+      && sameConversationJid(selectedConversation.value?.from, conversationFrom)
+    ) {
+      toast.error(e?.response?.data?.message || 'Gagal memuat riwayat pesan terkirim');
+    }
   }
 };
 
 // Close conversation
 const closeConversation = () => {
+  latestSentMessagesRequest++;
   clearAttachment();
   conversationReactions.value = [];
   reactionPickerMessageKey.value = '';

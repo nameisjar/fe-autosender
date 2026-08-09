@@ -536,7 +536,7 @@
         <button
           type="button"
           class="btn-preview-compact"
-          @click="showPreview = true"
+          @click="openPreview"
           :disabled="!isPreviewValid || generating"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -585,7 +585,11 @@
 
           <!-- PDF Preview -->
           <div v-else-if="previewData" class="pdf-preview-container">
-            <MonthlyFeedbackPDFTemplate :data="previewData" ref="pdfTemplate" />
+            <MonthlyFeedbackPDFTemplate
+              :key="previewRevision"
+              :data="previewData"
+              ref="pdfTemplate"
+            />
           </div>
 
           <div v-else class="preview-empty">
@@ -688,9 +692,29 @@
               </div>
               <div class="summary-content">
                 <span class="summary-value">{{
-                  sendResults.filter((r) => !r.success).length
+                  sendResults.filter((r) => r.status === "failed").length
                 }}</span>
                 <span class="summary-label">Gagal</span>
+              </div>
+            </div>
+            <div class="summary-item paused">
+              <div class="summary-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="10" y1="9" x2="10" y2="15" />
+                  <line x1="14" y1="9" x2="14" y2="15" />
+                </svg>
+              </div>
+              <div class="summary-content">
+                <span class="summary-value">{{
+                  sendResults.filter((r) => r.status === "paused").length
+                }}</span>
+                <span class="summary-label">Dijeda</span>
               </div>
             </div>
           </div>
@@ -746,17 +770,32 @@
                 v-for="(result, index) in sendResults"
                 :key="index"
                 class="result-item"
-                :class="{ success: result.success, failed: !result.success }"
+                :class="{
+                  success: result.status === 'success',
+                  failed: result.status === 'failed',
+                  paused: result.status === 'paused',
+                }"
               >
                 <div class="result-icon">
                   <svg
-                    v-if="result.success"
+                    v-if="result.status === 'success'"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
                   >
                     <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <svg
+                    v-else-if="result.status === 'paused'"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="10" y1="9" x2="10" y2="15" />
+                    <line x1="14" y1="9" x2="14" y2="15" />
                   </svg>
                   <svg
                     v-else
@@ -773,8 +812,9 @@
                   <span class="result-recipient">{{
                     getRecipientDisplayName(result.recipient, result.studentName, result.label)
                   }}</span>
-                  <span v-if="!result.success" class="result-error">{{
-                    result.error || "Gagal mengirim"
+                  <span v-if="result.status !== 'success'" class="result-error">{{
+                    result.error ||
+                    (result.status === "paused" ? "Pengiriman dijeda" : "Gagal mengirim")
                   }}</span>
                 </div>
               </div>
@@ -796,7 +836,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { userApi, deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
@@ -1172,6 +1212,11 @@ const commentCategories = ref({
       text: "",
       isCustom: true,
     },
+    {
+      id: "custom_3",
+      text: "",
+      isCustom: true,
+    },
   ],
 });
 
@@ -1203,6 +1248,23 @@ const formattedStudentName = computed(() => {
   return "Siswa";
 });
 
+// Nama yang ditampilkan di preview harus selalu mengikuti state form/kontak terbaru.
+const previewStudentName = computed(() => {
+  const defaultName = form.value.defaultStudentName?.trim();
+  if (defaultName) {
+    return toTitleCase(defaultName);
+  }
+
+  if (recipientsWithNames.value.length === 1) {
+    const recipientName = recipientsWithNames.value[0]?.finalName;
+    if (recipientName) {
+      return toTitleCase(recipientName);
+    }
+  }
+
+  return recipients.value.length > 0 ? formattedStudentName.value : "Nama Siswa";
+});
+
 const formattedReportBy = computed(() => {
   return toTitleCase(form.value.reportBy);
 });
@@ -1215,30 +1277,18 @@ const selectedCommentsText = computed(() => {
   const selectedIds = form.value.selectedComments.slice(0, 3);
   const comments = [];
 
-  // Tentukan nama untuk preview:
-  // - Jika 1 kontak: gunakan nama kontak
-  // - Jika banyak kontak: gunakan {{firstname}} untuk custom, nama format untuk non-custom
-  const contactPhones = Object.keys(recipientContactMap.value);
-  const hasMultipleRecipients = recipients.value.length > 1;
-  const singleContactName =
-    contactPhones.length === 1
-      ? toTitleCase(recipientContactMap.value[contactPhones[0]])
-      : null;
-
   Object.values(commentCategories.value).forEach((category) => {
     category.forEach((comment) => {
       if (selectedIds.includes(comment.id)) {
         let text = comment.text;
 
         if (comment.isCustom) {
-          // Custom comment: biarkan {{firstname}} jika banyak penerima, replace jika 1
-          if (!hasMultipleRecipients && singleContactName) {
-            text = text.replace(/\{\{firstname\}\}/gi, singleContactName);
-          }
-          // Jika banyak penerima, biarkan {{firstname}} apa adanya
+          // Preview memakai satu contoh nama. Saat dikirim, backend tetap mengganti
+          // placeholder berdasarkan nama masing-masing penerima.
+          text = text.replace(/\{\{firstname\}\}/gi, previewStudentName.value);
         } else {
           // Non-custom comment: replace dengan nama yang sesuai
-          text = replaceNameInComment(text, formattedStudentName.value || "Siswa");
+          text = replaceNameInComment(text, previewStudentName.value || "Siswa");
         }
 
         if (text) {
@@ -1276,6 +1326,7 @@ const updateCustomComment = (commentId, text) => {
 const templates = ref([]);
 const courses = ref([]);
 const showPreview = ref(false);
+const previewRevision = ref(0);
 const generating = ref(false);
 const sending = ref(false);
 const error = ref("");
@@ -1392,14 +1443,8 @@ const previewData = computed(() => {
 
   const durationText = form.value.duration || "Bulan ke-" + form.value.month;
 
-  // Gunakan nama default atau placeholder jika belum ada penerima
-  const previewStudentName =
-    recipients.value.length > 0
-      ? formattedStudentName.value
-      : form.value.defaultStudentName || 'Nama Siswa';
-
   return {
-    studentName: previewStudentName,
+    studentName: previewStudentName.value,
     courseName: form.value.courseName,
     month: form.value.month,
     duration: durationText,
@@ -1455,13 +1500,19 @@ const onMonthChange = () => {
   }
 };
 
+const openPreview = async () => {
+  previewRevision.value += 1;
+  showPreview.value = true;
+  await nextTick();
+};
+
 const handleSubmit = async () => {
   if (!isFormValid.value) {
     toast.error("Mohon lengkapi semua field yang diperlukan");
     return;
   }
 
-  showPreview.value = true;
+  await openPreview();
 };
 
 const handleGenerateAndSend = async () => {
@@ -1522,11 +1573,13 @@ const handleGenerateAndSend = async () => {
       sendResults.value = data.results.map((r) => {
         // 🆕 Cari label dari recipientsData
         const recipientData = recipientsData.find(rd => rd.phone === r.recipient);
+        const status = r.status || (r.success ? "success" : "failed");
         return {
           recipient: r.recipient,
           studentName: r.studentName || '', // Simpan studentName dari backend
           label: recipientData?.label || '', // 🆕 Simpan label
-          success: r.status === "success",
+          status,
+          success: status === "success",
           error: r.error,
         };
       });
@@ -1535,23 +1588,27 @@ const handleGenerateAndSend = async () => {
         recipient: rd.phone,
         studentName: rd.studentName || '', // Gunakan dari recipientsData
         label: rd.label || '', // 🆕 Simpan label
+        status: "success",
         success: true,
       }));
     }
 
     const successCount = sendResults.value.filter((r) => r.success).length;
-    const failedCount = sendResults.value.filter((r) => !r.success).length;
+    const failedCount = sendResults.value.filter((r) => r.status === "failed").length;
+    const pausedCount = sendResults.value.filter((r) => r.status === "paused").length;
 
     if (data.rateLimit) {
       rateLimitInfo.value = data.rateLimit;
     }
 
-    if (failedCount === 0) {
+    if (failedCount === 0 && pausedCount === 0) {
       success.value = `Feedback bulanan berhasil dikirim ke ${successCount} penerima!`;
       toast.success(`Feedback bulanan berhasil dikirim ke ${successCount} penerima!`);
     } else {
-      success.value = `Terkirim: ${successCount}, Gagal: ${failedCount}`;
-      toast.warning(`Terkirim: ${successCount}, Gagal: ${failedCount}`);
+      success.value = `Terkirim: ${successCount}, Gagal: ${failedCount}, Dijeda: ${pausedCount}`;
+      toast.warning(
+        `Terkirim: ${successCount}, Gagal: ${failedCount}, Dijeda: ${pausedCount}`
+      );
     }
 
     showSendResults.value = true;
@@ -1577,11 +1634,13 @@ const handleGenerateAndSend = async () => {
       sendResults.value = e.response.data.results.map((r) => {
         // 🆕 Cari label dari recipientsData
         const recipientData = recipientsData.find(rd => rd.phone === r.recipient);
+        const status = r.status || (r.success ? "success" : "failed");
         return {
           recipient: r.recipient,
           studentName: r.studentName || '', // Simpan studentName dari backend
           label: recipientData?.label || '', // 🆕 Simpan label
-          success: r.status === "success",
+          status,
+          success: status === "success",
           error: r.error,
         };
       });
@@ -1595,7 +1654,12 @@ const handleGenerateAndSend = async () => {
 const pdfTemplate = ref(null);
 
 const handleDownloadPDF = async () => {
-  if (!previewData.value || !pdfTemplate.value) return;
+  if (!previewData.value) return;
+
+  // Pastikan perubahan form terakhir sudah dirender sebelum elemen PDF dikloning.
+  await nextTick();
+  const originalElement = pdfTemplate.value?.$el;
+  if (!originalElement) return;
 
   generating.value = true;
 
@@ -1604,7 +1668,6 @@ const handleDownloadPDF = async () => {
 
   try {
     // 🔧 Clone the element and append to a visible but off-screen container
-    const originalElement = pdfTemplate.value.$el;
     pdfContainer = document.createElement("div");
     pdfContainer.id = "pdf-render-container";
     pdfContainer.style.cssText = `
@@ -1687,7 +1750,7 @@ const handleDownloadPDF = async () => {
     const elementWidth = element.offsetWidth || 794;
     const elementHeight = element.scrollHeight || element.offsetHeight || 1123;
 
-    const studentNameClean = formattedStudentName.value.replace(/\s+/g, "_");
+    const studentNameClean = previewStudentName.value.replace(/\s+/g, "_");
     const monthNum = previewData.value.month;
     const fileName = "Feedback_" + studentNameClean + "_Bulan" + monthNum + ".pdf";
 
@@ -3139,7 +3202,7 @@ onMounted(async () => {
 /* Results Summary */
 .results-summary {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -3163,6 +3226,11 @@ onMounted(async () => {
   border-color: #fca5a5;
 }
 
+.summary-item.paused {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fcd34d;
+}
+
 .summary-icon {
   width: 48px;
   height: 48px;
@@ -3179,6 +3247,10 @@ onMounted(async () => {
 
 .summary-item.failed .summary-icon {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.summary-item.paused .summary-icon {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 }
 
 .summary-icon svg {
@@ -3206,6 +3278,10 @@ onMounted(async () => {
   color: #991b1b;
 }
 
+.summary-item.paused .summary-value {
+  color: #92400e;
+}
+
 .summary-label {
   font-size: 14px;
   font-weight: 500;
@@ -3218,6 +3294,10 @@ onMounted(async () => {
 
 .summary-item.failed .summary-label {
   color: #b91c1c;
+}
+
+.summary-item.paused .summary-label {
+  color: #b45309;
 }
 
 /* Rate Limit Info */
@@ -3344,6 +3424,10 @@ onMounted(async () => {
   border-left: 4px solid #ef4444;
 }
 
+.result-item.paused {
+  border-left: 4px solid #f59e0b;
+}
+
 .result-icon {
   width: 28px;
   height: 28px;
@@ -3362,6 +3446,10 @@ onMounted(async () => {
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
 }
 
+.result-item.paused .result-icon {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
 .result-icon svg {
   width: 14px;
   height: 14px;
@@ -3373,6 +3461,10 @@ onMounted(async () => {
 
 .result-item.failed .result-icon svg {
   color: #dc2626;
+}
+
+.result-item.paused .result-icon svg {
+  color: #d97706;
 }
 
 .result-content {

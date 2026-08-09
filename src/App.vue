@@ -9,6 +9,7 @@ import { useGroups } from "./composables/useGroups.js";
 import { useDevices } from "./composables/useDevices.js";
 import { useGlobalNotifications } from "./composables/useGlobalNotifications.js";
 import { clearDeviceAccessTokenCache, userApi } from "./api/http.js";
+import { refreshSocketAuth } from "./api/socket.js";
 import ToastContainer from "./components/ToastContainer.vue";
 import { setToastInstance } from "./composables/useToast.js";
 
@@ -52,6 +53,10 @@ async function handleUserLoggedIn() {
   }, 500);
 }
 
+function handleTokenRefreshed() {
+  refreshSocketAuth();
+}
+
 async function ensureDefaultDeviceSelected() {
   const current = localStorage.getItem("device_selected_id");
   if (current) return;
@@ -81,6 +86,7 @@ onMounted(async () => {
   window.addEventListener("wa:device-session-closed", handleDeviceSessionClosed);
   window.addEventListener("device:changed", handleDeviceChanged);
   window.addEventListener("user:logged-in", handleUserLoggedIn);
+  window.addEventListener("auth:token-refreshed", handleTokenRefreshed);
 
   const token = localStorage.getItem("token");
   if (!token) return; // skip auto-calls on login page
@@ -97,6 +103,7 @@ onUnmounted(() => {
   window.removeEventListener("wa:device-session-closed", handleDeviceSessionClosed);
   window.removeEventListener("device:changed", handleDeviceChanged);
   window.removeEventListener("user:logged-in", handleUserLoggedIn);
+  window.removeEventListener("auth:token-refreshed", handleTokenRefreshed);
 });
 </script>
 

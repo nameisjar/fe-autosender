@@ -76,7 +76,58 @@ async function maybeRetry(err, instance) {
     return instance(config);
 }
 
-export const userApi = axios.create({ baseURL: API_BASE });
+export const userApi = axios.create({
+    baseURL: API_BASE,
+    withCredentials: true,
+});
+
+// Dedicated client so refreshing a token never re-enters the userApi interceptor.
+const authRefreshApi = axios.create({
+    baseURL: API_BASE,
+    withCredentials: true,
+});
+
+let refreshRequest = null;
+
+const isPublicAuthRequest = (config) => {
+    const url = String(config?.url || '');
+    return /\/(auth\/(login|register|refresh-token|logout)|customer-services\/login|super-admin\/login)(?:[/?]|$)/.test(
+        url,
+    );
+};
+
+const expireUserSession = () => {
+    localStorage.removeItem('token');
+    try {
+        window.dispatchEvent(new CustomEvent('auth:session-expired'));
+    } catch (_) {}
+
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+    }
+};
+
+const refreshAccessToken = async () => {
+    if (!refreshRequest) {
+        refreshRequest = authRefreshApi
+            .post('/auth/refresh-token', {})
+            .then(({ data }) => {
+                const accessToken = data?.accessToken;
+                if (!accessToken) throw new Error('Access token missing from refresh response');
+
+                localStorage.setItem('token', accessToken);
+                try {
+                    window.dispatchEvent(new CustomEvent('auth:token-refreshed'));
+                } catch (_) {}
+                return accessToken;
+            })
+            .finally(() => {
+                refreshRequest = null;
+            });
+    }
+
+    return refreshRequest;
+};
 
 userApi.interceptors.request.use(async (config) => {
     // Optimasi: Hanya throttle request non-GET (POST, PUT, DELETE)
@@ -93,10 +144,23 @@ userApi.interceptors.request.use(async (config) => {
 userApi.interceptors.response.use(
     (r) => r,
     async (err) => {
-        if (err && err.response && err.response.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-            return Promise.reject(err);
+        const config = err?.config;
+        if (err?.response?.status === 401 && config && !isPublicAuthRequest(config)) {
+            if (config.__skipAuthRefresh || config.__authRetry || !localStorage.getItem('token')) {
+                expireUserSession();
+                return Promise.reject(err);
+            }
+
+            config.__authRetry = true;
+            try {
+                const accessToken = await refreshAccessToken();
+                config.headers = config.headers || {};
+                config.headers.Authorization = `Bearer ${accessToken}`;
+                return userApi(config);
+            } catch (refreshError) {
+                expireUserSession();
+                return Promise.reject(refreshError);
+            }
         }
         // Retry/backoff
         try {

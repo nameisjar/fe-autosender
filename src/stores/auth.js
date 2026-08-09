@@ -23,7 +23,16 @@ export const useAuthStore = defineStore('auth', {
             }
         },
         // 🆕 Logout action dengan clear cache
-        logout() {
+        async logout() {
+            try {
+                await userApi.post('/auth/logout', {}, {
+                    __skipAuthRefresh: true,
+                    timeout: 5000,
+                });
+            } catch (_) {
+                // Local logout must still complete if the server cannot be reached.
+            }
+
             // Clear user state
             this.me = null;
             
