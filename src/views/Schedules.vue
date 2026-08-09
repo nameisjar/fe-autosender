@@ -1824,15 +1824,22 @@ onMounted(async () => {
 }
 
 .toolbar {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns:
+    minmax(160px, 1.35fr)
+    minmax(130px, 0.9fr)
+    minmax(115px, 0.75fr)
+    minmax(135px, 1fr)
+    minmax(135px, 0.95fr)
+    minmax(80px, 0.55fr)
+    minmax(82px, 0.6fr)
+    max-content;
+  gap: 10px;
   align-items: center;
 }
 
 .search-box {
-  flex: 1;
-  min-width: 250px;
+  min-width: 0;
   position: relative;
   display: flex;
   align-items: center;
@@ -1865,12 +1872,12 @@ onMounted(async () => {
 }
 
 .filter-group {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: contents;
 }
 
 .filter-select {
+  width: 100%;
+  min-width: 0;
   padding: 10px 14px;
   border: 1.5px solid var(--theme-border);
   border-radius: 10px;
@@ -1895,7 +1902,7 @@ onMounted(async () => {
 }
 
 .sort-dir {
-  min-width: 100px;
+  min-width: 0;
 }
 
 .btn-reload {
@@ -1912,6 +1919,8 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .btn-reload:hover:not(:disabled) {
@@ -2886,6 +2895,7 @@ onMounted(async () => {
   }
 
   .toolbar {
+    display: flex;
     flex-direction: column;
   }
 
@@ -2895,8 +2905,10 @@ onMounted(async () => {
   }
 
   .filter-group {
+    display: flex;
     width: 100%;
     flex-direction: column;
+    gap: 8px;
   }
 
   .filter-select {
