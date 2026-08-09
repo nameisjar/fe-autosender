@@ -268,7 +268,23 @@
         class="modal conversation-modal"
         :class="{ 'conversation-modal--fullscreen': isConversationFullscreen }"
         @click.stop
+        @dragenter.prevent="handleConversationDragEnter"
+        @dragover.prevent="handleConversationDragOver"
+        @dragleave.prevent="handleConversationDragLeave"
+        @drop.prevent="handleConversationDrop"
       >
+        <div v-if="isDraggingAttachment" class="attachment-drop-overlay" aria-hidden="true">
+          <div class="attachment-drop-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3v12" />
+              <path d="m7 8 5-5 5 5" />
+              <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+            </svg>
+            <strong>Lepaskan file untuk dilampirkan</strong>
+            <span>File akan dipreview sebelum dikirim</span>
+          </div>
+        </div>
+
         <div class="modal-header">
           <div class="modal-header-info">
             <!-- Personal chat with profile picture -->
@@ -731,6 +747,8 @@ const chatMessagesContainer = ref(null);
 const attachmentInput = ref(null);
 const selectedAttachment = ref(null);
 const attachmentPreviewUrl = ref('');
+const isDraggingAttachment = ref(false);
+let attachmentDragDepth = 0;
 const conversationAvatarUrls = ref({});
 const failedAvatarKeys = ref(new Set());
 const loadingAvatarKeys = new Set();
@@ -1768,6 +1786,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 const closeConversation = () => {
   latestSentMessagesRequest++;
   isConversationFullscreen.value = false;
+  resetAttachmentDrag();
   closeImagePreview();
   clearAttachment();
   conversationReactions.value = [];
@@ -1822,6 +1841,26 @@ const formatFileSize = (bytes) => {
 };
 
 const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
+const SUPPORTED_ATTACHMENT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/wav',
+  'audio/webm',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+  'text/csv',
+  'text/plain',
+]);
 const SUPPORTED_PASTED_IMAGE_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -1895,6 +1934,61 @@ const handleReplyPaste = (event) => {
   }
 
   selectAttachment(imageFile);
+};
+
+const hasDraggedFiles = (dataTransfer) => {
+  if (!dataTransfer) return false;
+  return Array.from(dataTransfer.types || []).includes('Files')
+    || Array.from(dataTransfer.items || []).some(item => item.kind === 'file');
+};
+
+const resetAttachmentDrag = () => {
+  attachmentDragDepth = 0;
+  isDraggingAttachment.value = false;
+};
+
+const handleConversationDragEnter = (event) => {
+  if (!hasDraggedFiles(event.dataTransfer)) return;
+  attachmentDragDepth += 1;
+  isDraggingAttachment.value = true;
+};
+
+const handleConversationDragOver = (event) => {
+  if (!hasDraggedFiles(event.dataTransfer)) return;
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+};
+
+const handleConversationDragLeave = (event) => {
+  if (!hasDraggedFiles(event.dataTransfer)) return;
+  attachmentDragDepth = Math.max(0, attachmentDragDepth - 1);
+  if (attachmentDragDepth === 0) isDraggingAttachment.value = false;
+};
+
+const handleConversationDrop = (event) => {
+  const files = Array.from(event.dataTransfer?.files || []);
+  resetAttachmentDrag();
+
+  if (files.length === 0) return;
+  if (sendingReply.value) {
+    toast.warning('Tunggu hingga pesan sebelumnya selesai dikirim');
+    return;
+  }
+  if (selectedAttachment.value) {
+    toast.warning('Hapus lampiran yang dipilih sebelum menambahkan file baru');
+    return;
+  }
+  if (files.length > 1) {
+    toast.warning('Saat ini hanya satu file yang dapat dikirim dalam satu pesan');
+    return;
+  }
+
+  const [file] = files;
+  if (!SUPPORTED_ATTACHMENT_TYPES.has(file.type.toLowerCase())) {
+    toast.error('Tipe file tidak didukung');
+    return;
+  }
+
+  selectAttachment(file);
 };
 
 const sendMediaReply = async () => {
@@ -3377,10 +3471,57 @@ const handleMediaError = (event, message) => {
 
 /* Conversation Modal */
 .conversation-modal {
+  position: relative;
   max-width: 880px;
   height: 88vh;
   max-height: 850px;
   transition: width 180ms ease, height 180ms ease, max-width 180ms ease;
+}
+
+.attachment-drop-overlay {
+  position: absolute;
+  inset: 10px;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.82);
+  border: 2px dashed #60a5fa;
+  border-radius: 16px;
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+  animation: attachmentDropFadeIn 140ms ease-out;
+}
+
+.attachment-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.attachment-drop-content svg {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  color: #60a5fa;
+}
+
+.attachment-drop-content strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.attachment-drop-content span {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+@keyframes attachmentDropFadeIn {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .conversation-modal--fullscreen {
