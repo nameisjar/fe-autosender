@@ -344,6 +344,12 @@
                   alt="Gambar WhatsApp"
                   class="chat-image"
                   loading="lazy"
+                  role="button"
+                  tabindex="0"
+                  title="Klik untuk memperbesar gambar"
+                  @click="openImagePreview(msg, $event)"
+                  @keydown.enter.prevent="openImagePreview(msg, $event)"
+                  @keydown.space.prevent="openImagePreview(msg, $event)"
                   @error="handleMediaError($event, msg)"
                 />
 
@@ -607,6 +613,43 @@
       </div>
     </div>
 
+    <Teleport to="body">
+      <div
+        v-if="imagePreview"
+        class="image-preview-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Preview gambar pesan"
+        @click="closeImagePreview"
+      >
+        <button
+          type="button"
+          class="image-preview-close"
+          aria-label="Tutup preview gambar"
+          title="Tutup preview (Esc)"
+          @click="closeImagePreview"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <figure class="image-preview-content" @click.stop>
+          <img
+            :src="imagePreview.src"
+            :alt="imagePreview.alt"
+            class="image-preview-image"
+            @error="handlePreviewImageError"
+          />
+          <figcaption v-if="imagePreview.caption || imagePreview.time" class="image-preview-meta">
+            <p v-if="imagePreview.caption">{{ imagePreview.caption }}</p>
+            <time v-if="imagePreview.time">{{ imagePreview.time }}</time>
+          </figcaption>
+        </figure>
+      </div>
+    </Teleport>
+
     <p v-if="err" class="error-message">{{ err }}</p>
   </div>
 </template>
@@ -640,6 +683,7 @@ const conversationReactions = ref([]);
 const reactionPickerMessageKey = ref('');
 const sendingReactionMessageKey = ref('');
 const messageActionMenuKey = ref('');
+const imagePreview = ref(null);
 
 // Reply functionality
 const replyText = ref('');
@@ -1669,6 +1713,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 // Close conversation
 const closeConversation = () => {
   latestSentMessagesRequest++;
+  closeImagePreview();
   clearAttachment();
   conversationReactions.value = [];
   reactionPickerMessageKey.value = '';
@@ -2397,6 +2442,8 @@ watch(q, () => {
 
 // Lifecycle
 onMounted(async () => {
+  window.addEventListener('keydown', handleImagePreviewKeydown);
+
   // Connect socket and setup listeners
   const socket = connectSocket();
 
@@ -2436,6 +2483,8 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleImagePreviewKeydown);
+  closeImagePreview();
   clearAttachment();
   clearConversationAvatars();
   if (socketCleanup) {
@@ -2487,6 +2536,39 @@ const getVisibleMessageText = (message) => {
     ['[Stiker]', '[Gambar]', '[Video]', '[Audio]'].includes(text)
   ) return '';
   return text;
+};
+
+const openImagePreview = (message, event) => {
+  if (!message?.mediaPath || message?.mediaLoadFailed) return;
+
+  const renderedImage = event?.currentTarget;
+  const src = renderedImage?.currentSrc || renderedImage?.src || mediaUrl(message.mediaPath);
+  if (!src) return;
+
+  imagePreview.value = {
+    src,
+    alt: message?.type === 'outgoing' ? 'Gambar terkirim' : 'Gambar masuk',
+    caption: getVisibleMessageText(message),
+    time: message?.type === 'incoming'
+      ? formatFullTime(message.receivedAt)
+      : formatTime(message.timestamp),
+  };
+};
+
+function closeImagePreview() {
+  imagePreview.value = null;
+}
+
+function handleImagePreviewKeydown(event) {
+  if (event.key === 'Escape' && imagePreview.value) {
+    event.preventDefault();
+    closeImagePreview();
+  }
+}
+
+const handlePreviewImageError = () => {
+  closeImagePreview();
+  toast.error('Gambar tidak dapat dibuka. Silakan muat ulang percakapan.');
 };
 
 const getMessagePreview = (message) => {
@@ -3495,6 +3577,109 @@ const handleMediaError = (event, message) => {
   background: rgba(15, 23, 42, 0.08);
 }
 
+.chat-image {
+  cursor: zoom-in;
+  transition: filter 160ms ease, transform 160ms ease;
+}
+
+.chat-image:hover {
+  filter: brightness(0.94);
+}
+
+.chat-image:focus-visible {
+  outline: 3px solid var(--theme-accent);
+  outline-offset: 3px;
+}
+
+.image-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px 28px;
+  background: rgba(2, 6, 23, 0.92);
+  backdrop-filter: blur(8px);
+  animation: imagePreviewFadeIn 160ms ease-out;
+}
+
+.image-preview-close {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 1;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  color: #f8fafc;
+  background: rgba(30, 41, 59, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.image-preview-close:hover {
+  background: rgba(51, 65, 85, 0.96);
+  transform: scale(1.04);
+}
+
+.image-preview-close:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 3px;
+}
+
+.image-preview-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+.image-preview-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: min(1200px, 100%);
+  max-height: 100%;
+  margin: 0;
+}
+
+.image-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 160px);
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.5);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+.image-preview-meta {
+  max-width: min(760px, 100%);
+  margin-top: 14px;
+  color: #f8fafc;
+  text-align: center;
+}
+
+.image-preview-meta p {
+  margin: 0 0 5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.image-preview-meta time {
+  color: #aebbcf;
+  font-size: 13px;
+}
+
+@keyframes imagePreviewFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .chat-audio {
   display: block;
   width: min(300px, 65vw);
@@ -4045,6 +4230,27 @@ const handleMediaError = (event, message) => {
   
   .chat-bubble {
     max-width: 90%;
+  }
+
+  .image-preview-overlay {
+    padding: 60px 12px 18px;
+  }
+
+  .image-preview-close {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .image-preview-image {
+    max-height: calc(100vh - 130px);
+    border-radius: 8px;
+  }
+
+  .image-preview-meta {
+    margin-top: 10px;
+    font-size: 14px;
   }
   
   .reply-input-container {
