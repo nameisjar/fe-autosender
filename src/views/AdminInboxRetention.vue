@@ -118,7 +118,7 @@
           </div>
           <div class="stat-card warning">
             <span>Siap dihapus permanen</span>
-            <strong>{{ formatNumber(preview.incomingPendingDeletion) }}</strong>
+            <strong>{{ formatNumber(permanentDeletionTotal) }}</strong>
           </div>
         </div>
         <p v-if="hasUnsavedChanges" class="unsaved-text">
@@ -158,7 +158,11 @@
                 <td>
                   {{ formatNumber(log.incomingHiddenCount + log.outgoingHiddenCount) }} pesan
                 </td>
-                <td>{{ formatNumber(log.incomingDeletedCount) }} pesan masuk</td>
+                <td>
+                  {{ formatNumber(
+                    Number(log.incomingDeletedCount || 0) + Number(log.outgoingDeletedCount || 0)
+                  ) }} pesan
+                </td>
               </tr>
             </tbody>
           </table>
@@ -207,6 +211,7 @@ const preview = ref({
   incomingToHide: 0,
   outgoingToHide: 0,
   incomingPendingDeletion: 0,
+  outgoingPendingDeletion: 0,
   affectedDevices: 0,
 });
 const logs = ref([]);
@@ -215,6 +220,10 @@ const form = reactive({ enabled: true, retentionDays: 90 });
 
 const eligibleTotal = computed(
   () => Number(preview.value.incomingToHide || 0) + Number(preview.value.outgoingToHide || 0),
+);
+const permanentDeletionTotal = computed(
+  () => Number(preview.value.incomingPendingDeletion || 0)
+    + Number(preview.value.outgoingPendingDeletion || 0),
 );
 const hasUnsavedChanges = computed(
   () =>
