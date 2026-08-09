@@ -2551,7 +2551,7 @@ const handleMediaError = (event, message) => {
   margin: 0 0 8px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .header-icon {
@@ -2563,7 +2563,7 @@ const handleMediaError = (event, message) => {
 
 .subtitle {
   margin: 0;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 15px;
 }
 
@@ -2576,8 +2576,8 @@ const handleMediaError = (event, message) => {
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
+  background: var(--theme-gradient-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -2590,7 +2590,7 @@ const handleMediaError = (event, message) => {
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #cbd5e1;
+  border-color: var(--theme-border-strong);
 }
 
 .stat-card svg {
@@ -2603,20 +2603,20 @@ const handleMediaError = (event, message) => {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
   line-height: 1;
 }
 
 .stat-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin-top: 4px;
 }
 
 /* Toolbar Card */
 .toolbar-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 24px;
@@ -2643,24 +2643,24 @@ const handleMediaError = (event, message) => {
   left: 14px;
   width: 20px;
   height: 20px;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   pointer-events: none;
 }
 
 .search-box input {
   width: 100%;
   padding: 12px 16px 12px 44px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 12px;
   font-size: 14px;
   transition: all 0.2s ease;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .search-box input:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -2672,25 +2672,25 @@ const handleMediaError = (event, message) => {
 
 .filter-select {
   padding: 10px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   font-size: 13px;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .filter-select:hover {
-  border-color: #cbd5e1;
-  background: #ffffff;
+  border-color: var(--theme-border-strong);
+  background: var(--theme-surface);
 }
 
 .filter-select:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -2777,8 +2777,8 @@ const handleMediaError = (event, message) => {
 /* Table Container */
 .table-container {
   margin-bottom: 32px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -2794,14 +2794,14 @@ const handleMediaError = (event, message) => {
   display: flex;
   gap: 16px;
   padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--theme-border);
   cursor: pointer;
   transition: all 0.2s ease;
   align-items: center;
 }
 
 .message-item:hover {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .message-item:hover .btn-delete-conv {
@@ -2819,13 +2819,13 @@ const handleMediaError = (event, message) => {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   opacity: 0;
   transition: all 0.2s ease;
 }
 
 .btn-delete-conv:hover {
-  background: #fef2f2;
+  background: var(--theme-danger-soft);
   color: #ef4444;
 }
 
@@ -2913,7 +2913,7 @@ const handleMediaError = (event, message) => {
 
 .sender-name {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   font-size: 15px;
 }
 
@@ -2925,7 +2925,7 @@ const handleMediaError = (event, message) => {
 
 .sender-phone {
   margin-top: 2px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   font-weight: 500;
@@ -2957,11 +2957,11 @@ const handleMediaError = (event, message) => {
 
 .message-time {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
 }
 
 .message-preview {
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
   line-height: 1.5;
   overflow: hidden;
@@ -2983,13 +2983,13 @@ const handleMediaError = (event, message) => {
   align-items: center;
   justify-content: center;
   padding: 80px 24px;
-  color: #64748b;
+  color: var(--theme-text-muted);
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid #e2e8f0;
+  border: 4px solid var(--theme-border);
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -3020,19 +3020,19 @@ const handleMediaError = (event, message) => {
   margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .empty-state p,
 .empty-selection-card p {
   margin: 0;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
 }
 
 .empty-selection-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
@@ -3043,14 +3043,14 @@ const handleMediaError = (event, message) => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-top: 1px solid #f1f5f9;
-  background: #f8fafc;
+  border-top: 1px solid var(--theme-border);
+  background: var(--theme-surface-soft);
   flex-wrap: wrap;
   gap: 16px;
 }
 
 .pagination-info {
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
 }
 
@@ -3065,10 +3065,10 @@ const handleMediaError = (event, message) => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
-  background: #ffffff;
-  color: #475569;
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -3078,7 +3078,7 @@ const handleMediaError = (event, message) => {
 .btn-page:hover:not(:disabled) {
   border-color: #3b82f6;
   color: #3b82f6;
-  background: #eff6ff;
+  background: var(--theme-info-soft);
 }
 
 .btn-page:disabled {
@@ -3099,7 +3099,7 @@ const handleMediaError = (event, message) => {
 
 .btn-page.page-number.active {
   color: #ffffff;
-  border-color: #2563eb;
+  border-color: var(--theme-info-text);
   background: #2563eb;
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
 }
@@ -3109,12 +3109,12 @@ const handleMediaError = (event, message) => {
   align-items: center;
   gap: 4px;
   font-size: 14px;
-  color: #64748b;
+  color: var(--theme-text-muted);
 }
 
 .current-page {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 /* Modal - Konsisten dengan Schedules */
@@ -3131,7 +3131,7 @@ const handleMediaError = (event, message) => {
 }
 
 .modal {
-  background: #ffffff;
+  background: var(--theme-surface);
   border-radius: 20px;
   width: 100%;
   max-width: 500px;
@@ -3147,8 +3147,8 @@ const handleMediaError = (event, message) => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-gradient-surface);
 }
 
 .modal-header h3 {
@@ -3158,7 +3158,7 @@ const handleMediaError = (event, message) => {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .modal-header h3 svg {
@@ -3194,18 +3194,18 @@ const handleMediaError = (event, message) => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .modal-subtitle {
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-muted);
 }
 
 .modal-phone {
   display: block;
   margin-top: 2px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
 }
@@ -3217,7 +3217,7 @@ const handleMediaError = (event, message) => {
 .chat-body {
   flex: 1;
   padding: 0;
-  background: #f1f5f9;
+  background: var(--theme-surface-soft);
   display: flex;
   flex-direction: column;
   max-height: calc(80vh - 140px);
@@ -3252,7 +3252,7 @@ const handleMediaError = (event, message) => {
 }
 
 .bubble-content {
-  background: #ffffff;
+  background: var(--theme-surface);
   padding: 12px 16px;
   border-radius: 16px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -3295,9 +3295,9 @@ const handleMediaError = (event, message) => {
   padding: 2px 7px;
   border: 1px solid #dbe3ef;
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-size: 12px;
   line-height: 1;
 }
@@ -3322,9 +3322,9 @@ const handleMediaError = (event, message) => {
   padding: 0;
   border: 1px solid #dbe3ef;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14);
-  color: #64748b;
+  color: var(--theme-text-muted);
   cursor: pointer;
   font-size: 17px;
   line-height: 1;
@@ -3361,7 +3361,7 @@ const handleMediaError = (event, message) => {
 
 .btn-message-actions.incoming {
   left: 5px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   background: transparent;
 }
 
@@ -3380,7 +3380,7 @@ const handleMediaError = (event, message) => {
 }
 
 .btn-message-reaction:hover {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .btn-message-actions.incoming:hover,
@@ -3401,9 +3401,9 @@ const handleMediaError = (event, message) => {
   width: 190px;
   flex-direction: column;
   padding: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 
@@ -3415,13 +3415,13 @@ const handleMediaError = (event, message) => {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #334155;
+  color: var(--theme-text-secondary);
   cursor: pointer;
   font-size: 13px;
   text-align: left;
 }
 
-.message-actions-menu button:hover { background: #f1f5f9; }
+.message-actions-menu button:hover { background: var(--theme-surface-soft); }
 .message-actions-menu button.danger { color: #dc2626; }
 
 @media (hover: none) {
@@ -3442,14 +3442,14 @@ const handleMediaError = (event, message) => {
 .bubble-sender-phone {
   display: block;
   margin-top: 1px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 10px;
   font-weight: 500;
 }
 
 .bubble-text {
-  color: #1e293b;
+  color: var(--theme-text);
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -3460,7 +3460,7 @@ const handleMediaError = (event, message) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -3509,8 +3509,8 @@ const handleMediaError = (event, message) => {
   max-width: 320px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #f1f5f9;
-  color: #1e293b;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text);
   text-decoration: none;
 }
 
@@ -3537,7 +3537,7 @@ const handleMediaError = (event, message) => {
 
 .bubble-time {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   margin-top: 6px;
   display: flex;
   align-items: center;
@@ -3602,8 +3602,8 @@ const handleMediaError = (event, message) => {
   flex-direction: column;
   gap: 10px;
   padding: 16px 20px;
-  background: #ffffff;
-  border-top: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border-top: 1px solid var(--theme-border);
 }
 
 .reply-input-row {
@@ -3623,18 +3623,18 @@ const handleMediaError = (event, message) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 12px;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-attachment:hover:not(:disabled) {
-  border-color: #93c5fd;
-  color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--theme-info-border);
+  color: var(--theme-info-text);
+  background: var(--theme-info-soft);
 }
 
 .btn-attachment:disabled {
@@ -3654,7 +3654,7 @@ const handleMediaError = (event, message) => {
   padding: 9px 10px;
   border: 1px solid #dbeafe;
   border-radius: 12px;
-  background: #eff6ff;
+  background: var(--theme-info-soft);
 }
 
 .attachment-preview > img {
@@ -3668,8 +3668,8 @@ const handleMediaError = (event, message) => {
   min-width: 52px;
   padding: 7px;
   border-radius: 8px;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--theme-info-soft);
+  color: var(--theme-info-text);
   font-size: 10px;
   font-weight: 700;
   text-align: center;
@@ -3685,14 +3685,14 @@ const handleMediaError = (event, message) => {
 
 .attachment-info strong {
   overflow: hidden;
-  color: #1e293b;
+  color: var(--theme-text);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .attachment-info span {
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 11px;
 }
 
@@ -3702,7 +3702,7 @@ const handleMediaError = (event, message) => {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 22px;
   cursor: pointer;
 }
@@ -3712,24 +3712,24 @@ const handleMediaError = (event, message) => {
   min-height: 40px;
   max-height: 120px;
   padding: 10px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 12px;
   font-size: 14px;
   font-family: inherit;
   resize: none;
   transition: all 0.2s ease;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .reply-textarea:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .reply-textarea::placeholder {
-  color: #94a3b8;
+  color: var(--theme-text-muted);
 }
 
 .btn-send-reply {
@@ -3773,8 +3773,8 @@ const handleMediaError = (event, message) => {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: #e2e8f0;
-  color: #64748b;
+  background: var(--theme-surface-hover);
+  color: var(--theme-text-muted);
   font-size: 11px;
   font-weight: 600;
   border-radius: 10px;
@@ -3788,16 +3788,16 @@ const handleMediaError = (event, message) => {
   align-items: center;
   justify-content: center;
   border: none;
-  background: #f1f5f9;
+  background: var(--theme-surface-soft);
   border-radius: 10px;
   cursor: pointer;
-  color: #64748b;
+  color: var(--theme-text-muted);
   transition: all 0.2s ease;
 }
 
 .btn-close:hover {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: var(--theme-surface-hover);
+  color: var(--theme-text);
 }
 
 .btn-close svg {
@@ -3823,12 +3823,12 @@ const handleMediaError = (event, message) => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin-bottom: 8px;
 }
 
 .detail-value {
-  color: #1e293b;
+  color: var(--theme-text);
   font-size: 15px;
 }
 
@@ -3840,22 +3840,22 @@ const handleMediaError = (event, message) => {
 
 .sender-info .sender-name {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .sender-info .sender-phone {
   font-size: 14px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-family: monospace;
 }
 
 .message-text {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   padding: 16px;
   border-radius: 12px;
   white-space: pre-wrap;
   line-height: 1.6;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
   font-size: 14px;
 }
 
@@ -3878,7 +3878,7 @@ const handleMediaError = (event, message) => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #fef2f2;
+  background: var(--theme-danger-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3895,13 +3895,13 @@ const handleMediaError = (event, message) => {
   margin: 0 0 8px;
   font-size: 18px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .delete-modal-desc {
   margin: 0;
   font-size: 14px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   line-height: 1.5;
 }
 
@@ -3914,9 +3914,9 @@ const handleMediaError = (event, message) => {
 
 .btn-cancel {
   padding: 10px 24px;
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border);
   border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
@@ -3925,7 +3925,7 @@ const handleMediaError = (event, message) => {
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: #e2e8f0;
+  background: var(--theme-surface-hover);
 }
 
 .btn-cancel:disabled {
@@ -3966,12 +3966,12 @@ const handleMediaError = (event, message) => {
 
 /* Error Message - Konsisten dengan Schedules */
 .error-message {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  background: var(--theme-gradient-danger);
   color: #dc2626;
   padding: 16px 20px;
   border-radius: 12px;
   margin-top: 16px;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--theme-danger-border);
   font-size: 14px;
   display: flex;
   align-items: center;

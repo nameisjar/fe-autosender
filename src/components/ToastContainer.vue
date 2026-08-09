@@ -128,49 +128,49 @@ defineExpose({ addToast, removeToast });
 
 /* Success - Green */
 .toast-success {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-color: #86efac;
-  color: #166534;
+  background: var(--theme-gradient-success);
+  border-color: var(--theme-success-border);
+  color: var(--theme-success-text);
 }
 
 .toast-success .toast-icon {
   color: #16a34a;
-  background: #bbf7d0;
+  background: var(--theme-success-soft);
 }
 
 /* Error - Red */
 .toast-error {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border-color: #fca5a5;
-  color: #991b1b;
+  background: var(--theme-gradient-danger);
+  border-color: var(--theme-danger-border);
+  color: var(--theme-danger-text);
 }
 
 .toast-error .toast-icon {
   color: #dc2626;
-  background: #fecaca;
+  background: var(--theme-danger-soft);
 }
 
 /* Warning - Yellow */
 .toast-warning {
-  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  background: var(--theme-gradient-warning);
   border-color: #fde047;
   color: #854d0e;
 }
 
 .toast-warning .toast-icon {
   color: #ca8a04;
-  background: #fef08a;
+  background: var(--theme-warning-soft);
 }
 
 /* Info - Blue */
 .toast-info {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #93c5fd;
+  background: var(--theme-gradient-info);
+  border-color: var(--theme-info-border);
   color: #1e40af;
 }
 
 .toast-info .toast-icon {
-  color: #2563eb;
+  color: var(--theme-info-text);
   background: #bfdbfe;
 }
 

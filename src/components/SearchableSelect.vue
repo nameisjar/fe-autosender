@@ -395,8 +395,8 @@ watch(() => props.options, () => {
   align-items: center;
   min-height: 46px;
   padding: 6px 40px 6px 10px;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
+  background: var(--theme-surface-soft);
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   cursor: text;
   transition: all 0.2s;
@@ -406,7 +406,7 @@ watch(() => props.options, () => {
 .searchable-select.is-open .select-input-wrapper,
 .select-input-wrapper:focus-within {
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -421,18 +421,18 @@ watch(() => props.options, () => {
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   font-size: 13px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-weight: 500;
   transition: all 0.2s;
 }
 
 .select-chip:hover {
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  border-color: var(--theme-border-strong);
+  background: var(--theme-surface-soft);
 }
 
 .chip-text {
@@ -461,7 +461,7 @@ watch(() => props.options, () => {
   padding: 0;
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -483,12 +483,12 @@ watch(() => props.options, () => {
   background: transparent;
   font-size: 14px;
   font-family: inherit;
-  color: #1e293b;
+  color: var(--theme-text);
   outline: none;
 }
 
 .select-input::placeholder {
-  color: #94a3b8;
+  color: var(--theme-text-muted);
 }
 
 .select-input.has-chips {
@@ -515,7 +515,7 @@ watch(() => props.options, () => {
 .icon-chevron {
   width: 18px;
   height: 18px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   transition: transform 0.2s;
 }
 
@@ -535,8 +535,8 @@ watch(() => props.options, () => {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: white;
-  border: 1.5px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   overflow: hidden;
@@ -566,11 +566,11 @@ watch(() => props.options, () => {
 
 .dropdown-option:hover,
 .dropdown-option.is-highlighted {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .dropdown-option.is-selected {
-  background: #eff6ff;
+  background: var(--theme-info-soft);
 }
 
 .dropdown-option.is-selected .option-label {
@@ -588,7 +588,7 @@ watch(() => props.options, () => {
 
 .option-label {
   font-size: 14px;
-  color: #1e293b;
+  color: var(--theme-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -596,7 +596,7 @@ watch(() => props.options, () => {
 
 .option-sublabel {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -617,7 +617,7 @@ watch(() => props.options, () => {
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   text-align: center;
 }
 
@@ -633,7 +633,7 @@ watch(() => props.options, () => {
 }
 
 .empty-query {
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   font-style: italic;
 }
 
@@ -661,12 +661,12 @@ watch(() => props.options, () => {
 }
 
 .dropdown-options::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--theme-surface-soft);
   border-radius: 3px;
 }
 
 .dropdown-options::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--theme-surface-hover);
   border-radius: 3px;
 }
 

@@ -1,0 +1,392 @@
+:root {
+    --theme-bg: #f8fafc;
+    --theme-surface: #ffffff;
+    --theme-surface-soft: #f1f5f9;
+    --theme-surface-hover: #eaf0f7;
+    --theme-text: #0f172a;
+    --theme-text-secondary: #334155;
+    --theme-text-muted: #64748b;
+    --theme-border: #e2e8f0;
+    --theme-border-strong: #cbd5e1;
+    --theme-input: #ffffff;
+    --theme-overlay: rgba(15, 23, 42, 0.52);
+    --theme-shadow: rgba(15, 23, 42, 0.08);
+    --theme-accent: #3b82f6;
+    --theme-accent-soft: #eff6ff;
+    --theme-scrollbar: #cbd5e1;
+    --theme-success-soft: #f0fdf4;
+    --theme-success-border: #bbf7d0;
+    --theme-success-text: #166534;
+    --theme-warning-soft: #fffbeb;
+    --theme-warning-border: #fde68a;
+    --theme-warning-text: #92400e;
+    --theme-danger-soft: #fef2f2;
+    --theme-danger-border: #fecaca;
+    --theme-danger-text: #991b1b;
+    --theme-info-soft: #eff6ff;
+    --theme-info-border: #bfdbfe;
+    --theme-info-text: #1d4ed8;
+    --theme-purple-soft: #f5f3ff;
+    --theme-purple-border: #ddd6fe;
+    --theme-purple-text: #6d28d9;
+    --theme-gradient-surface: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    --theme-gradient-neutral: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    --theme-gradient-neutral-hover: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    --theme-gradient-success: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    --theme-gradient-info: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    --theme-gradient-warning: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    --theme-gradient-danger: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    --theme-gradient-purple: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+}
+
+html.dark {
+    --theme-bg: #101827;
+    --theme-surface: #182235;
+    --theme-surface-soft: #1d293d;
+    --theme-surface-hover: #26354b;
+    --theme-text: #e7edf6;
+    --theme-text-secondary: #c7d2e1;
+    --theme-text-muted: #97a6ba;
+    --theme-border: #304058;
+    --theme-border-strong: #41536e;
+    --theme-input: #141f31;
+    --theme-overlay: rgba(2, 6, 23, 0.78);
+    --theme-shadow: rgba(0, 0, 0, 0.28);
+    --theme-accent: #60a5fa;
+    --theme-accent-soft: #172554;
+    --theme-scrollbar: #475569;
+    --theme-success-soft: #0d2f29;
+    --theme-success-border: #1f6b57;
+    --theme-success-text: #6ee7b7;
+    --theme-warning-soft: #352a12;
+    --theme-warning-border: #80641e;
+    --theme-warning-text: #fcd34d;
+    --theme-danger-soft: #3a1b24;
+    --theme-danger-border: #7f3345;
+    --theme-danger-text: #fca5a5;
+    --theme-info-soft: #172b4d;
+    --theme-info-border: #28568f;
+    --theme-info-text: #93c5fd;
+    --theme-purple-soft: #2a2145;
+    --theme-purple-border: #5b4990;
+    --theme-purple-text: #c4b5fd;
+    --theme-gradient-surface: linear-gradient(135deg, #1b263a 0%, #182235 100%);
+    --theme-gradient-neutral: linear-gradient(135deg, #223047 0%, #1d293d 100%);
+    --theme-gradient-neutral-hover: linear-gradient(135deg, #2a3a52 0%, #223047 100%);
+    --theme-gradient-success: linear-gradient(135deg, #12362f 0%, #0d2f29 100%);
+    --theme-gradient-info: linear-gradient(135deg, #1b355d 0%, #172b4d 100%);
+    --theme-gradient-warning: linear-gradient(135deg, #403419 0%, #352a12 100%);
+    --theme-gradient-danger: linear-gradient(135deg, #47222d 0%, #3a1b24 100%);
+    --theme-gradient-purple: linear-gradient(135deg, #342953 0%, #2a2145 100%);
+}
+
+html,
+body,
+#app {
+    min-height: 100%;
+    background: var(--theme-bg);
+    color: var(--theme-text);
+}
+
+body {
+    margin: 0;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+html.dark :where(.layout, .wrapper, main, .login-page, .snippet-viewer) {
+    background-color: var(--theme-bg) !important;
+    color: var(--theme-text) !important;
+}
+
+html.dark
+    :where(
+        .card,
+        .login-box,
+        .actions-card,
+        .stat-card,
+        .stat-box,
+        .list-card,
+        .create-card,
+        .toolbar-card,
+        .device-selection-card,
+        .health-card,
+        .summary-card,
+        .empty-selection-card,
+        .empty-state,
+        .section-card,
+        .settings-card,
+        .schedule-card,
+        .template-card,
+        .contact-card,
+        .device-card,
+        .message-card,
+        .form-card,
+        .preview-card,
+        .info-card,
+        .chart-container,
+        .table-container,
+        .table-wrapper,
+        .tab-content,
+        .course-group,
+        .comment-checkboxes,
+        .comment-item,
+        .selected-recipients,
+        .device-item-compact,
+        .activity-item,
+        .feedback-section,
+        .reply-input-container,
+        .preview-feedback,
+        .searchable-select,
+        .select-input-wrapper,
+        .dropdown-menu,
+        .select-dropdown,
+        .options-list,
+        .popover,
+        .detail-modal,
+        .delete-modal,
+        .edit-modal,
+        .create-modal,
+        .health-modal,
+        .confirm-modal,
+        .form-modal,
+        .import-modal,
+        .preview-modal,
+        .results-modal,
+        .modal,
+        .modal-content,
+        .dialog-content
+    ):not(.pdf-template *):not(.pdf-container *) {
+    background-color: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html.dark
+    :where(
+        .card-header,
+        .card-footer,
+        .modal-header,
+        .modal-footer,
+        .detail-modal-header,
+        .detail-modal-footer,
+        .edit-modal-header,
+        .section-header,
+        .table-filters,
+        .toolbar,
+        .pagination,
+        .tabs,
+        .tab-nav,
+        .search-bar,
+        .chat-body
+    ):not(.pdf-template *):not(.pdf-container *) {
+    background-color: var(--theme-surface-soft) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html.dark
+    :where(h1, h2, h3, h4, h5, h6, label, legend, .title, .card-title, .section-title, .user-name):not(.pdf-template *):not(.pdf-container *) {
+    color: var(--theme-text) !important;
+}
+
+html.dark
+    :where(
+        .stat-value,
+        .card-value,
+        .info-value,
+        .summary-value,
+        .result-recipient,
+        .contact-name,
+        .device-name,
+        .template-name,
+        .schedule-name,
+        .message-sender,
+        .sender-name,
+        .modal-title
+    ):not(.pdf-template *):not(.pdf-container *) {
+    color: var(--theme-text) !important;
+}
+
+html.dark
+    :where(
+        p,
+        small,
+        .subtitle,
+        .description,
+        .hint,
+        .helper-text,
+        .form-hint,
+        .meta,
+        .card-label,
+        .summary-label,
+        .empty-text,
+        .user-role,
+        .page-info,
+        .sender-phone,
+        .message-time,
+        .message-preview
+    ):not(.pdf-template *):not(.pdf-container *) {
+    color: var(--theme-text-muted) !important;
+}
+
+html.dark
+    :where(input, textarea, select):not(.pdf-template *):not(.pdf-container *) {
+    background-color: var(--theme-input) !important;
+    border-color: var(--theme-border-strong) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html.dark :where(input, textarea)::placeholder {
+    color: #718096 !important;
+    opacity: 1;
+}
+
+html.dark :where(input, textarea, select):focus {
+    border-color: var(--theme-accent) !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16) !important;
+}
+
+html.dark :where(select option) {
+    background: var(--theme-input);
+    color: var(--theme-text);
+}
+
+html.dark
+    :where(table, thead, tbody, tr, th, td):not(.pdf-template *):not(.pdf-container *) {
+    background-color: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text-secondary) !important;
+}
+
+html.dark :where(thead, th):not(.pdf-template *):not(.pdf-container *) {
+    background-color: var(--theme-surface-soft) !important;
+    color: var(--theme-text) !important;
+}
+
+html.dark :where(tbody tr):not(.pdf-template *):not(.pdf-container *) {
+    background-color: var(--theme-surface) !important;
+}
+
+html.dark :where(tbody tr:hover):not(.pdf-template *):not(.pdf-container *) {
+    background-color: var(--theme-surface-hover) !important;
+}
+
+html.dark .chat-bubble.incoming .bubble-content {
+    background: var(--theme-surface) !important;
+    color: var(--theme-text) !important;
+}
+
+html.dark
+    :where(.modal-overlay, .detail-modal-overlay, .delete-modal-overlay, .health-modal-overlay) {
+    background: var(--theme-overlay) !important;
+}
+
+html.dark
+    :where(.btn-secondary, .btn-cancel, .btn-close, .btn-page, .close-btn, .icon-btn, .filter-btn) {
+    background-color: var(--theme-surface-soft) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text-secondary) !important;
+}
+
+html.dark
+    :where(.btn-secondary, .btn-cancel, .btn-close, .btn-page, .close-btn, .icon-btn, .filter-btn):hover:not(:disabled) {
+    background-color: var(--theme-surface-hover) !important;
+    border-color: var(--theme-border-strong) !important;
+}
+
+html.dark :where(.option, .select-option, .dropdown-item):not(.pdf-template *):not(.pdf-container *) {
+    color: var(--theme-text-secondary) !important;
+}
+
+html.dark
+    :where(.option, .select-option, .dropdown-item):hover:not(.pdf-template *):not(.pdf-container *),
+html.dark :where(.option.highlighted, .select-option.active, .dropdown-item.active) {
+    background-color: var(--theme-surface-hover) !important;
+    color: var(--theme-text) !important;
+}
+
+html.dark :where(hr, .divider, .nav-divider) {
+    border-color: var(--theme-border) !important;
+    background-color: var(--theme-border) !important;
+}
+
+html.dark a:not(.router-link-active):not(.pdf-template *):not(.pdf-container *) {
+    color: var(--theme-accent);
+}
+
+html.dark :where(.status-success, .success-card, .alert-success) {
+    background-color: #052e24 !important;
+    border-color: #166534 !important;
+}
+
+html.dark
+    :where(.health-card.healthy, .health-header.healthy, .summary-card.success, .result-item.success) {
+    background-color: #052e24 !important;
+    border-color: #166534 !important;
+}
+
+html.dark :where(.status-warning, .warning-card, .alert-warning) {
+    background-color: #352506 !important;
+    border-color: #854d0e !important;
+}
+
+html.dark
+    :where(.health-card.warning, .health-header.warning, .summary-card.warning, .result-item.paused) {
+    background-color: #352506 !important;
+    border-color: #854d0e !important;
+}
+
+html.dark :where(.status-error, .error-card, .alert-error) {
+    background-color: #3b1117 !important;
+    border-color: #991b1b !important;
+}
+
+html.dark
+    :where(
+        .health-card.error,
+        .health-header.critical,
+        .health-header.banned,
+        .summary-card.danger,
+        .result-item.failed
+    ) {
+    background-color: #3b1117 !important;
+    border-color: #991b1b !important;
+}
+
+html.dark :where(.health-header.paused, .health-card.paused) {
+    background-color: #1e293b !important;
+    border-color: #475569 !important;
+}
+
+html.dark ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+html.dark ::-webkit-scrollbar-track {
+    background: var(--theme-bg);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar);
+    border: 2px solid var(--theme-bg);
+    border-radius: 999px;
+}
+
+/* Reports are print artifacts and intentionally stay in light mode. */
+html.dark :where(.pdf-template, .pdf-container, #pdf-render-container) {
+    color-scheme: light !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+}
+
+html.dark :where(.pdf-template, .pdf-container, #pdf-render-container) :where(input, textarea, select) {
+    color-scheme: light !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body {
+        transition: none;
+    }
+}

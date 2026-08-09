@@ -502,7 +502,7 @@ const onDeviceChanged = () => {
   margin: 0 0 8px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .header-content h2 svg {
@@ -514,7 +514,7 @@ const onDeviceChanged = () => {
 
 .subtitle {
   margin: 0;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -529,10 +529,10 @@ const onDeviceChanged = () => {
 
 /* Card */
 .card {
-  background: white;
+  background: var(--theme-surface);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
   overflow: visible;
 }
 
@@ -541,8 +541,8 @@ const onDeviceChanged = () => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-gradient-surface);
 }
 
 .card-title {
@@ -551,7 +551,7 @@ const onDeviceChanged = () => {
   gap: 10px;
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   margin: 0;
 }
 
@@ -572,10 +572,10 @@ const onDeviceChanged = () => {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  border: 1.5px solid #cbd5e1;
+  background: var(--theme-gradient-neutral);
+  border: 1.5px solid var(--theme-border-strong);
   border-radius: 10px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -583,7 +583,7 @@ const onDeviceChanged = () => {
 }
 
 .btn-refresh-header:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background: var(--theme-gradient-neutral-hover);
   transform: translateY(-1px);
 }
 
@@ -600,12 +600,12 @@ const onDeviceChanged = () => {
 /* Badges */
 .badge-count {
   padding: 6px 12px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: var(--theme-gradient-info);
   color: #1e40af;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  border: 1px solid #93c5fd;
+  border: 1px solid var(--theme-info-border);
 }
 
 /* Form Elements */
@@ -627,7 +627,7 @@ const onDeviceChanged = () => {
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-size: 13px;
 }
 
@@ -646,12 +646,12 @@ const onDeviceChanged = () => {
 .form-select {
   width: 100%;
   padding: 12px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   font-size: 14px;
   font-family: inherit;
   transition: all 0.2s;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .form-input:focus,
@@ -659,14 +659,14 @@ const onDeviceChanged = () => {
 .form-select:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  background: #f1f5f9;
+  background: var(--theme-surface-soft);
 }
 
 .form-textarea {
@@ -679,7 +679,7 @@ const onDeviceChanged = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 13px;
 }
 
@@ -690,8 +690,8 @@ const onDeviceChanged = () => {
 
 .message-preview {
   padding: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
   border-radius: 10px;
   max-height: 300px;
   overflow-y: auto;
@@ -704,27 +704,27 @@ const onDeviceChanged = () => {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  color: #334155;
+  color: var(--theme-text-secondary);
 }
 
 .message-preview.no-preview {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-color: #fcd34d;
+  background: var(--theme-gradient-warning);
+  border-color: var(--theme-warning-border);
 }
 
 .message-preview.no-preview svg {
   width: 24px;
   height: 24px;
-  color: #92400e;
+  color: var(--theme-warning-text);
   flex-shrink: 0;
 }
 
 .message-preview.no-preview p {
   margin: 0;
-  color: #92400e;
+  color: var(--theme-warning-text);
   font-size: 14px;
   font-weight: 500;
 }
@@ -741,8 +741,8 @@ const onDeviceChanged = () => {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border: 1px solid #93c5fd;
+  background: var(--theme-gradient-info);
+  border: 1px solid var(--theme-info-border);
   border-radius: 12px;
 }
 
@@ -786,24 +786,24 @@ const onDeviceChanged = () => {
 }
 
 .alert-success {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #15803d;
-  border-color: #86efac;
+  background: var(--theme-gradient-success);
+  color: var(--theme-success-text);
+  border-color: var(--theme-success-border);
 }
 
 .alert-error {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border-color: #fca5a5;
+  background: var(--theme-gradient-danger);
+  color: var(--theme-danger-text);
+  border-color: var(--theme-danger-border);
 }
 
 /* Form Actions */
 .form-actions {
-  background: white;
+  background: var(--theme-surface);
   padding: 24px;
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
 }
 
 .btn-submit {

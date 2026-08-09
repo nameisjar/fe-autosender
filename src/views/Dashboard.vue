@@ -40,7 +40,7 @@ const closeSidebar = () => {
   display: grid;
   grid-template-columns: 280px 1fr;
   height: 100vh;
-  background: #f8fafc;
+  background: var(--theme-bg);
 }
 
 /* Hamburger Button (Hidden on Desktop) */
@@ -52,8 +52,8 @@ const closeSidebar = () => {
   z-index: 1001;
   width: 44px;
   height: 44px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 10px;
   cursor: pointer;
   flex-direction: column;
@@ -65,8 +65,8 @@ const closeSidebar = () => {
 }
 
 .hamburger:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--theme-surface-hover);
+  border-color: var(--theme-border-strong);
 }
 
 .hamburger:active {
@@ -77,7 +77,7 @@ const closeSidebar = () => {
   display: block;
   width: 22px;
   height: 2px;
-  background: #334155;
+  background: var(--theme-text-secondary);
   border-radius: 2px;
   transition: all 0.3s ease;
 }
@@ -120,7 +120,7 @@ const closeSidebar = () => {
 main {
   padding: 32px;
   overflow: auto;
-  background: #f8fafc;
+  background: var(--theme-bg);
 }
 
 /* Mobile Responsive */

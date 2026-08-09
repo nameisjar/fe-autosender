@@ -486,7 +486,7 @@ function onDeviceChanged() {
   margin: 0 0 8px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .header-content h2 svg {
@@ -498,7 +498,7 @@ function onDeviceChanged() {
 
 .subtitle {
   margin: 0;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -513,10 +513,10 @@ function onDeviceChanged() {
 
 /* Card */
 .card {
-  background: white;
+  background: var(--theme-surface);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
   overflow: visible;
 }
 
@@ -525,8 +525,8 @@ function onDeviceChanged() {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-gradient-surface);
 }
 
 .card-title {
@@ -535,7 +535,7 @@ function onDeviceChanged() {
   gap: 10px;
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   margin: 0;
 }
 
@@ -556,10 +556,10 @@ function onDeviceChanged() {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  border: 1.5px solid #cbd5e1;
+  background: var(--theme-gradient-neutral);
+  border: 1.5px solid var(--theme-border-strong);
   border-radius: 10px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -567,7 +567,7 @@ function onDeviceChanged() {
 }
 
 .btn-refresh-header:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background: var(--theme-gradient-neutral-hover);
   transform: translateY(-1px);
 }
 
@@ -584,7 +584,7 @@ function onDeviceChanged() {
 /* Badges */
 .badge-optional {
   padding: 6px 12px;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  background: var(--theme-gradient-info);
   color: #4338ca;
   border-radius: 8px;
   font-size: 12px;
@@ -594,12 +594,12 @@ function onDeviceChanged() {
 
 .badge-count {
   padding: 6px 12px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: var(--theme-gradient-info);
   color: #1e40af;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  border: 1px solid #93c5fd;
+  border: 1px solid var(--theme-info-border);
 }
 
 /* Form Elements */
@@ -621,7 +621,7 @@ function onDeviceChanged() {
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-size: 13px;
 }
 
@@ -636,8 +636,8 @@ function onDeviceChanged() {
   gap: 4px;
   padding: 4px 10px;
   margin-left: 8px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
+  background: var(--theme-gradient-warning);
+  color: var(--theme-warning-text);
   border: 1px solid #f59e0b;
   border-radius: 6px;
   font-size: 11px;
@@ -647,7 +647,7 @@ function onDeviceChanged() {
 }
 
 .badge-template:hover {
-  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  background: var(--theme-gradient-warning);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
 }
@@ -663,7 +663,7 @@ function onDeviceChanged() {
 
 /* Reminder badge variant - blue/cyan color */
 .badge-template-reminder {
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  background: var(--theme-gradient-info);
   color: #0369a1;
   border: 1px solid #38bdf8;
 }
@@ -675,13 +675,13 @@ function onDeviceChanged() {
 
 /* Warning badge variant - orange/red for urgency */
 .badge-template-warning {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #b91c1c;
+  background: var(--theme-gradient-danger);
+  color: var(--theme-danger-text);
   border: 1px solid #f87171;
 }
 
 .badge-template-warning:hover {
-  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  background: var(--theme-gradient-danger);
   box-shadow: 0 2px 6px rgba(248, 113, 113, 0.3);
 }
 
@@ -690,12 +690,12 @@ function onDeviceChanged() {
 .form-select {
   width: 100%;
   padding: 12px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   font-size: 14px;
   font-family: inherit;
   transition: all 0.2s;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .form-input:focus,
@@ -703,7 +703,7 @@ function onDeviceChanged() {
 .form-select:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -717,7 +717,7 @@ function onDeviceChanged() {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 13px;
 }
 
@@ -726,7 +726,7 @@ function onDeviceChanged() {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin-top: 4px;
   font-style: normal;
 }
@@ -735,7 +735,7 @@ function onDeviceChanged() {
   width: 12px;
   height: 12px;
   flex-shrink: 0;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
 }
 
 /* Info Section */
@@ -750,8 +750,8 @@ function onDeviceChanged() {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border: 1px solid #93c5fd;
+  background: var(--theme-gradient-info);
+  border: 1px solid var(--theme-info-border);
   border-radius: 12px;
 }
 
@@ -795,24 +795,24 @@ function onDeviceChanged() {
 }
 
 .alert-success {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #15803d;
-  border-color: #86efac;
+  background: var(--theme-gradient-success);
+  color: var(--theme-success-text);
+  border-color: var(--theme-success-border);
 }
 
 .alert-error {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border-color: #fca5a5;
+  background: var(--theme-gradient-danger);
+  color: var(--theme-danger-text);
+  border-color: var(--theme-danger-border);
 }
 
 /* Form Actions */
 .form-actions {
-  background: white;
+  background: var(--theme-surface);
   padding: 24px;
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
 }
 
 .btn-submit {

@@ -360,7 +360,7 @@ onMounted(() => {
 
 <style scoped>
 .wrapper { max-width: 920px; margin: 0 auto; }
-.card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,0.04); padding: 12px; }
+.card { background: var(--theme-surface); border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,0.04); padding: 12px; }
 
 .form { display: flex; flex-direction: column; gap: 12px; }
 .row { display:flex; gap:12px; align-items:flex-end; flex-wrap: wrap; }
@@ -368,16 +368,16 @@ onMounted(() => {
 
 .field { display:flex; flex-direction: column; gap:6px; }
 .field > span { font-size: 12px; color: #667085; }
-.field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid #d8dde6; border-radius: 8px; background: #fff; }
+.field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid #d8dde6; border-radius: 8px; background: var(--theme-surface); }
 .field textarea { min-height: 100px; }
 .field.grow { flex: 1; min-width: 260px; }
 
 .actions { margin-top: 6px; }
 
-.btn { height: 36px; padding: 0 12px; border: 1px solid #d0d5dd; background: #f9fafb; border-radius: 8px; cursor: pointer; font-weight: 500; }
+.btn { height: 36px; padding: 0 12px; border: 1px solid #d0d5dd; background: var(--theme-surface-soft); border-radius: 8px; cursor: pointer; font-weight: 500; }
 .btn:disabled { opacity: .6; cursor: not-allowed; }
-.btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-.btn.outline { background: #fff; }
+.btn.primary { background: #2563eb; border-color: var(--theme-info-text); color: #fff; }
+.btn.outline { background: var(--theme-surface); }
 
 .error { color: #b00020; }
 .ok { color: #2e7d32; }

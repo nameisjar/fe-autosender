@@ -270,9 +270,9 @@ function formatFileSize(bytes) {
 
 <style scoped>
 .card {
-  background: white;
+  background: var(--theme-surface);
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
@@ -282,8 +282,8 @@ function formatFileSize(bytes) {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  background: linear-gradient(to right, #f8fafc, #ffffff);
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-gradient-surface);
 }
 
 .card-title {
@@ -292,7 +292,7 @@ function formatFileSize(bytes) {
   gap: 12px;
   font-size: 16px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
   margin: 0;
 }
 
@@ -318,8 +318,8 @@ function formatFileSize(bytes) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border: 1px solid #93c5fd;
+  background: var(--theme-gradient-info);
+  border: 1px solid var(--theme-info-border);
   border-radius: 50%;
   cursor: help;
   transition: all 0.2s;
@@ -338,20 +338,20 @@ function formatFileSize(bytes) {
 
 .badge-optional {
   padding: 6px 12px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #64748b;
+  background: var(--theme-gradient-neutral);
+  color: var(--theme-text-muted);
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--theme-border-strong);
 }
 
 /* Upload Zone */
 .upload-zone {
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--theme-border-strong);
   border-radius: 12px;
   transition: all 0.3s ease;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   position: relative;
   overflow: hidden;
 }
@@ -363,12 +363,12 @@ function formatFileSize(bytes) {
 
 .upload-zone.is-empty:hover {
   border-color: #3b82f6;
-  background: #eff6ff;
+  background: var(--theme-info-soft);
 }
 
 .upload-zone.is-dragover {
   border-color: #3b82f6;
-  background: #dbeafe;
+  background: var(--theme-info-soft);
   transform: scale(1.01);
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
@@ -376,7 +376,7 @@ function formatFileSize(bytes) {
 .upload-zone.has-media {
   padding: 0;
   border-style: solid;
-  background: white;
+  background: var(--theme-surface);
 }
 
 .upload-empty {
@@ -410,22 +410,22 @@ function formatFileSize(bytes) {
 .upload-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   margin: 0 0 6px 0;
 }
 
 .upload-subtitle {
   font-size: 14px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin: 0;
 }
 
 .btn-upload {
   padding: 10px 20px;
-  background: white;
-  border: 1.5px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -438,7 +438,7 @@ function formatFileSize(bytes) {
 .btn-upload:hover {
   border-color: #3b82f6;
   color: #3b82f6;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .btn-upload svg {
@@ -504,13 +504,13 @@ function formatFileSize(bytes) {
 }
 
 .btn-change {
-  background: white;
-  color: #475569;
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
   border: none;
 }
 
 .btn-change:hover {
-  background: #f1f5f9;
+  background: var(--theme-surface-soft);
 }
 
 .btn-remove {
@@ -533,14 +533,14 @@ function formatFileSize(bytes) {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
 }
 
 .doc-icon-wrapper {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: var(--theme-gradient-info);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -561,7 +561,7 @@ function formatFileSize(bytes) {
 
 .doc-name {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -571,7 +571,7 @@ function formatFileSize(bytes) {
 
 .doc-size {
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin: 4px 0 0 0;
 }
 
@@ -584,9 +584,9 @@ function formatFileSize(bytes) {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1.5px solid #e2e8f0;
-  background: white;
-  color: #475569;
+  border: 1.5px solid var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -597,7 +597,7 @@ function formatFileSize(bytes) {
 .btn-icon:hover {
   border-color: #3b82f6;
   color: #3b82f6;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .btn-icon svg {
@@ -608,7 +608,7 @@ function formatFileSize(bytes) {
 .btn-icon-danger:hover {
   border-color: #ef4444;
   color: #ef4444;
-  background: #fef2f2;
+  background: var(--theme-danger-soft);
 }
 
 @media (max-width: 640px) {

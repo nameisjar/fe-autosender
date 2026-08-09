@@ -82,7 +82,7 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
 }
 
 .delete-modal {
-  background: white;
+  background: var(--theme-surface);
   border-radius: 20px;
   max-width: 480px;
   width: 90%;
@@ -95,7 +95,7 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: #fee2e2;
+  background: var(--theme-danger-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,12 +112,12 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
   margin: 20px 0 12px 0;
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .delete-warning {
   margin: 0 0 24px 0;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -127,8 +127,8 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
   align-items: center;
   gap: 14px;
   padding: 16px;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
+  background: var(--theme-surface-soft);
+  border: 1.5px solid var(--theme-border);
   border-radius: 12px;
   margin-bottom: 24px;
   text-align: left;
@@ -138,7 +138,7 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: #dbeafe;
+  background: var(--theme-info-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -158,7 +158,7 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
 
 .preview-name {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   font-size: 15px;
 }
 
@@ -168,7 +168,7 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
   gap: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--theme-text-muted);
 }
 
 .status-dot {
@@ -199,9 +199,9 @@ defineEmits(["confirm", "cancel", "update:modelValue"]);
 }
 
 .btn-keep {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1.5px solid #cbd5e1;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
+  border: 1.5px solid var(--theme-border-strong);
 }
 
 .btn-delete-confirm {

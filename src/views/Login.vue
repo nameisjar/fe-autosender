@@ -112,12 +112,12 @@ const login = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: var(--theme-surface-soft);
   padding: 20px;
 }
 
 .login-box {
-  background: white;
+  background: var(--theme-surface);
   width: 100%;
   max-width: 420px;
   padding: 40px;
@@ -150,7 +150,7 @@ const login = async () => {
 .login-brand h1 {
   font-size: 24px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   margin: 0;
 }
 
@@ -162,13 +162,13 @@ const login = async () => {
 .login-header h2 {
   font-size: 20px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   margin: 0 0 8px 0;
 }
 
 .login-header p {
   font-size: 14px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin: 0;
 }
 
@@ -184,7 +184,7 @@ const login = async () => {
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--theme-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -209,8 +209,8 @@ const login = async () => {
 
 .error-box {
   padding: 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--theme-danger-soft);
+  border: 1px solid var(--theme-danger-border);
   border-radius: 6px;
   color: #dc2626;
   font-size: 14px;
@@ -235,7 +235,7 @@ const login = async () => {
 }
 
 .btn-login:disabled {
-  background: #93c5fd;
+  background: var(--theme-info-border);
   cursor: not-allowed;
 }
 

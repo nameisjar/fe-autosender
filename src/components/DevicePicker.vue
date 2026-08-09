@@ -443,8 +443,8 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1.5px solid #e2e8f0;
+  background: var(--theme-gradient-surface);
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
 }
 
@@ -477,7 +477,7 @@ defineExpose({
 .device-name-compact {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -485,7 +485,7 @@ defineExpose({
 
 .device-phone-inline {
   font-size: 14px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-weight: 500;
 }
 
@@ -501,10 +501,10 @@ defineExpose({
 
 .btn-change-compact {
   padding: 6px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -513,8 +513,8 @@ defineExpose({
 }
 
 .btn-change-compact:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--theme-surface-soft);
+  border-color: var(--theme-border-strong);
 }
 
 /* Device List Compact */
@@ -530,14 +530,14 @@ defineExpose({
   justify-content: center;
   gap: 12px;
   padding: 24px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
 }
 
 .spinner-small {
   width: 20px;
   height: 20px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--theme-border);
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -555,7 +555,7 @@ defineExpose({
 .device-empty {
   padding: 24px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   font-size: 14px;
 }
 
@@ -568,8 +568,8 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -577,16 +577,16 @@ defineExpose({
   width: 100%;
   font-size: 13px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .device-item-compact:hover {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   border-color: #3b82f6;
 }
 
 .device-item-compact.online {
-  border-color: #86efac;
+  border-color: var(--theme-success-border);
 }
 
 .device-item-label {
@@ -620,8 +620,8 @@ defineExpose({
   border-radius: 10px;
   cursor: pointer;
   transition: transform 0.15s, opacity 0.15s;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
 }
 
 .health-pill:hover {
@@ -630,23 +630,23 @@ defineExpose({
 }
 
 .health-pill.green {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--theme-success-soft);
+  color: var(--theme-success-text);
 }
 
 .health-pill.yellow {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--theme-warning-soft);
+  color: var(--theme-warning-text);
 }
 
 .health-pill.red {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--theme-danger-soft);
+  color: var(--theme-danger-text);
 }
 
 .health-pill.gray {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
 }
 
 .health-pill-small {
@@ -657,28 +657,28 @@ defineExpose({
   font-size: 10px;
   font-weight: 600;
   border-radius: 8px;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
 }
 
 .health-pill-small.green {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--theme-success-soft);
+  color: var(--theme-success-text);
 }
 
 .health-pill-small.yellow {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--theme-warning-soft);
+  color: var(--theme-warning-text);
 }
 
 .health-pill-small.red {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--theme-danger-soft);
+  color: var(--theme-danger-text);
 }
 
 .health-pill-small.gray {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
 }
 
 .paused-indicator {
@@ -689,7 +689,7 @@ defineExpose({
 
 .device-item-compact.paused {
   border-color: #fbbf24;
-  background: #fefce8;
+  background: var(--theme-warning-soft);
 }
 
 /* 🆕 Health Modal Styles */
@@ -708,7 +708,7 @@ defineExpose({
 }
 
 .health-modal {
-  background: white;
+  background: var(--theme-surface);
   border-radius: 16px;
   width: 90%;
   max-width: 480px;
@@ -734,15 +734,15 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-surface-soft);
 }
 
 .health-modal-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .close-btn {
@@ -754,15 +754,15 @@ defineExpose({
   background: none;
   border: none;
   font-size: 24px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.2s;
 }
 
 .close-btn:hover {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: var(--theme-surface-hover);
+  color: var(--theme-text);
 }
 
 .health-modal-body {
@@ -777,7 +777,7 @@ defineExpose({
   justify-content: center;
   gap: 10px;
   padding: 40px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
 }
 
@@ -791,11 +791,11 @@ defineExpose({
   margin-bottom: 16px;
 }
 
-.health-header.healthy { background: #f0fdf4; border: 1px solid #bbf7d0; }
-.health-header.warning { background: #fffbeb; border: 1px solid #fde68a; }
-.health-header.critical { background: #fef2f2; border: 1px solid #fecaca; }
-.health-header.paused { background: #f8fafc; border: 1px solid #e2e8f0; }
-.health-header.banned { background: #fef2f2; border: 1px solid #fecaca; }
+.health-header.healthy { background: var(--theme-success-soft); border: 1px solid var(--theme-success-border); }
+.health-header.warning { background: var(--theme-warning-soft); border: 1px solid var(--theme-warning-border); }
+.health-header.critical { background: var(--theme-danger-soft); border: 1px solid var(--theme-danger-border); }
+.health-header.paused { background: var(--theme-surface-soft); border: 1px solid var(--theme-border); }
+.health-header.banned { background: var(--theme-danger-soft); border: 1px solid var(--theme-danger-border); }
 
 .status-dot {
   width: 10px;
@@ -819,12 +819,12 @@ defineExpose({
 .status-label {
   font-weight: 600;
   font-size: 15px;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .status-time {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-muted);
 }
 
 /* Stats Grid */
@@ -840,18 +840,18 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   padding: 14px 12px;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
 }
 
-.stat-box.has-warning { border-color: #fbbf24; background: #fffbeb; }
-.stat-box.has-error { border-color: #f87171; background: #fef2f2; }
+.stat-box.has-warning { border-color: #fbbf24; background: var(--theme-warning-soft); }
+.stat-box.has-error { border-color: #f87171; background: var(--theme-danger-soft); }
 
 .stat-box .stat-value {
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
   line-height: 1;
 }
 
@@ -860,7 +860,7 @@ defineExpose({
 
 .stat-box .stat-label {
   font-size: 11px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin-top: 4px;
 }
 
@@ -874,13 +874,13 @@ defineExpose({
 }
 
 .notice.warning {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
+  background: var(--theme-warning-soft);
+  border: 1px solid var(--theme-warning-border);
+  color: var(--theme-warning-text);
 }
 
 .notice.info {
-  background: #f0f9ff;
+  background: var(--theme-info-soft);
   border: 1px solid #bae6fd;
   color: #0369a1;
 }
@@ -912,13 +912,13 @@ defineExpose({
 .section-title {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .section-count {
   font-size: 12px;
-  color: #94a3b8;
-  background: #f1f5f9;
+  color: var(--theme-text-muted);
+  background: var(--theme-surface-soft);
   padding: 2px 8px;
   border-radius: 10px;
 }
@@ -936,9 +936,9 @@ defineExpose({
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--theme-surface);
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
   font-size: 13px;
 }
 
@@ -970,13 +970,13 @@ defineExpose({
 }
 
 .activity-type {
-  color: #374151;
+  color: var(--theme-text-secondary);
   font-weight: 500;
 }
 
 .activity-message {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-text-muted);
   line-height: 1.4;
   word-break: break-word;
 }
@@ -989,11 +989,11 @@ defineExpose({
 
 .activity-confidence.high { background: #ef4444; }
 .activity-confidence.medium { background: #f59e0b; }
-.activity-confidence.low { background: #d1d5db; }
+.activity-confidence.low { background: var(--theme-surface-hover); }
 
 .activity-time {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1005,16 +1005,16 @@ defineExpose({
   background: transparent;
   border: 1px dashed #d1d5db;
   border-radius: 6px;
-  color: #6b7280;
+  color: var(--theme-text-muted);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .btn-toggle:hover {
-  background: #f9fafb;
+  background: var(--theme-surface-soft);
   border-color: #9ca3af;
-  color: #374151;
+  color: var(--theme-text-secondary);
 }
 
 /* Action Bar */
@@ -1047,19 +1047,19 @@ defineExpose({
 
 .btn.secondary {
   flex: 1;
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
   border: 1px solid #d1d5db;
 }
 
 .btn.secondary:hover:not(:disabled) {
-  background: #e5e7eb;
+  background: var(--theme-surface-hover);
 }
 
 .btn.icon-only {
   padding: 10px;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
   border: 1px solid #d1d5db;
   display: flex;
   align-items: center;
@@ -1067,8 +1067,8 @@ defineExpose({
 }
 
 .btn.icon-only:hover:not(:disabled) {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--theme-surface-hover);
+  color: var(--theme-text-secondary);
 }
 
 .btn:disabled {
@@ -1080,7 +1080,7 @@ defineExpose({
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #6b7280;
+  color: var(--theme-text-muted);
 }
 
 .empty-state p {

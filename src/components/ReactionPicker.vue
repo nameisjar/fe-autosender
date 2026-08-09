@@ -153,9 +153,9 @@ const selectEmoji = emoji => emit('select', emoji);
   max-width: calc(100vw - 72px);
   margin-top: 6px;
   padding: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 
@@ -193,12 +193,12 @@ const selectEmoji = emoji => emit('select', emoji);
 .emoji-button.active,
 .category-button:hover,
 .category-button.active {
-  background: #eaf2ff;
+  background: var(--theme-info-soft);
   transform: scale(1.1);
 }
 
 .emoji-button:disabled { cursor: wait; opacity: 0.55; }
-.expand-button { color: #2563eb; font-size: 24px; font-weight: 600; }
+.expand-button { color: var(--theme-info-text); font-size: 24px; font-weight: 600; }
 .remove-button { color: #ef4444; font-size: 22px; }
 
 .category-tabs {

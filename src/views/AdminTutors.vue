@@ -794,7 +794,7 @@ const SortIcon = {
   margin: 0 0 8px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .header-icon {
@@ -806,7 +806,7 @@ const SortIcon = {
 
 .subtitle {
   margin: 0;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 15px;
 }
 
@@ -819,8 +819,8 @@ const SortIcon = {
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
+  background: var(--theme-gradient-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -833,7 +833,7 @@ const SortIcon = {
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #cbd5e1;
+  border-color: var(--theme-border-strong);
 }
 
 .stat-card svg {
@@ -846,20 +846,20 @@ const SortIcon = {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
   line-height: 1;
 }
 
 .stat-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin-top: 4px;
 }
 
 /* Create Card */
 .create-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
@@ -872,7 +872,7 @@ const SortIcon = {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .card-header-section h3 {
@@ -882,7 +882,7 @@ const SortIcon = {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .card-header-section h3 svg {
@@ -927,9 +927,9 @@ const SortIcon = {
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #475569;
-  border: 1.5px solid #cbd5e1;
+  background: var(--theme-gradient-neutral);
+  color: var(--theme-text-secondary);
+  border: 1.5px solid var(--theme-border-strong);
   border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
@@ -938,7 +938,7 @@ const SortIcon = {
 }
 
 .btn-reload:hover {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background: var(--theme-gradient-neutral-hover);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -968,7 +968,7 @@ const SortIcon = {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .form-group label svg {
@@ -979,17 +979,17 @@ const SortIcon = {
 
 .form-group input {
   padding: 12px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   font-size: 14px;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   transition: all 0.2s ease;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -1036,7 +1036,7 @@ const SortIcon = {
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: #f0f9ff;
+  background: var(--theme-info-soft);
   border: 1px solid #bae6fd;
   border-radius: 10px;
   color: #0c4a6e;
@@ -1056,7 +1056,7 @@ const SortIcon = {
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: #f0f9ff;
+  background: var(--theme-info-soft);
   border: 1px solid #bae6fd;
   border-radius: 10px;
   color: #0c4a6e;
@@ -1074,9 +1074,9 @@ const SortIcon = {
 .success-message {
   margin-top: 12px;
   padding: 12px 14px;
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #15803d;
-  border: 1px solid #86efac;
+  background: var(--theme-gradient-success);
+  color: var(--theme-success-text);
+  border: 1px solid var(--theme-success-border);
   border-radius: 10px;
   font-weight: 500;
 }
@@ -1084,17 +1084,17 @@ const SortIcon = {
 .error-message {
   margin-top: 12px;
   padding: 12px 14px;
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: var(--theme-gradient-danger);
+  color: var(--theme-danger-text);
+  border: 1px solid var(--theme-danger-border);
   border-radius: 10px;
   font-weight: 500;
 }
 
 /* List Card */
 .list-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 32px;
@@ -1121,33 +1121,33 @@ const SortIcon = {
   left: 14px;
   width: 20px;
   height: 20px;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   pointer-events: none;
 }
 
 .search-box input {
   width: 100%;
   padding: 12px 16px 12px 44px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 12px;
   font-size: 14px;
   transition: all 0.2s ease;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .search-box input:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .page-size-select {
   padding: 12px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   font-size: 14px;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
@@ -1157,7 +1157,7 @@ const SortIcon = {
 .page-size-select:focus {
   outline: none;
   border-color: #3b82f6;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -1169,8 +1169,8 @@ const SortIcon = {
 .tutors-table {
   width: 100%;
   border-collapse: collapse;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -1180,19 +1180,19 @@ const SortIcon = {
   padding: 12px 16px;
   text-align: left;
   font-size: 14px;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .tutors-table th {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .tutors-table td {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .tutors-table th.sortable {
@@ -1217,7 +1217,7 @@ const SortIcon = {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: var(--theme-gradient-info);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1231,7 +1231,7 @@ const SortIcon = {
 
 .td-name .name-primary {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .td-email .email-cell {
@@ -1244,7 +1244,7 @@ const SortIcon = {
 .td-email .email-cell svg {
   width: 16px;
   height: 16px;
-  color: #64748b;
+  color: var(--theme-text-muted);
 }
 
 .td-devices .devices-cell {
@@ -1270,32 +1270,32 @@ const SortIcon = {
 }
 
 .device-badge.open {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #15803d;
-  border-color: #86efac;
+  background: var(--theme-gradient-success);
+  color: var(--theme-success-text);
+  border-color: var(--theme-success-border);
 }
 
 .device-badge.close,
 .device-badge.closed {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border-color: #fca5a5;
+  background: var(--theme-gradient-danger);
+  color: var(--theme-danger-text);
+  border-color: var(--theme-danger-border);
 }
 
 .device-badge.connecting {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border-color: #fcd34d;
+  background: var(--theme-gradient-warning);
+  color: var(--theme-warning-text);
+  border-color: var(--theme-warning-border);
 }
 
 .no-device {
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 13px;
 }
 
 .td-date .date-text {
   font-size: 13px;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .td-actions .action-buttons {
@@ -1318,7 +1318,7 @@ const SortIcon = {
 }
 
 .btn-edit-table {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: var(--theme-gradient-info);
 }
 
 .btn-edit-table:hover {
@@ -1328,11 +1328,11 @@ const SortIcon = {
 }
 
 .btn-delete-table {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  background: var(--theme-gradient-danger);
 }
 
 .btn-delete-table:hover {
-  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  background: var(--theme-gradient-danger);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
@@ -1361,8 +1361,8 @@ const SortIcon = {
   align-items: center;
   justify-content: center;
   padding: 64px 32px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 2px dashed #cbd5e1;
+  background: var(--theme-gradient-surface);
+  border: 2px dashed var(--theme-border-strong);
   border-radius: 16px;
   text-align: center;
   margin-bottom: 24px;
@@ -1378,12 +1378,12 @@ const SortIcon = {
 .empty-state h3 {
   margin: 0 0 8px 0;
   font-size: 20px;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .empty-state p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   font-size: 14px;
 }
 
@@ -1393,19 +1393,19 @@ const SortIcon = {
   align-items: center;
   justify-content: space-between;
   padding: 20px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
   border-radius: 12px;
   gap: 16px;
 }
 
 .pagination-info {
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
 }
 
 .pagination-info strong {
-  color: #1e293b;
+  color: var(--theme-text);
   font-weight: 600;
 }
 
@@ -1420,9 +1420,9 @@ const SortIcon = {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #ffffff;
-  color: #475569;
-  border: 1.5px solid #e2e8f0;
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
+  border: 1.5px solid var(--theme-border);
   border-radius: 8px;
   font-weight: 600;
   font-size: 13px;
@@ -1431,8 +1431,8 @@ const SortIcon = {
 }
 
 .btn-page:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--theme-surface-soft);
+  border-color: var(--theme-border-strong);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -1602,7 +1602,7 @@ const SortIcon = {
 }
 
 .edit-modal {
-  background: #ffffff;
+  background: var(--theme-surface);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
@@ -1625,8 +1625,8 @@ const SortIcon = {
 
 .edit-modal-header {
   padding: 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-gradient-surface);
 }
 
 .edit-modal-header h3 {
@@ -1636,7 +1636,7 @@ const SortIcon = {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .edit-modal-header h3 svg {
@@ -1654,10 +1654,10 @@ const SortIcon = {
 
 .edit-modal-actions {
   padding: 20px 24px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--theme-border);
   display: flex;
   gap: 12px;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .btn-save,
@@ -1694,14 +1694,14 @@ const SortIcon = {
 }
 
 .btn-cancel {
-  background: #ffffff;
-  color: #475569;
-  border-color: #cbd5e1;
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
+  border-color: var(--theme-border-strong);
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #94a3b8;
+  background: var(--theme-surface-soft);
+  border-color: var(--theme-text-muted);
   transform: translateY(-1px);
 }
 
@@ -1731,7 +1731,7 @@ const SortIcon = {
 }
 
 .delete-modal {
-  background: white;
+  background: var(--theme-surface);
   border-radius: 20px;
   max-width: 480px;
   width: 90%;
@@ -1775,7 +1775,7 @@ const SortIcon = {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  background: var(--theme-gradient-danger);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1789,7 +1789,7 @@ const SortIcon = {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  background: var(--theme-gradient-danger);
   opacity: 0.3;
   animation: ripple 1.5s infinite;
 }
@@ -1822,12 +1822,12 @@ const SortIcon = {
   margin: 0 0 12px 0;
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .delete-warning {
   margin: 0 0 24px 0;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -1837,8 +1837,8 @@ const SortIcon = {
   align-items: center;
   gap: 14px;
   padding: 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1.5px solid #e2e8f0;
+  background: var(--theme-gradient-surface);
+  border: 1.5px solid var(--theme-border);
   border-radius: 12px;
   margin-bottom: 24px;
   text-align: left;
@@ -1846,7 +1846,7 @@ const SortIcon = {
 }
 
 .tutor-preview:hover {
-  border-color: #cbd5e1;
+  border-color: var(--theme-border-strong);
   transform: translateY(-1px);
 }
 
@@ -1854,7 +1854,7 @@ const SortIcon = {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: var(--theme-gradient-info);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1877,7 +1877,7 @@ const SortIcon = {
 
 .preview-name {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
@@ -1886,7 +1886,7 @@ const SortIcon = {
 
 .preview-email {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 13px;
   font-weight: 500;
 }
@@ -1917,13 +1917,13 @@ const SortIcon = {
 }
 
 .btn-keep {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #475569;
-  border: 1.5px solid #cbd5e1;
+  background: var(--theme-gradient-neutral);
+  color: var(--theme-text-secondary);
+  border: 1.5px solid var(--theme-border-strong);
 }
 
 .btn-keep:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background: var(--theme-gradient-neutral-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

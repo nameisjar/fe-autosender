@@ -86,7 +86,7 @@ const close = () => {
 }
 
 .form-modal {
-  background: white;
+  background: var(--theme-surface);
   border-radius: 20px;
   max-width: 500px;
   width: 90%;
@@ -99,7 +99,7 @@ const close = () => {
 
 .modal-header {
   padding: 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--theme-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -109,14 +109,14 @@ const close = () => {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .btn-close {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f1f5f9;
+  background: var(--theme-surface-soft);
   border-radius: 8px;
   cursor: pointer;
   display: flex;
@@ -127,7 +127,7 @@ const close = () => {
 .btn-close svg {
   width: 18px;
   height: 18px;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .modal-body {
@@ -151,7 +151,7 @@ const close = () => {
 .form-group label {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .required {
@@ -160,15 +160,15 @@ const close = () => {
 
 .form-group input {
   padding: 12px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--theme-border);
   border-radius: 10px;
   font-size: 14px;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 .field-hint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-muted);
   margin: 0;
 }
 
@@ -177,10 +177,10 @@ const close = () => {
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: var(--theme-gradient-warning);
   border: 1px solid #fbbf24;
   border-radius: 10px;
-  color: #92400e;
+  color: var(--theme-warning-text);
   font-size: 13px;
 }
 
@@ -197,7 +197,7 @@ const close = () => {
   gap: 12px;
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--theme-border);
 }
 
 .btn-cancel,
@@ -216,9 +216,9 @@ const close = () => {
 }
 
 .btn-cancel {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1.5px solid #cbd5e1;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
+  border: 1.5px solid var(--theme-border-strong);
 }
 
 .btn-save {

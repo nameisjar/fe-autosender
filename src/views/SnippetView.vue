@@ -323,7 +323,7 @@ onMounted(() => {
 
 .error-container p {
   margin: 0 0 24px;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
 }
 
 .btn-home {
@@ -413,7 +413,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   font-size: 0.875rem;
 }
 
@@ -426,7 +426,7 @@ onMounted(() => {
 
 .description {
   margin: 0;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   line-height: 1.6;
 }
 
@@ -445,7 +445,7 @@ onMounted(() => {
 }
 
 .filename {
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 0.875rem;
   font-family: "Fira Code", monospace;
 }
@@ -495,7 +495,7 @@ onMounted(() => {
 
 .line-numbers span {
   padding: 0 12px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-family: "Fira Code", monospace;
   font-size: 0.85rem;
   line-height: 1.6;
@@ -523,7 +523,7 @@ onMounted(() => {
 }
 
 .snippet-footer p {
-  color: #64748b;
+  color: var(--theme-text-muted);
   font-size: 0.875rem;
 }
 

@@ -327,6 +327,25 @@
     </nav>
 
     <div class="sidebar-footer">
+      <div class="theme-setting" aria-label="Pilih tema tampilan">
+        <div class="theme-setting-label">Tampilan</div>
+        <div class="theme-options" role="group" aria-label="Tema tampilan">
+          <button
+            v-for="option in themeOptions"
+            :key="option.value"
+            type="button"
+            class="theme-option"
+            :class="{ active: theme === option.value }"
+            :aria-pressed="theme === option.value"
+            :title="option.description"
+            @click="setTheme(option.value)"
+          >
+            <span class="theme-option-icon" aria-hidden="true">{{ option.icon }}</span>
+            <span>{{ option.label }}</span>
+          </button>
+        </div>
+      </div>
+
       <div class="user-info" v-if="me">
         <div class="avatar">
           <img
@@ -377,6 +396,7 @@ import { useGroups } from "../../composables/useGroups.js";
 import { useDevices } from "../../composables/useDevices.js";
 import { deviceApi } from "../../api/http.js";
 import { listenToDeviceStatus } from "../../api/socket.js";
+import { useTheme } from "../../composables/useTheme.js";
 
 const props = defineProps({
   isOpen: {
@@ -391,6 +411,12 @@ const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
 const { clearGroups } = useGroups();
+const { theme, setTheme } = useTheme();
+const themeOptions = [
+  { value: "light", label: "Terang", icon: "☀", description: "Selalu gunakan tema terang" },
+  { value: "dark", label: "Gelap", icon: "☾", description: "Selalu gunakan tema gelap" },
+  { value: "system", label: "Auto", icon: "◐", description: "Ikuti tema perangkat" },
+];
 
 // 🆕 Gunakan useDevices untuk mendapatkan data devices (shared state)
 const { devices, selectedDevice, loadDevices } = useDevices();
@@ -644,8 +670,8 @@ const logout = async () => {
 <style scoped>
 /* Sidebar */
 aside {
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border-right: 1px solid var(--theme-border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -655,7 +681,7 @@ aside {
 
 .sidebar-header {
   padding: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--theme-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -686,7 +712,7 @@ aside {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f1f5f9;
+  background: var(--theme-surface-soft);
   border-radius: 8px;
   cursor: pointer;
   align-items: center;
@@ -695,13 +721,13 @@ aside {
 }
 
 .close-btn:hover {
-  background: #e2e8f0;
+  background: var(--theme-surface-hover);
 }
 
 .close-btn svg {
   width: 18px;
   height: 18px;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 /* Navigation */
@@ -723,7 +749,7 @@ nav {
 .nav-label {
   font-size: 11px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   padding: 12px 16px 8px 16px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -731,7 +757,7 @@ nav {
 
 .nav-divider {
   height: 1px;
-  background: #e2e8f0;
+  background: var(--theme-border);
   margin: 12px 16px;
 }
 
@@ -740,7 +766,7 @@ nav a {
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  color: #475569;
+  color: var(--theme-text-secondary);
   padding: 12px 16px;
   border-radius: 10px;
   font-size: 14px;
@@ -750,8 +776,8 @@ nav a {
 }
 
 nav a:hover {
-  background: #f1f5f9;
-  color: #1e293b;
+  background: var(--theme-surface-hover);
+  color: var(--theme-text);
 }
 
 nav a.router-link-active {
@@ -768,7 +794,7 @@ nav a.router-link-active::before {
   transform: translateY(-50%);
   width: 4px;
   height: 24px;
-  background: #fff;
+  background: var(--theme-surface);
   border-radius: 0 4px 4px 0;
 }
 
@@ -785,8 +811,66 @@ nav a.router-link-active .nav-icon {
 /* Sidebar Footer */
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-top: 1px solid var(--theme-border);
+  background: var(--theme-surface-soft);
+}
+
+.theme-setting {
+  margin-bottom: 12px;
+}
+
+.theme-setting-label {
+  margin-bottom: 7px;
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface);
+}
+
+.theme-option {
+  display: flex;
+  min-width: 0;
+  padding: 7px 4px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  transition: 150ms ease;
+}
+
+.theme-option:hover {
+  background: var(--theme-surface-hover);
+  color: var(--theme-text);
+}
+
+.theme-option.active {
+  border-color: rgba(59, 130, 246, 0.32);
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  box-shadow: 0 1px 4px var(--theme-shadow);
+}
+
+.theme-option-icon {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .user-info {
@@ -794,10 +878,10 @@ nav a.router-link-active .nav-icon {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #ffffff;
+  background: var(--theme-surface);
   border-radius: 10px;
   margin-bottom: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-border);
 }
 
 .avatar {
@@ -834,7 +918,7 @@ nav a.router-link-active .nav-icon {
 .user-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--theme-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -842,7 +926,7 @@ nav a.router-link-active .nav-icon {
 
 .user-role {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-muted);
 }
 
 .logout-btn {
@@ -852,8 +936,8 @@ nav a.router-link-active .nav-icon {
   gap: 8px;
   width: 100%;
   padding: 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 10px;
   color: #ef4444;
   font-weight: 500;
@@ -863,8 +947,8 @@ nav a.router-link-active .nav-icon {
 }
 
 .logout-btn:hover {
-  background: #fef2f2;
-  border-color: #fecaca;
+  background: var(--theme-danger-soft);
+  border-color: var(--theme-danger-border);
 }
 
 .logout-btn svg {
@@ -885,7 +969,7 @@ nav::-webkit-scrollbar-track {
 
 aside::-webkit-scrollbar-thumb,
 nav::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--theme-scrollbar);
   border-radius: 3px;
 }
 
