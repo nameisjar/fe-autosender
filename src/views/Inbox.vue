@@ -518,7 +518,7 @@
                   :disabled="isSendingReaction(msg)"
                   :aria-label="`Beri reaction pada pesan ${msg.type === 'incoming' ? 'masuk' : 'keluar'}`"
                   title="Beri reaction"
-                  @click.stop="toggleReactionPicker(msg)"
+                  @click.stop="toggleReactionPicker(msg, $event)"
                 >
                   {{ isSendingReaction(msg) ? '…' : '☺' }}
                 </button>
@@ -527,7 +527,8 @@
                   :direction="msg.type"
                   :current-emoji="getOwnReaction(msg)?.emoji || ''"
                   :loading="isSendingReaction(msg)"
-                  @click.stop
+                  :anchor-element="reactionPickerAnchor"
+                  :boundary-element="chatMessagesContainer"
                   @select="emoji => sendReaction(msg, emoji)"
                 />
               </div>
@@ -734,6 +735,7 @@ const selectedConversation = ref(null);
 const isConversationFullscreen = ref(false);
 const conversationReactions = ref([]);
 const reactionPickerMessageKey = ref('');
+const reactionPickerAnchor = ref(null);
 const sendingReactionMessageKey = ref('');
 const messageActionMenuKey = ref('');
 const imagePreview = ref(null);
@@ -866,6 +868,7 @@ const isSendingReaction = message =>
 
 const closeMessagePopups = () => {
   reactionPickerMessageKey.value = '';
+  reactionPickerAnchor.value = null;
   messageActionMenuKey.value = '';
 };
 
@@ -881,12 +884,17 @@ const handleMessagePopupPointerDown = event => {
   if (!isPopupInteraction) closeMessagePopups();
 };
 
-const toggleReactionPicker = message => {
+const toggleReactionPicker = (message, event) => {
   const messageKey = getReactionMessageKey(message);
+  const isClosing = reactionPickerMessageKey.value === messageKey;
   messageActionMenuKey.value = '';
-  reactionPickerMessageKey.value =
-    reactionPickerMessageKey.value === messageKey ? '' : messageKey;
+  reactionPickerAnchor.value = isClosing ? null : event?.currentTarget || null;
+  reactionPickerMessageKey.value = isClosing ? '' : messageKey;
 };
+
+watch(reactionPickerMessageKey, value => {
+  if (!value) reactionPickerAnchor.value = null;
+});
 
 const canDeleteMessage = message => Boolean(getMessageReactionTargetId(message));
 

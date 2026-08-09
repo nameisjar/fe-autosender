@@ -1,6 +1,14 @@
 <template>
-  <div class="reaction-picker" :class="[direction, { expanded }]" role="menu">
-    <div class="quick-reactions">
+  <Teleport to="body">
+    <div
+      ref="pickerElement"
+      class="reaction-picker"
+      :class="[direction, { expanded }]"
+      role="menu"
+      @click.stop
+      @pointerdown.stop
+    >
+      <div class="quick-reactions">
       <button
         v-for="emoji in QUICK_REACTIONS"
         :key="emoji"
@@ -35,10 +43,10 @@
       >
         ×
       </button>
-    </div>
+      </div>
 
-    <template v-if="expanded">
-      <div class="category-tabs" role="tablist" aria-label="Kategori emoji">
+      <template v-if="expanded">
+        <div class="category-tabs" role="tablist" aria-label="Kategori emoji">
         <button
           v-for="category in EMOJI_CATEGORIES"
           :key="category.id"
@@ -53,9 +61,9 @@
         >
           {{ category.icon }}
         </button>
-      </div>
+        </div>
 
-      <div class="emoji-grid" role="tabpanel">
+        <div class="emoji-grid" role="tabpanel">
         <button
           v-for="emoji in activeEmojis"
           :key="emoji"
@@ -68,23 +76,68 @@
         >
           {{ emoji }}
         </button>
-      </div>
-    </template>
-  </div>
+        </div>
+      </template>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { calculateFloatingPosition } from '../utils/floatingPosition.js';
 
-defineProps({
+const props = defineProps({
   currentEmoji: { type: String, default: '' },
   direction: { type: String, default: 'incoming' },
   loading: { type: Boolean, default: false },
+  anchorElement: { default: null },
+  boundaryElement: { default: null },
 });
 
 const emit = defineEmits(['select']);
 const expanded = ref(false);
 const activeCategory = ref('faces');
+const pickerElement = ref(null);
+let resizeObserver = null;
+let positionFrame = null;
+
+const updatePosition = () => {
+  const picker = pickerElement.value;
+  const anchor = props.anchorElement;
+  const boundary = props.boundaryElement;
+  if (!picker || !anchor || !boundary) return;
+
+  const anchorRect = anchor.getBoundingClientRect();
+  const boundaryRect = boundary.getBoundingClientRect();
+  const edgeGap = 12;
+  const anchorGap = 8;
+  const availableWidth = Math.max(0, boundaryRect.width - edgeGap * 2);
+  const availableHeight = Math.max(0, boundaryRect.height - edgeGap * 2);
+
+  picker.style.visibility = 'hidden';
+  picker.style.maxWidth = `${availableWidth}px`;
+  picker.style.maxHeight = `${availableHeight}px`;
+  picker.style.width = expanded.value ? `${Math.min(320, availableWidth)}px` : 'max-content';
+
+  const pickerRect = picker.getBoundingClientRect();
+  const { left, top } = calculateFloatingPosition({
+    anchorRect,
+    boundaryRect,
+    pickerRect,
+    direction: props.direction,
+    edgeGap,
+    anchorGap,
+  });
+
+  picker.style.left = `${Math.round(left)}px`;
+  picker.style.top = `${Math.round(top)}px`;
+  picker.style.visibility = 'visible';
+};
+
+const schedulePositionUpdate = () => {
+  if (positionFrame) cancelAnimationFrame(positionFrame);
+  positionFrame = requestAnimationFrame(updatePosition);
+};
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const EMOJI_CATEGORIES = [
@@ -143,15 +196,47 @@ const activeEmojis = computed(
 );
 
 const selectEmoji = emoji => emit('select', emoji);
+
+watch(
+  () => [props.anchorElement, props.boundaryElement, props.direction],
+  async () => {
+    await nextTick();
+    schedulePositionUpdate();
+  },
+);
+
+watch(expanded, async () => {
+  await nextTick();
+  schedulePositionUpdate();
+});
+
+onMounted(async () => {
+  await nextTick();
+  schedulePositionUpdate();
+  window.addEventListener('resize', schedulePositionUpdate);
+
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(schedulePositionUpdate);
+    if (pickerElement.value) resizeObserver.observe(pickerElement.value);
+    if (props.boundaryElement) resizeObserver.observe(props.boundaryElement);
+  }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', schedulePositionUpdate);
+  resizeObserver?.disconnect();
+  if (positionFrame) cancelAnimationFrame(positionFrame);
+});
 </script>
 
 <style scoped>
 .reaction-picker {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  z-index: 50;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1400;
+  visibility: hidden;
   width: max-content;
-  max-width: calc(100vw - 72px);
   box-sizing: border-box;
   margin: 0;
   padding: 6px;
@@ -161,10 +246,11 @@ const selectEmoji = emoji => emit('select', emoji);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 
-.reaction-picker.incoming { left: 0; }
-.reaction-picker.outgoing { right: 0; }
 .reaction-picker.expanded {
-  width: min(320px, calc(100vw - 72px));
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  overflow: hidden;
   border-radius: 18px;
 }
 
@@ -172,10 +258,8 @@ const selectEmoji = emoji => emit('select', emoji);
   display: flex;
   align-items: center;
   gap: 2px;
-  max-width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scrollbar-width: thin;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .emoji-button,
@@ -215,7 +299,7 @@ const selectEmoji = emoji => emit('select', emoji);
   padding: 6px 0;
   border-top: 1px solid #eef2f7;
   border-bottom: 1px solid #eef2f7;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .category-button {
@@ -229,16 +313,26 @@ const selectEmoji = emoji => emit('select', emoji);
   display: grid;
   grid-template-columns: repeat(8, minmax(28px, 1fr));
   gap: 3px;
+  min-height: 80px;
   max-height: 190px;
   margin-top: 6px;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 
 .grid-emoji { width: 100%; }
 
 @media (max-width: 520px) {
-  .reaction-picker.expanded { width: min(292px, calc(100vw - 56px)); }
+  .reaction-picker { padding: 5px; }
+  .reaction-picker.expanded { width: 292px; }
+  .quick-reactions { gap: 1px; }
+  .quick-reactions .emoji-button {
+    width: 29px;
+    height: 29px;
+    flex-basis: 29px;
+    font-size: 18px;
+  }
   .emoji-grid { grid-template-columns: repeat(7, minmax(28px, 1fr)); }
 }
 </style>
