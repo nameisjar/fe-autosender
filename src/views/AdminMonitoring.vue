@@ -15,7 +15,11 @@
           </svg>
           Monitoring System
         </h2>
-        <p class="subtitle">Pantau kesehatan sistem dan analitik pesan secara real-time</p>
+        <p class="subtitle">
+          {{ activeTab === 'system'
+            ? 'Pantau kesehatan sistem dan analitik pesan secara real-time'
+            : 'Pantau status device seluruh akun tanpa akses operasional' }}
+        </p>
       </div>
 
       <!-- Connection Status -->
@@ -25,8 +29,27 @@
       </div>
     </div>
 
+    <div class="monitor-tabs" role="tablist" aria-label="Bagian monitoring">
+      <button
+        :class="{ active: activeTab === 'system' }"
+        role="tab"
+        :aria-selected="activeTab === 'system'"
+        @click="activeTab = 'system'"
+      >
+        Kesehatan Sistem
+      </button>
+      <button
+        :class="{ active: activeTab === 'devices' }"
+        role="tab"
+        :aria-selected="activeTab === 'devices'"
+        @click="activeTab = 'devices'"
+      >
+        Device Semua Akun
+      </button>
+    </div>
+
     <!-- System Health Section -->
-    <section class="health-section">
+    <section v-if="activeTab === 'system'" class="health-section">
       <div class="section-header">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -168,14 +191,14 @@
     </section>
 
     <!-- Device Status Section -->
-    <section class="devices-section">
+    <section v-if="activeTab === 'devices'" class="devices-section">
       <div class="section-header">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
             <line x1="12" y1="18" x2="12.01" y2="18" />
           </svg>
-          Device Status
+          Device Semua Akun
         </h3>
         <div class="device-summary">
           <span class="connected">
@@ -189,6 +212,15 @@
         </div>
       </div>
 
+      <div class="monitor-device-stats">
+        <div><span>Total Device</span><strong>{{ deviceSummary.total }}</strong></div>
+        <div><span>Terhubung</span><strong>{{ deviceSummary.connected }}</strong></div>
+        <div><span>Terputus</span><strong>{{ deviceSummary.disconnected }}</strong></div>
+        <div><span>Milik User</span><strong>{{ deviceSummary.userOwned }}</strong></div>
+        <div><span>Dari Admin</span><strong>{{ deviceSummary.adminAssigned }}</strong></div>
+        <div><span>Akun Pemilik</span><strong>{{ deviceSummary.ownerAccounts }}</strong></div>
+      </div>
+
       <!-- Filters and Search -->
       <div class="table-filters">
         <div class="filter-group">
@@ -200,30 +232,44 @@
             <input
               type="text"
               v-model="deviceFilters.search"
-              placeholder="Cari nama atau nomor..."
+              placeholder="Cari device, nomor, atau pemilik..."
               @input="debouncedLoadDevices"
             />
           </div>
 
-          <select v-model="deviceFilters.status" @change="loadDevices" class="filter-select">
+          <select v-model="deviceFilters.status" @change="applyDeviceFilters" class="filter-select">
             <option value="all">Semua Status</option>
             <option value="connected">Connected</option>
             <option value="disconnected">Disconnected</option>
           </select>
 
-          <select v-model="deviceFilters.sortBy" @change="loadDevices" class="filter-select">
+          <select v-model="deviceFilters.ownerId" @change="applyDeviceFilters" class="filter-select">
+            <option value="">Semua Pemilik</option>
+            <option v-for="owner in owners" :key="owner.id" :value="owner.id">
+              {{ ownerName(owner) }}
+            </option>
+          </select>
+
+          <select v-model="deviceFilters.ownership" @change="applyDeviceFilters" class="filter-select">
+            <option value="all">Semua Kepemilikan</option>
+            <option value="user_owned">Milik User</option>
+            <option value="admin_owned">Milik Admin</option>
+            <option value="admin_assigned">Dari Admin &amp; Di-assign</option>
+          </select>
+
+          <select v-model="deviceFilters.sortBy" @change="applyDeviceFilters" class="filter-select">
             <option value="updatedAt">Terakhir Update</option>
             <option value="name">Nama</option>
             <option value="phone">Nomor</option>
             <option value="messageCount">Total Pesan</option>
           </select>
 
-          <select v-model="deviceFilters.sortOrder" @change="loadDevices" class="filter-select">
+          <select v-model="deviceFilters.sortOrder" @change="applyDeviceFilters" class="filter-select">
             <option value="desc">Terbaru</option>
             <option value="asc">Terlama</option>
           </select>
 
-          <select v-model="deviceFilters.limit" @change="loadDevices" class="filter-select">
+          <select v-model="deviceFilters.limit" @change="applyDeviceFilters" class="filter-select">
             <option :value="5">5 / halaman</option>
             <option :value="10">10 / halaman</option>
             <option :value="25">25 / halaman</option>
@@ -240,14 +286,18 @@
               <th>Status</th>
               <th>Nama Device</th>
               <th>Nomor Telepon</th>
-              <th>User</th>
+              <th>Pemilik</th>
+              <th>Role</th>
+              <th>Kepemilikan</th>
+              <th>Assignment</th>
               <th>Total Pesan</th>
               <th>Terakhir Update</th>
+              <th>Detail</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loadingDevices">
-              <td colspan="6" class="loading-row">
+              <td colspan="10" class="loading-row">
                 <div class="spinner"></div>
                 <span>Memuat data...</span>
               </td>
@@ -266,16 +316,31 @@
               </td>
               <td class="device-name-cell">{{ device.name || 'Unnamed Device' }}</td>
               <td>{{ device.phone || '-' }}</td>
-              <td>{{ device.user?.firstName || 'No User' }}</td>
+              <td>
+                <div class="owner-cell">
+                  <strong>{{ ownerName(device.user) }}</strong>
+                  <small>{{ device.user?.email || '-' }}</small>
+                </div>
+              </td>
+              <td>{{ device.user?.privilege?.name || 'User' }}</td>
+              <td>
+                <span class="ownership-badge" :class="device.ownershipType">
+                  {{ ownershipLabel(device.ownershipType) }}
+                </span>
+              </td>
+              <td>{{ device.assignmentCount || 0 }} akun</td>
               <td class="message-count-cell">
                 <span class="message-count" :title="`Broadcast: ${device.broadcastCount || 0}, Outgoing: ${device.outgoingCount || 0}`">
                   {{ formatNumber(device.messageCount || 0) }}
                 </span>
               </td>
               <td class="date-cell">{{ formatDateTime(device.updatedAt) }}</td>
+              <td>
+                <button class="btn-view-detail" @click="openDeviceDetail(device)">Lihat</button>
+              </td>
             </tr>
             <tr v-if="!loadingDevices && devices.length === 0">
-              <td colspan="6" class="empty-row">
+              <td colspan="10" class="empty-row">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                   <line x1="12" y1="18" x2="12.01" y2="18" />
@@ -326,8 +391,40 @@
       </div>
     </section>
 
+    <div v-if="selectedDevice" class="monitor-modal-overlay" @click.self="selectedDevice = null">
+      <div class="monitor-modal" role="dialog" aria-modal="true">
+        <div class="monitor-modal-header">
+          <div>
+            <h3>Detail Monitoring Device</h3>
+            <p>Informasi ini hanya untuk pemantauan dan tidak memberikan akses operasional.</p>
+          </div>
+          <button aria-label="Tutup" @click="selectedDevice = null">×</button>
+        </div>
+        <div class="detail-grid">
+          <div><span>Nama Device</span><strong>{{ selectedDevice.name || '-' }}</strong></div>
+          <div><span>Nomor WhatsApp</span><strong>{{ selectedDevice.phone || '-' }}</strong></div>
+          <div><span>Status</span><strong>{{ selectedDevice.isConnected ? 'Terhubung' : 'Terputus' }}</strong></div>
+          <div><span>Jenis</span><strong>{{ ownershipLabel(selectedDevice.ownershipType) }}</strong></div>
+          <div><span>Pemilik</span><strong>{{ ownerName(selectedDevice.user) }}</strong></div>
+          <div><span>Role Pemilik</span><strong>{{ selectedDevice.user?.privilege?.name || 'User' }}</strong></div>
+          <div><span>Dibuat</span><strong>{{ formatDateTime(selectedDevice.createdAt) }}</strong></div>
+          <div><span>Terakhir Update</span><strong>{{ formatDateTime(selectedDevice.updatedAt) }}</strong></div>
+        </div>
+        <div class="assignment-detail">
+          <h4>Assignment ({{ selectedDevice.assignmentCount || 0 }})</h4>
+          <div v-if="selectedDevice.assignedTo?.length" class="assignment-list">
+            <div v-for="assignment in selectedDevice.assignedTo" :key="assignment.id">
+              <span>{{ ownerName(assignment.user) }}</span>
+              <small>{{ assignment.user?.email }} · {{ formatDateTime(assignment.assignedAt) }}</small>
+            </div>
+          </div>
+          <p v-else>Device ini tidak di-assign ke akun lain.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Message Analytics Section -->
-    <section class="analytics-section">
+    <section v-if="activeTab === 'system'" class="analytics-section">
       <div class="section-header">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -457,7 +554,7 @@
     </section>
 
     <!-- PDF Generator Details -->
-    <section class="pdf-section" v-if="overview?.pdfGenerator">
+    <section v-if="activeTab === 'system' && overview?.pdfGenerator" class="pdf-section">
       <div class="section-header">
         <h3>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -519,10 +616,13 @@ import { useToast } from "../composables/useToast.js";
 const { showToast } = useToast();
 
 // State
+const activeTab = ref("system");
 const loading = ref(false);
 const loadingDevices = ref(false);
 const overview = ref(null);
 const devices = ref([]);
+const owners = ref([]);
+const selectedDevice = ref(null);
 const analytics = ref(null);
 const selectedPeriod = ref(7);
 const lastUpdate = ref("-");
@@ -542,6 +642,8 @@ const pagination = ref({
 const deviceFilters = ref({
   search: "",
   status: "all",
+  ownerId: "",
+  ownership: "all",
   sortBy: "updatedAt",
   sortOrder: "desc",
   limit: 10,
@@ -552,6 +654,10 @@ const deviceSummaryFromApi = ref({
   connected: 0,
   disconnected: 0,
   total: 0,
+  userOwned: 0,
+  adminOwned: 0,
+  adminAssigned: 0,
+  ownerAccounts: 0,
 });
 
 // Debounce timer
@@ -565,6 +671,10 @@ const deviceSummary = computed(() => ({
   connected: deviceSummaryFromApi.value.connected,
   disconnected: deviceSummaryFromApi.value.disconnected,
   total: deviceSummaryFromApi.value.total,
+  userOwned: deviceSummaryFromApi.value.userOwned || 0,
+  adminOwned: deviceSummaryFromApi.value.adminOwned || 0,
+  adminAssigned: deviceSummaryFromApi.value.adminAssigned || 0,
+  ownerAccounts: deviceSummaryFromApi.value.ownerAccounts || 0,
 }));
 
 const paginationStart = computed(() => {
@@ -646,6 +756,22 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
+const ownerName = (user) => {
+  if (!user) return "Tanpa Pemilik";
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  return name || user.email || "Tanpa Nama";
+};
+
+const ownershipLabel = (type) => {
+  if (type === "admin_assigned") return "Dari Admin";
+  if (type === "admin_owned") return "Milik Admin";
+  return "Milik User";
+};
+
+const openDeviceDetail = (device) => {
+  selectedDevice.value = device;
+};
+
 const updateLastUpdate = () => {
   lastUpdate.value = new Date().toLocaleTimeString("id-ID");
 };
@@ -659,6 +785,11 @@ const debouncedLoadDevices = () => {
     pagination.value.page = 1;
     loadDevices();
   }, 300);
+};
+
+const applyDeviceFilters = () => {
+  pagination.value.page = 1;
+  loadDevices();
 };
 
 // Pagination
@@ -695,6 +826,8 @@ const loadDevices = async () => {
       page: pagination.value.page.toString(),
       limit: deviceFilters.value.limit.toString(),
       status: deviceFilters.value.status,
+      ownerId: deviceFilters.value.ownerId,
+      ownership: deviceFilters.value.ownership,
       search: deviceFilters.value.search,
       sortBy: deviceFilters.value.sortBy,
       sortOrder: deviceFilters.value.sortOrder,
@@ -702,6 +835,7 @@ const loadDevices = async () => {
     
     const response = await userApi.get(`/health/devices?${params.toString()}`);
     devices.value = response.data.devices || [];
+    owners.value = response.data.owners || [];
     
     if (response.data.pagination) {
       pagination.value = response.data.pagination;
@@ -869,6 +1003,31 @@ onUnmounted(() => {
   color: var(--theme-text-muted);
   margin: 8px 0 0 0;
   font-size: 0.95rem;
+}
+
+.monitor-tabs {
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 24px;
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  background: var(--theme-surface);
+}
+
+.monitor-tabs button {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.monitor-tabs button.active {
+  background: #2563eb;
+  color: #ffffff;
 }
 
 .connection-status {
@@ -1118,6 +1277,32 @@ section {
   gap: 6px;
 }
 
+.monitor-device-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.monitor-device-stats > div {
+  padding: 14px;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+}
+
+.monitor-device-stats span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--theme-text-muted);
+  font-size: 0.78rem;
+}
+
+.monitor-device-stats strong {
+  color: var(--theme-text);
+  font-size: 1.35rem;
+}
+
 .dot {
   width: 8px;
   height: 8px;
@@ -1316,6 +1501,102 @@ section {
   border-bottom: 1px solid var(--theme-border);
   color: var(--theme-text-secondary);
 }
+
+.owner-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.owner-cell strong { color: var(--theme-text); }
+.owner-cell small { color: var(--theme-text-muted); }
+
+.ownership-badge {
+  display: inline-flex;
+  padding: 5px 9px;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ownership-badge.user_owned {
+  border-color: var(--theme-success-border);
+  background: var(--theme-success-soft);
+  color: var(--theme-success-text);
+}
+
+.ownership-badge.admin_assigned {
+  border-color: var(--theme-info-border);
+  background: var(--theme-info-soft);
+  color: var(--theme-info-text);
+}
+
+.btn-view-detail {
+  padding: 7px 12px;
+  border: 1px solid var(--theme-info-border);
+  border-radius: 8px;
+  background: var(--theme-info-soft);
+  color: var(--theme-info-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.monitor-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--theme-overlay);
+}
+
+.monitor-modal {
+  width: min(720px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--theme-border);
+  border-radius: 16px;
+  background: var(--theme-surface);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.monitor-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.monitor-modal-header h3 { margin: 0; color: var(--theme-text); }
+.monitor-modal-header p { margin: 6px 0 0; color: var(--theme-text-muted); }
+.monitor-modal-header button { border: 0; background: transparent; color: var(--theme-text-muted); font-size: 28px; cursor: pointer; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.detail-grid > div {
+  padding: 13px;
+  border-radius: 9px;
+  background: var(--theme-surface-soft);
+}
+
+.detail-grid span { display: block; margin-bottom: 5px; color: var(--theme-text-muted); font-size: 0.78rem; }
+.detail-grid strong { color: var(--theme-text); }
+.assignment-detail h4 { margin: 0 0 12px; color: var(--theme-text); }
+.assignment-detail > p { color: var(--theme-text-muted); }
+.assignment-list { display: grid; gap: 8px; }
+.assignment-list > div { display: flex; justify-content: space-between; gap: 15px; padding: 11px 13px; border: 1px solid var(--theme-border); border-radius: 9px; color: var(--theme-text-secondary); }
+.assignment-list small { color: var(--theme-text-muted); }
 
 .data-table tbody tr {
   transition: background 0.15s;
@@ -1769,6 +2050,19 @@ section {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .monitor-tabs {
+    display: flex;
+  }
+
+  .monitor-tabs button {
+    flex: 1;
+    padding: 10px;
+  }
+
+  .monitor-device-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .filter-group {
     flex-direction: column;
     align-items: stretch;
@@ -1807,6 +2101,14 @@ section {
 
   .analytics-summary {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assignment-list > div {
+    flex-direction: column;
   }
 
   .chart-bars {
