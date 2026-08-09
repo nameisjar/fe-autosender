@@ -594,9 +594,10 @@
               </button>
               <textarea
                 v-model="replyText"
-                :placeholder="selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan...'"
+                :placeholder="selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan atau tempel gambar...'"
                 class="reply-textarea"
                 @keydown.enter.exact="handleEnterKey"
+                @paste="handleReplyPaste"
                 rows="1"
                 ref="replyTextarea"
               ></textarea>
@@ -1820,6 +1821,28 @@ const formatFileSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
+const SUPPORTED_PASTED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]);
+
+const selectAttachment = (file) => {
+  if (!file) return false;
+
+  if (file.size > MAX_ATTACHMENT_SIZE) {
+    toast.error('Ukuran lampiran maksimal 25 MB');
+    return false;
+  }
+
+  if (attachmentPreviewUrl.value) URL.revokeObjectURL(attachmentPreviewUrl.value);
+  selectedAttachment.value = file;
+  attachmentPreviewUrl.value = URL.createObjectURL(file);
+  return true;
+};
+
 const clearAttachment = () => {
   if (attachmentPreviewUrl.value) URL.revokeObjectURL(attachmentPreviewUrl.value);
   attachmentPreviewUrl.value = '';
@@ -1830,15 +1853,50 @@ const clearAttachment = () => {
 const handleAttachmentChange = (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
-  if (file.size > 25 * 1024 * 1024) {
-    toast.error('Ukuran lampiran maksimal 25 MB');
+
+  if (!selectAttachment(file)) {
     event.target.value = '';
+  }
+};
+
+const getPastedImage = (clipboardData) => {
+  if (!clipboardData) return null;
+
+  const imageItem = Array.from(clipboardData.items || []).find(
+    item => item.kind === 'file' && item.type.startsWith('image/'),
+  );
+  const itemFile = imageItem?.getAsFile?.();
+  if (itemFile) return itemFile;
+
+  return Array.from(clipboardData.files || []).find(
+    file => file.type.startsWith('image/'),
+  ) || null;
+};
+
+const handleReplyPaste = (event) => {
+  const imageFile = getPastedImage(event.clipboardData);
+  if (!imageFile) return;
+
+  event.preventDefault();
+
+  if (sendingReply.value) {
+    toast.warning('Tunggu hingga pesan sebelumnya selesai dikirim');
     return;
   }
 
-  if (attachmentPreviewUrl.value) URL.revokeObjectURL(attachmentPreviewUrl.value);
-  selectedAttachment.value = file;
-  attachmentPreviewUrl.value = URL.createObjectURL(file);
+  if (selectedAttachment.value) {
+    toast.warning('Hapus lampiran yang dipilih sebelum menempel gambar baru');
+    return;
+  }
+
+  if (!SUPPORTED_PASTED_IMAGE_TYPES.has(imageFile.type.toLowerCase())) {
+    toast.error('Format gambar clipboard harus JPG, PNG, GIF, atau WebP');
+    return;
+  }
+
+  if (selectAttachment(imageFile)) {
+    toast.info('Gambar dari clipboard siap dikirim');
+  }
 };
 
 const sendMediaReply = async () => {
