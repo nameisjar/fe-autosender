@@ -1,6 +1,10 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { userApi } from '../api/http.js';
-import { listenToDeviceStatus, connectSocket } from '../api/socket.js';
+import {
+  listenToDeviceAccessChanges,
+  listenToDeviceStatus,
+  connectSocket,
+} from '../api/socket.js';
 
 // 🔄 Inisialisasi dari localStorage
 const devices = ref([]);
@@ -64,6 +68,12 @@ export function useDevices() {
 
     // Connect socket
     connectSocket();
+
+    socketCleanups.push(
+      listenToDeviceAccessChanges(() => {
+        loadDevices();
+      })
+    );
 
     // Listen to status changes for ALL devices
     devices.value.forEach((device) => {
@@ -142,6 +152,10 @@ export function useDevices() {
       phone: device.phone || '',
       status: device.status || 'unknown',
       isConnected: device.status === 'open',
+      isOwner: device.isOwner !== false,
+      accessType: device.accessType || 'owner',
+      canManage: device.canManage !== false,
+      assignmentCount: Number(device.assignmentCount || 0),
     };
   });
 
@@ -152,6 +166,10 @@ export function useDevices() {
       phone: d.phone || '',
       status: d.status || 'unknown',
       isConnected: d.status === 'open',
+      isOwner: d.isOwner !== false,
+      accessType: d.accessType || 'owner',
+      canManage: d.canManage !== false,
+      assignmentCount: Number(d.assignmentCount || 0),
       // 🆕 Health info from cache
       health: deviceHealthCache.value[d.id] || null,
     }));

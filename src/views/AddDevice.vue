@@ -21,6 +21,7 @@
         :disconnectCountdown="disconnectCountdown"
         :controllerActive="controllerActive"
         :humanStatus="humanStatus"
+        :canManageSelected="selectedDevice?.canManage !== false"
         @startPairing="startPairing"
         @stopPairing="stopPairing"
         @quickRetryPairing="quickRetryPairing"
@@ -46,9 +47,11 @@
         :totalPages="totalPages"
         :humanStatus="humanStatus"
         :statusClass="statusClass"
+        :canAssignDevices="canAssignDevices"
         @reload="fetchDevices(true)"
         @openAddDeviceModal="openAddDeviceModal"
         @deleteOne="deleteOne"
+        @openAssignments="openAssignments"
         @nextPage="nextPage"
         @prevPage="prevPage"
       />
@@ -71,6 +74,18 @@
       @confirm="confirmDelete"
       @cancel="cancelDelete"
     />
+
+    <AssignDeviceModal
+      :modelValue="showAssignModal"
+      :device="assignmentDevice"
+      :users="assignmentUsers"
+      :assignments="deviceAssignments"
+      :loading="assignmentLoading"
+      :saving="assignmentSaving"
+      @close="closeAssignments"
+      @assign="assignDeviceToUser"
+      @revoke="revokeDeviceAccess"
+    />
   </div>
 </template>
 
@@ -86,6 +101,7 @@ import DevicePairingPanel from "./add-device/components/DevicePairingPanel.vue";
 import DeviceListTable from "./add-device/components/DeviceListTable.vue";
 import AddDeviceModal from "./add-device/components/AddDeviceModal.vue";
 import DeleteDeviceModal from "./add-device/components/DeleteDeviceModal.vue";
+import AssignDeviceModal from "./add-device/components/AssignDeviceModal.vue";
 
 import { useDevicePairing } from "./add-device/composables/useDevicePairing.js";
 import { useDeviceStats } from "./add-device/composables/useDeviceStats.js";
@@ -99,6 +115,7 @@ const { clearGroups } = useGroups();
 const CACHE_KEY = "devices_list";
 
 const isTutor = computed(() => auth.roleName === "cs");
+const canAssignDevices = computed(() => auth.isAdmin);
 
 // ------- Devices (GLOBAL single source of truth) -------
 const {
@@ -119,9 +136,15 @@ const deviceId = computed({
 
 const selectedStatus = computed(() => selectedDevice.value?.status || "");
 
-const tutorReachedLimit = computed(() => isTutor.value && devices.value.length >= 1);
+const tutorReachedLimit = computed(
+  () => isTutor.value && devices.value.filter((device) => device.isOwner !== false).length >= 1
+);
 const tutorHasConnectedDevice = computed(
-  () => isTutor.value && devices.value.some((d) => String(d.status).toLowerCase() === "open")
+  () =>
+    isTutor.value &&
+    devices.value.some(
+      (d) => d.isOwner !== false && String(d.status).toLowerCase() === "open"
+    )
 );
 
 // Provide a compatibility wrapper for the new pairing/stats composables
@@ -220,7 +243,77 @@ const openAddDeviceModal = () => {
 const showDeleteModal = ref(false);
 const deviceToDelete = ref(null);
 
+const showAssignModal = ref(false);
+const assignmentDevice = ref(null);
+const assignmentUsers = ref([]);
+const deviceAssignments = ref([]);
+const assignmentLoading = ref(false);
+const assignmentSaving = ref(false);
+
+const loadAssignmentData = async () => {
+  if (!assignmentDevice.value?.id) return;
+  assignmentLoading.value = true;
+  try {
+    const [usersResponse, assignmentsResponse] = await Promise.all([
+      userApi.get("/devices/assignment-users"),
+      userApi.get(`/devices/${assignmentDevice.value.id}/assignments`),
+    ]);
+    assignmentUsers.value = Array.isArray(usersResponse.data) ? usersResponse.data : [];
+    deviceAssignments.value = Array.isArray(assignmentsResponse.data?.assignments)
+      ? assignmentsResponse.data.assignments
+      : [];
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "Gagal memuat assignment device");
+    closeAssignments();
+  } finally {
+    assignmentLoading.value = false;
+  }
+};
+
+const openAssignments = async (device) => {
+  if (!canAssignDevices.value || device?.canManage === false) return;
+  assignmentDevice.value = device;
+  showAssignModal.value = true;
+  await loadAssignmentData();
+};
+
+const closeAssignments = () => {
+  showAssignModal.value = false;
+  assignmentDevice.value = null;
+  assignmentUsers.value = [];
+  deviceAssignments.value = [];
+};
+
+const assignDeviceToUser = async (userId) => {
+  if (!assignmentDevice.value?.id || !userId) return;
+  assignmentSaving.value = true;
+  try {
+    await userApi.post(`/devices/${assignmentDevice.value.id}/assignments`, { userId });
+    toast.success("Akses device berhasil diberikan");
+    await Promise.all([loadAssignmentData(), loadDevices()]);
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "Gagal memberikan akses device");
+  } finally {
+    assignmentSaving.value = false;
+  }
+};
+
+const revokeDeviceAccess = async (userId) => {
+  if (!assignmentDevice.value?.id || !userId) return;
+  assignmentSaving.value = true;
+  try {
+    await userApi.delete(`/devices/${assignmentDevice.value.id}/assignments/${userId}`);
+    toast.success("Akses device berhasil dicabut");
+    await Promise.all([loadAssignmentData(), loadDevices()]);
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "Gagal mencabut akses device");
+  } finally {
+    assignmentSaving.value = false;
+  }
+};
+
 const deleteOne = (d) => {
+  if (d?.canManage === false) return;
   deviceToDelete.value = d;
   showDeleteModal.value = true;
 };

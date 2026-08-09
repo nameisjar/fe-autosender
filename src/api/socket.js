@@ -97,6 +97,15 @@ export function listenToDeviceStatus(deviceId, callback) {
   };
 }
 
+export function listenToDeviceAccessChanges(callback) {
+  const socket = connectSocket();
+  const eventName = 'device:access-changed';
+  const handler = (payload) => callback(payload || {});
+
+  socket.on(eventName, handler);
+  return () => socket.off(eventName, handler);
+}
+
 export function listenToGroupUpdates(deviceId, callback) {
   const socket = connectSocket();
   const eventName = `device:${deviceId}:groups-updated`;

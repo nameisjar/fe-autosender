@@ -28,7 +28,7 @@
         <select :value="deviceId" @change="$emit('update:deviceId', $event.target.value)">
           <option value="" disabled>Pilih device</option>
           <option v-for="d in devices" :key="d.id" :value="String(d.id)">
-            {{ d.name }} - {{ humanStatus(d.status) }}
+            {{ d.name }} - {{ humanStatus(d.status) }}{{ d.isOwner === false ? " (Ditugaskan)" : "" }}
           </option>
         </select>
       </div>
@@ -37,7 +37,7 @@
         <label>&nbsp;</label>
         <div class="row-btns">
           <button
-            v-if="selectedStatus !== 'open'"
+            v-if="selectedStatus !== 'open' && canManageSelected"
             class="btn primary"
             @click="$emit('startPairing')"
             :disabled="!deviceId || pairingLoading || (isTutor && tutorHasConnectedDevice)"
@@ -62,7 +62,7 @@
           </button>
 
           <button
-            v-if="controllerActive && selectedStatus !== 'open'"
+            v-if="controllerActive && selectedStatus !== 'open' && canManageSelected"
             class="btn outline"
             @click="$emit('stopPairing')"
           >
@@ -90,7 +90,12 @@
       <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 3-3 3" />
       <line x1="12" y1="17" x2="12" y2="17" />
     </svg>
-    Scan QR dari WhatsApp di ponsel Anda. Jika sudah terhubung, jangan lupa untuk di-refresh.
+    <template v-if="canManageSelected">
+      Scan QR dari WhatsApp di ponsel Anda. Jika sudah terhubung, jangan lupa untuk di-refresh.
+    </template>
+    <template v-else>
+      Device ini diberikan oleh admin dan tidak memerlukan pairing QR dari akun Anda.
+    </template>
   </p>
 
   <div v-if="selectedStatus === 'open'" class="connection-success">
@@ -109,7 +114,7 @@
     </div>
   </div>
 
-  <template v-else>
+  <template v-else-if="canManageSelected">
     <div v-if="pairingLoading && !apiError && !qr" class="status-bar status-bar-connecting">
       <div class="status-spinner"></div>
       <span class="status-message">{{ statusText || 'Menghubungkan ke WhatsApp...' }}</span>
@@ -216,6 +221,11 @@
       <small>Proses ini membutuhkan waktu beberapa detik</small>
     </div>
   </template>
+
+  <div v-else class="assigned-device-notice">
+    <strong>Device ditugaskan oleh admin</strong>
+    <span>Hubungi admin jika koneksi device terputus atau perlu dilakukan pairing ulang.</span>
+  </div>
 </template>
 
 <script setup>
@@ -224,6 +234,7 @@ const props = defineProps({
   devices: { type: Array, default: () => [] },
   selectedDevice: { type: Object, default: null },
   selectedStatus: { type: String, default: "" },
+  canManageSelected: { type: Boolean, default: true },
 
   isTutor: { type: Boolean, default: false },
   tutorHasConnectedDevice: { type: Boolean, default: false },
@@ -402,6 +413,22 @@ defineEmits([
   height: 18px;
   flex-shrink: 0;
   color: #3b82f6;
+}
+
+.assigned-device-notice {
+  display: grid;
+  gap: 5px;
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid var(--theme-info-border);
+  border-radius: 12px;
+  background: var(--theme-info-soft);
+  color: var(--theme-info-text);
+}
+
+.assigned-device-notice span {
+  color: var(--theme-text-secondary);
+  font-size: 14px;
 }
 
 .connection-success {

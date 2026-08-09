@@ -13,6 +13,7 @@ vi.mock('../../api/http.js', () => ({
 
 vi.mock('../../api/socket.js', () => ({
   listenToDeviceStatus: vi.fn(),
+  listenToDeviceAccessChanges: vi.fn(() => vi.fn()),
   connectSocket: vi.fn(),
   disconnectSocket: vi.fn(),
 }));
@@ -125,6 +126,31 @@ describe('useDevices Composable', () => {
 
       // Can be null or undefined depending on implementation
       expect(selectedDevice.value == null).toBe(true);
+    });
+
+    it('should preserve assignment permissions for the selected device', async () => {
+      userApi.get.mockResolvedValue({
+        data: [
+          {
+            id: 'assigned-device',
+            name: 'Device Admin',
+            status: 'open',
+            isOwner: false,
+            accessType: 'assigned',
+            canManage: false,
+          },
+        ],
+      });
+
+      const { loadDevices, selectedDevice } = useDevices();
+      await loadDevices();
+
+      expect(selectedDevice.value).toMatchObject({
+        id: 'assigned-device',
+        isOwner: false,
+        accessType: 'assigned',
+        canManage: false,
+      });
     });
   });
 });

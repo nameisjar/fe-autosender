@@ -144,6 +144,10 @@
               </div>
               <div class="device-info-cell">
                 <div class="device-name">{{ d.name }}</div>
+                <span v-if="d.isOwner === false" class="access-badge">Ditugaskan Admin</span>
+                <span v-else-if="d.assignmentCount" class="assignment-count">
+                  {{ d.assignmentCount }} akun diberi akses
+                </span>
               </div>
             </div>
           </td>
@@ -265,19 +269,36 @@
           </td>
 
           <td data-label="Aksi" class="text-center">
-            <button
-              class="btn-delete-table"
-              @click="$emit('deleteOne', d)"
-              :disabled="deleting"
-              title="Hapus Device"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path
-                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                />
-              </svg>
-            </button>
+            <div class="action-buttons">
+              <button
+                v-if="canAssignDevices && d.canManage !== false"
+                class="btn-assign-table"
+                @click="$emit('openAssignments', d)"
+                title="Kelola akses akun"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <line x1="19" y1="8" x2="19" y2="14" />
+                  <line x1="22" y1="11" x2="16" y2="11" />
+                </svg>
+              </button>
+              <button
+                v-if="d.canManage !== false"
+                class="btn-delete-table"
+                @click="$emit('deleteOne', d)"
+                :disabled="deleting"
+                title="Hapus Device"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
+                </svg>
+              </button>
+              <span v-if="d.canManage === false" class="managed-by-admin">Dikelola admin</span>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -355,6 +376,7 @@ defineProps({
 
   isTutor: { type: Boolean, default: false },
   tutorReachedLimit: { type: Boolean, default: false },
+  canAssignDevices: { type: Boolean, default: false },
 
   searchQuery: { type: String, default: "" },
   filteredDevices: { type: Array, default: () => [] },
@@ -375,6 +397,7 @@ defineEmits([
   "reload",
   "openAddDeviceModal",
   "deleteOne",
+  "openAssignments",
   "nextPage",
   "prevPage",
   "update:searchQuery",
@@ -588,6 +611,30 @@ defineEmits([
   font-size: 14px;
 }
 
+.device-info-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.access-badge,
+.assignment-count {
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.access-badge {
+  background: var(--theme-info-soft);
+  color: var(--theme-info-text);
+}
+
+.assignment-count {
+  background: var(--theme-purple-soft);
+  color: var(--theme-purple-text);
+}
+
 .phone-number {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: var(--theme-text-secondary);
@@ -696,7 +743,15 @@ defineEmits([
   color: var(--theme-warning-text);
 }
 
-.btn-delete-table {
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-delete-table,
+.btn-assign-table {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -710,9 +765,22 @@ defineEmits([
   cursor: pointer;
 }
 
-.btn-delete-table svg {
+.btn-assign-table {
+  background: var(--theme-info-soft);
+  color: var(--theme-info-text);
+  border: 1.5px solid var(--theme-info-border);
+}
+
+.btn-delete-table svg,
+.btn-assign-table svg {
   width: 18px;
   height: 18px;
+}
+
+.managed-by-admin {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .pagination {
@@ -850,8 +918,13 @@ defineEmits([
     text-align: left;
   }
 
-  .btn-delete-table {
-    width: 100%;
+  .action-buttons {
+    justify-content: flex-start;
+  }
+
+  .btn-delete-table,
+  .btn-assign-table {
+    width: 44px;
     height: 40px;
     margin-top: 8px;
   }
