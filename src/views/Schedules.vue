@@ -73,6 +73,7 @@
           <select v-model="statusFilter" class="filter-select">
             <option value="all">📋 Semua Status</option>
             <option value="upcoming">⏰ Proses Dikirim</option>
+            <option value="pending">⏳ Pesan Tertunda</option>
             <option value="sent">✅ Sudah Dikirim</option>
             <option value="inactive">❌ Nonaktif</option>
           </select>
@@ -932,6 +933,8 @@ const matchesStatus = (g) => {
   if (statusFilter.value === "sent") return isSent;
   if (statusFilter.value === "upcoming")
     return !isSent && b.status !== false && sched > Date.now();
+  if (statusFilter.value === "pending")
+    return !isSent && b.status !== false && sched <= Date.now();
   return true;
 };
 
