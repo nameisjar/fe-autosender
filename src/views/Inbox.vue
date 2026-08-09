@@ -1894,9 +1894,7 @@ const handleReplyPaste = (event) => {
     return;
   }
 
-  if (selectAttachment(imageFile)) {
-    toast.info('Gambar dari clipboard siap dikirim');
-  }
+  selectAttachment(imageFile);
 };
 
 const sendMediaReply = async () => {
