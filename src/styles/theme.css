@@ -387,6 +387,12 @@ html.dark .recipients-info-box strong {
     color: #ffffff !important;
 }
 
+/* Keep primary page titles text-only across user and admin menus. */
+.page-header .header-content > h2 > svg:first-child,
+.page-header > div:first-child > h2 > svg:first-child {
+    display: none !important;
+}
+
 /* Reports are print artifacts and intentionally stay in light mode. */
 html.dark :where(.pdf-template, .pdf-container, #pdf-render-container) {
     color-scheme: light !important;
