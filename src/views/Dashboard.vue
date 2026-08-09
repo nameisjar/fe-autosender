@@ -123,6 +123,21 @@ main {
   background: var(--theme-bg);
 }
 
+/*
+ * Jarak halaman dashboard dikendalikan dari elemen main agar setiap menu
+ * mempunyai garis awal yang sama. Selector hanya menyasar root route aktif,
+ * sehingga wrapper di dalam komponen, tabel, dan modal tidak ikut berubah.
+ */
+main > :deep(.wrapper),
+main > :deep(.retention-page) {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .layout {
