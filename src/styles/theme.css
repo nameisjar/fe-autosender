@@ -378,6 +378,10 @@ html.dark .label-chip-table {
     color: #ffffff !important;
 }
 
+html.dark .members-badge {
+    color: #ffffff !important;
+}
+
 html.dark .recipients-info-box,
 html.dark .recipients-info-box strong {
     color: #ffffff !important;

@@ -2,7 +2,7 @@
   <div class="wrapper">
     <AddDeviceHeader :devices="devices" />
 
-    <section class="pairing card">
+    <section class="device-panel pairing">
       <DevicePairingPanel
         v-model:deviceId="deviceId"
         :devices="devices"
@@ -30,7 +30,7 @@
       />
     </section>
 
-    <section class="list card">
+    <section class="device-panel list">
       <DeviceListTable
         :devices="devices"
         :deviceStats="deviceStats"
@@ -433,10 +433,35 @@ watch(
 </script>
 
 <style scoped>
-/* Styles moved into child components. Kept wrapper only. */
 .wrapper {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.device-panel {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 24px;
+  padding: 24px;
+  overflow: hidden;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 16px;
+  box-shadow: 0 6px 20px var(--theme-shadow);
+}
+
+/* Toolbar pairing adalah isi panel, bukan panel visual yang terpisah. */
+:global(html.dark) .pairing :deep(.toolbar) {
+  background-color: transparent !important;
+}
+
+@media (max-width: 768px) {
+  .device-panel {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 12px;
+  }
 }
 </style>
