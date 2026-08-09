@@ -264,7 +264,11 @@
 
     <!-- Message Detail Modal -->
     <div v-if="selectedConversation" class="modal-overlay" @click="closeConversation">
-      <div class="modal conversation-modal" @click.stop>
+      <div
+        class="modal conversation-modal"
+        :class="{ 'conversation-modal--fullscreen': isConversationFullscreen }"
+        @click.stop
+      >
         <div class="modal-header">
           <div class="modal-header-info">
             <!-- Personal chat with profile picture -->
@@ -303,15 +307,41 @@
               <span class="modal-subtitle">{{ selectedConversation.messageCount }} pesan</span>
             </div>
           </div>
-          <button class="btn-close" @click="closeConversation">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          <div class="modal-header-actions">
+            <button
+              type="button"
+              class="btn-close btn-fullscreen"
+              :title="isConversationFullscreen ? 'Kembali ke ukuran normal' : 'Perbesar percakapan'"
+              :aria-label="isConversationFullscreen ? 'Kembali ke ukuran normal' : 'Perbesar percakapan'"
+              @click="isConversationFullscreen = !isConversationFullscreen"
+            >
+              <svg v-if="!isConversationFullscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 3 21 3 21 9" />
+                <polyline points="9 21 3 21 3 15" />
+                <line x1="21" y1="3" x2="14" y2="10" />
+                <line x1="3" y1="21" x2="10" y2="14" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 14 10 14 10 20" />
+                <polyline points="20 10 14 10 14 4" />
+                <line x1="10" y1="14" x2="3" y2="21" />
+                <line x1="14" y1="10" x2="21" y2="3" />
+              </svg>
+            </button>
+            <button type="button" class="btn-close" title="Tutup percakapan" aria-label="Tutup percakapan" @click="closeConversation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="modal-body chat-body">
-          <div class="chat-messages" ref="chatMessagesContainer">
+          <div
+            class="chat-messages"
+            ref="chatMessagesContainer"
+            @scroll.passive="closeMessagePopups"
+          >
             <!-- All messages (incoming + outgoing) sorted by timestamp -->
             <div
               v-for="msg in allMessages"
@@ -460,18 +490,31 @@
                   </span>
                 </span>
               </div>
-              <button
+              <div
                 v-if="canReactToMessage(msg)"
-                type="button"
-                class="btn-message-reaction"
+                class="message-reaction-control"
                 :class="msg.type"
-                :disabled="isSendingReaction(msg)"
-                :aria-label="`Beri reaction pada pesan ${msg.type === 'incoming' ? 'masuk' : 'keluar'}`"
-                title="Beri reaction"
-                @click.stop="toggleReactionPicker(msg)"
               >
-                {{ isSendingReaction(msg) ? '…' : '☺' }}
-              </button>
+                <button
+                  type="button"
+                  class="btn-message-reaction"
+                  :class="msg.type"
+                  :disabled="isSendingReaction(msg)"
+                  :aria-label="`Beri reaction pada pesan ${msg.type === 'incoming' ? 'masuk' : 'keluar'}`"
+                  title="Beri reaction"
+                  @click.stop="toggleReactionPicker(msg)"
+                >
+                  {{ isSendingReaction(msg) ? '…' : '☺' }}
+                </button>
+                <ReactionPicker
+                  v-if="isReactionPickerOpen(msg)"
+                  :direction="msg.type"
+                  :current-emoji="getOwnReaction(msg)?.emoji || ''"
+                  :loading="isSendingReaction(msg)"
+                  @click.stop
+                  @select="emoji => sendReaction(msg, emoji)"
+                />
+              </div>
               <button
                 v-if="canDeleteMessage(msg)"
                 type="button"
@@ -493,14 +536,6 @@
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
-              <ReactionPicker
-                v-if="isReactionPickerOpen(msg)"
-                :direction="msg.type"
-                :current-emoji="getOwnReaction(msg)?.emoji || ''"
-                :loading="isSendingReaction(msg)"
-                @click.stop
-                @select="emoji => sendReaction(msg, emoji)"
-              />
               <div
                 v-if="isMessageActionMenuOpen(msg)"
                 class="message-actions-menu"
@@ -679,6 +714,7 @@ const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
 const loading = ref(false);
 const err = ref('');
 const selectedConversation = ref(null);
+const isConversationFullscreen = ref(false);
 const conversationReactions = ref([]);
 const reactionPickerMessageKey = ref('');
 const sendingReactionMessageKey = ref('');
@@ -808,6 +844,23 @@ const isReactionPickerOpen = message =>
 
 const isSendingReaction = message =>
   sendingReactionMessageKey.value === getReactionMessageKey(message);
+
+const closeMessagePopups = () => {
+  reactionPickerMessageKey.value = '';
+  messageActionMenuKey.value = '';
+};
+
+const handleMessagePopupPointerDown = event => {
+  if (!selectedConversation.value) return;
+  if (!reactionPickerMessageKey.value && !messageActionMenuKey.value) return;
+
+  const target = event.target;
+  const isPopupInteraction = typeof target?.closest === 'function' && target.closest(
+    '.btn-message-reaction, .reaction-picker, .btn-message-actions, .message-actions-menu',
+  );
+
+  if (!isPopupInteraction) closeMessagePopups();
+};
 
 const toggleReactionPicker = message => {
   const messageKey = getReactionMessageKey(message);
@@ -1713,6 +1766,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 // Close conversation
 const closeConversation = () => {
   latestSentMessagesRequest++;
+  isConversationFullscreen.value = false;
   closeImagePreview();
   clearAttachment();
   conversationReactions.value = [];
@@ -2443,6 +2497,7 @@ watch(q, () => {
 // Lifecycle
 onMounted(async () => {
   window.addEventListener('keydown', handleImagePreviewKeydown);
+  window.addEventListener('pointerdown', handleMessagePopupPointerDown);
 
   // Connect socket and setup listeners
   const socket = connectSocket();
@@ -2484,6 +2539,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleImagePreviewKeydown);
+  window.removeEventListener('pointerdown', handleMessagePopupPointerDown);
   closeImagePreview();
   clearAttachment();
   clearConversationAvatars();
@@ -2560,9 +2616,23 @@ function closeImagePreview() {
 }
 
 function handleImagePreviewKeydown(event) {
-  if (event.key === 'Escape' && imagePreview.value) {
+  if (event.key !== 'Escape') return;
+
+  if (imagePreview.value) {
     event.preventDefault();
     closeImagePreview();
+    return;
+  }
+
+  if (reactionPickerMessageKey.value || messageActionMenuKey.value) {
+    event.preventDefault();
+    closeMessagePopups();
+    return;
+  }
+
+  if (isConversationFullscreen.value) {
+    event.preventDefault();
+    isConversationFullscreen.value = false;
   }
 }
 
@@ -3251,13 +3321,29 @@ const handleMediaError = (event, message) => {
 
 /* Conversation Modal */
 .conversation-modal {
-  max-width: 600px;
-  height: 80vh;
-  max-height: 700px;
+  max-width: 880px;
+  height: 88vh;
+  max-height: 850px;
+  transition: width 180ms ease, height 180ms ease, max-width 180ms ease;
+}
+
+.conversation-modal--fullscreen {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border-radius: 16px;
 }
 
 .conversation-modal .modal-header {
   padding: 16px 20px;
+}
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .modal-header-info {
@@ -3296,13 +3382,15 @@ const handleMediaError = (event, message) => {
   content: ' · ';
 }
 
-.chat-body {
+.conversation-modal .modal-body.chat-body {
   flex: 1;
+  min-height: 0;
   padding: 0;
   background: var(--theme-surface-soft);
   display: flex;
   flex-direction: column;
-  max-height: calc(80vh - 140px);
+  max-height: none;
+  overflow: hidden;
 }
 
 .chat-messages {
@@ -3315,7 +3403,7 @@ const handleMediaError = (event, message) => {
 }
 
 .chat-bubble {
-  max-width: 85%;
+  max-width: 78%;
   position: relative;
   animation: fadeIn 0.2s ease;
 }
@@ -3394,6 +3482,23 @@ const handleMediaError = (event, message) => {
   font-variant-numeric: tabular-nums;
 }
 
+.message-reaction-control {
+  position: absolute;
+  top: 50%;
+  z-index: 40;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
+}
+
+.message-reaction-control.incoming {
+  right: -36px;
+}
+
+.message-reaction-control.outgoing {
+  left: -36px;
+}
+
 .btn-message-reaction,
 .btn-message-actions {
   position: absolute;
@@ -3415,12 +3520,10 @@ const handleMediaError = (event, message) => {
   transition: opacity 0.15s ease, background 0.15s ease;
 }
 
-.btn-message-reaction.incoming {
-  right: -36px;
-}
-
-.btn-message-reaction.outgoing {
-  left: -36px;
+.btn-message-reaction {
+  position: static;
+  top: auto;
+  transform: none;
 }
 
 .btn-message-actions {
@@ -4222,6 +4325,10 @@ const handleMediaError = (event, message) => {
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+  }
+
+  .btn-fullscreen {
+    display: none;
   }
   
   .chat-body {

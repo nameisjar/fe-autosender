@@ -147,11 +147,12 @@ const selectEmoji = emoji => emit('select', emoji);
 
 <style scoped>
 .reaction-picker {
-  position: relative;
-  z-index: 20;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  z-index: 50;
   width: max-content;
   max-width: calc(100vw - 72px);
-  margin-top: 6px;
+  margin: 0;
   padding: 6px;
   border: 1px solid var(--theme-border);
   border-radius: 999px;
@@ -159,8 +160,8 @@ const selectEmoji = emoji => emit('select', emoji);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 
-.reaction-picker.incoming { margin-right: auto; }
-.reaction-picker.outgoing { margin-left: auto; }
+.reaction-picker.incoming { right: 0; }
+.reaction-picker.outgoing { left: 0; }
 .reaction-picker.expanded {
   width: 320px;
   border-radius: 18px;
