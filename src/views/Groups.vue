@@ -2129,6 +2129,49 @@ const handleImageError = (event) => {
     min-width: unset;
   }
 
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+    gap: 12px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .pagination-info {
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .pagination-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .pagination-controls .page-indicator {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+  }
+
+  .pagination-controls .btn-page {
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding: 9px 8px;
+    box-sizing: border-box;
+    white-space: nowrap;
+  }
+
+  .pagination-controls .btn-page svg {
+    flex-shrink: 0;
+  }
+
   .modal {
     max-width: 90%;
   }
