@@ -174,6 +174,16 @@ defineExpose({ addToast, removeToast });
   background: #bfdbfe;
 }
 
+/* Keep every toast readable without losing its semantic background in dark mode. */
+:global(html.dark) .toast {
+  color: #f8fafc;
+}
+
+:global(html.dark) .toast .toast-message,
+:global(html.dark) .toast .toast-close {
+  color: #ffffff;
+}
+
 .toast-icon {
   width: 32px;
   height: 32px;

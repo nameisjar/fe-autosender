@@ -539,7 +539,7 @@
                 :class="msg.type"
                 :aria-label="`Opsi pesan ${msg.type === 'incoming' ? 'masuk' : 'keluar'}`"
                 title="Opsi pesan"
-                @click.stop="toggleMessageActionMenu(msg)"
+                @click.stop="toggleMessageActionMenu(msg, $event)"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -553,24 +553,28 @@
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
-              <div
-                v-if="isMessageActionMenuOpen(msg)"
-                class="message-actions-menu"
-                :class="msg.type"
-                @click.stop
-              >
-                <button type="button" @click="confirmDeleteMessage(msg, 'me')">
-                  Hapus untuk saya
-                </button>
-                <button
-                  v-if="msg.type === 'outgoing' && !isDeletedForEveryone(msg)"
-                  type="button"
-                  class="danger"
-                  @click="confirmDeleteMessage(msg, 'everyone')"
+              <Teleport to="body">
+                <div
+                  v-if="isMessageActionMenuOpen(msg)"
+                  :ref="setMessageActionMenuElement"
+                  class="message-actions-menu"
+                  :class="msg.type"
+                  :style="messageActionMenuStyle"
+                  @click.stop
                 >
-                  Hapus untuk semua
-                </button>
-              </div>
+                  <button type="button" @click="confirmDeleteMessage(msg, 'me')">
+                    Hapus untuk saya
+                  </button>
+                  <button
+                    v-if="msg.type === 'outgoing' && !isDeletedForEveryone(msg)"
+                    type="button"
+                    class="danger"
+                    @click="confirmDeleteMessage(msg, 'everyone')"
+                  >
+                    Hapus untuk semua
+                  </button>
+                </div>
+              </Teleport>
             </div>
           </div>
           
@@ -708,7 +712,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted, nextTick } from 'vue';
 import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
@@ -738,6 +742,15 @@ const reactionPickerMessageKey = ref('');
 const reactionPickerAnchor = ref(null);
 const sendingReactionMessageKey = ref('');
 const messageActionMenuKey = ref('');
+const messageActionMenuAnchor = ref(null);
+const messageActionMenuElement = ref(null);
+const hiddenMessageActionMenuStyle = () => ({
+  top: '0px',
+  left: '0px',
+  right: 'auto',
+  visibility: 'hidden',
+});
+const messageActionMenuStyle = ref(hiddenMessageActionMenuStyle());
 const imagePreview = ref(null);
 
 // Reply functionality
@@ -870,6 +883,9 @@ const closeMessagePopups = () => {
   reactionPickerMessageKey.value = '';
   reactionPickerAnchor.value = null;
   messageActionMenuKey.value = '';
+  messageActionMenuAnchor.value = null;
+  messageActionMenuElement.value = null;
+  messageActionMenuStyle.value = hiddenMessageActionMenuStyle();
 };
 
 const handleMessagePopupPointerDown = event => {
@@ -901,11 +917,64 @@ const canDeleteMessage = message => Boolean(getMessageReactionTargetId(message))
 const isMessageActionMenuOpen = message =>
   messageActionMenuKey.value === getReactionMessageKey(message);
 
-const toggleMessageActionMenu = message => {
+const setMessageActionMenuElement = element => {
+  messageActionMenuElement.value = element || null;
+};
+
+const updateMessageActionMenuPosition = () => {
+  const anchor = messageActionMenuAnchor.value;
+  const menu = messageActionMenuElement.value;
+  const boundary = chatMessagesContainer.value;
+  if (!anchor || !menu || !boundary || !messageActionMenuKey.value) return;
+
+  const anchorRect = anchor.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  const boundaryRect = boundary.getBoundingClientRect();
+  const gap = 6;
+  const padding = 8;
+  const menuWidth = menuRect.width || 190;
+  const menuHeight = menuRect.height || 96;
+  const minLeft = Math.max(padding, boundaryRect.left + padding);
+  const maxLeft = Math.max(minLeft, Math.min(
+    window.innerWidth - menuWidth - padding,
+    boundaryRect.right - menuWidth - padding,
+  ));
+  const preferredLeft = anchorRect.right - menuWidth;
+  const left = Math.min(maxLeft, Math.max(minLeft, preferredLeft));
+  const spaceBelow = boundaryRect.bottom - anchorRect.bottom - gap;
+  const spaceAbove = anchorRect.top - boundaryRect.top - gap;
+  const openAbove = spaceBelow < menuHeight && spaceAbove >= menuHeight;
+  const minTop = Math.max(padding, boundaryRect.top + padding);
+  const maxTop = Math.max(minTop, Math.min(
+    window.innerHeight - menuHeight - padding,
+    boundaryRect.bottom - menuHeight - padding,
+  ));
+  const preferredTop = openAbove
+    ? anchorRect.top - menuHeight - gap
+    : anchorRect.bottom + gap;
+  const top = Math.min(maxTop, Math.max(minTop, preferredTop));
+
+  messageActionMenuStyle.value = {
+    top: `${Math.round(top)}px`,
+    left: `${Math.round(left)}px`,
+    right: 'auto',
+    visibility: 'visible',
+  };
+};
+
+const toggleMessageActionMenu = async (message, event) => {
   const messageKey = getReactionMessageKey(message);
   reactionPickerMessageKey.value = '';
-  messageActionMenuKey.value =
-    messageActionMenuKey.value === messageKey ? '' : messageKey;
+  if (messageActionMenuKey.value === messageKey) {
+    closeMessagePopups();
+    return;
+  }
+
+  messageActionMenuAnchor.value = event?.currentTarget || null;
+  messageActionMenuStyle.value = hiddenMessageActionMenuStyle();
+  messageActionMenuKey.value = messageKey;
+  await nextTick();
+  updateMessageActionMenuPosition();
 };
 
 const sendReaction = async (message, selectedEmoji) => {
@@ -1765,6 +1834,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
         tempId: msg.id,
         text: msg.message || '',
         mediaPath: msg.mediaPath || '',
+        fileName: msg.fileName || '',
         timestamp: msg.createdAt,
         status: uiStatus,
         deletedForEveryone:
@@ -2091,6 +2161,7 @@ const sendMediaReply = async () => {
         waMessageId: saved.waMessageId || saved.id,
         text: saved.message || optimisticMessage.text,
         mediaPath: saved.mediaPath || localPreviewUrl,
+        fileName: saved.fileName || optimisticMessage.fileName,
         timestamp: saved.createdAt || optimisticMessage.timestamp,
         status: 'server_ack',
       };
@@ -2694,6 +2765,7 @@ watch(q, () => {
 onMounted(async () => {
   window.addEventListener('keydown', handleImagePreviewKeydown);
   window.addEventListener('pointerdown', handleMessagePopupPointerDown);
+  window.addEventListener('resize', updateMessageActionMenuPosition);
 
   // Connect socket and setup listeners
   const socket = connectSocket();
@@ -2736,6 +2808,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleImagePreviewKeydown);
   window.removeEventListener('pointerdown', handleMessagePopupPointerDown);
+  window.removeEventListener('resize', updateMessageActionMenuPosition);
   closeImagePreview();
   clearAttachment();
   clearConversationAvatars();
@@ -2774,6 +2847,10 @@ const isDocumentMedia = (message) =>
 
 const getMediaFileName = (message) => {
   if (message?.fileName) return message.fileName;
+  const messageText = String(
+    message?.type === 'incoming' ? message?.message : message?.text,
+  ).trim();
+  if (/^[^\\/]+\.[a-z0-9]{1,10}$/i.test(messageText)) return messageText;
   const path = String(message?.mediaPath || '').replace(/\\/g, '/');
   const fileName = decodeURIComponent(path.split('/').pop() || 'Dokumen');
   return fileName.replace(/^[a-zA-Z0-9_]+-/, '') || 'Dokumen';
@@ -3823,9 +3900,8 @@ const handleMediaError = (event, message) => {
 }
 
 .message-actions-menu {
-  position: absolute;
-  top: 36px;
-  z-index: 30;
+  position: fixed;
+  z-index: 2100;
   display: flex;
   width: 190px;
   flex-direction: column;
@@ -3835,9 +3911,6 @@ const handleMediaError = (event, message) => {
   background: var(--theme-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
-
-.message-actions-menu.incoming { left: 0; }
-.message-actions-menu.outgoing { right: 0; }
 
 .message-actions-menu button {
   padding: 9px 10px;
