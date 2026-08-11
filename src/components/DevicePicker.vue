@@ -5,7 +5,7 @@
     <div v-if="selectedDevice && !showDeviceList" class="device-info-compact">
       <div
         class="device-avatar-compact"
-        :class="{ online: selectedDevice.isConnected }"
+        :class="{ online: selectedDevice.isConnected, reconnecting: selectedDevice.isReconnecting }"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -39,9 +39,9 @@
         </div>
         <div
           class="device-status-compact"
-          :class="{ online: selectedDevice.isConnected }"
+          :class="{ online: selectedDevice.isConnected, reconnecting: selectedDevice.isReconnecting }"
         >
-          {{ selectedDevice.isConnected ? "● Online" : "● Offline" }}
+          ● {{ selectedDevice.connectionLabel }}
           <span v-if="selectedDeviceHealth?.isPaused" class="paused-indicator">
             • Paused
           </span>
@@ -71,7 +71,7 @@
         :key="device.id"
         type="button"
         class="device-item-compact"
-        :class="{ online: device.isConnected, paused: device.health?.isPaused }"
+        :class="{ online: device.isConnected, reconnecting: device.isReconnecting, paused: device.health?.isPaused }"
         @click="handleSelectDevice(device.id)"
       >
         <span class="device-item-label">
@@ -88,7 +88,7 @@
             {{ getHealthBadge(device.id).label }}
           </span>
         </span>
-        <span class="status-dot" :class="{ online: device.isConnected }"></span>
+        <span class="status-dot" :class="{ online: device.isConnected, reconnecting: device.isReconnecting }"></span>
       </button>
     </div>
 
@@ -469,6 +469,10 @@ defineExpose({
   background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
 }
 
+.device-avatar-compact.reconnecting {
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+}
+
 .device-info-text {
   flex: 1;
   min-width: 0;
@@ -497,6 +501,10 @@ defineExpose({
 
 .device-status-compact.online {
   color: #059669;
+}
+
+.device-status-compact.reconnecting {
+  color: #d97706;
 }
 
 .btn-change-compact {
@@ -607,6 +615,15 @@ defineExpose({
 
 .status-dot.online {
   background: #10b981;
+}
+
+.status-dot.reconnecting {
+  background: #f59e0b;
+  animation: device-status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes device-status-pulse {
+  50% { opacity: 0.35; }
 }
 
 /* 🆕 Health Pill Styles */

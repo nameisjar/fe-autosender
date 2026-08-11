@@ -14,12 +14,14 @@ vi.mock('../../api/http.js', () => ({
 vi.mock('../../api/socket.js', () => ({
   listenToDeviceStatus: vi.fn(),
   listenToDeviceAccessChanges: vi.fn(() => vi.fn()),
+  listenToSocketConnection: vi.fn(() => vi.fn()),
   connectSocket: vi.fn(),
   disconnectSocket: vi.fn(),
 }));
 
 import { useDevices } from '../../composables/useDevices.js';
 import { userApi } from '../../api/http.js';
+import { listenToDeviceStatus } from '../../api/socket.js';
 
 describe('useDevices Composable', () => {
   beforeEach(() => {
@@ -151,6 +153,38 @@ describe('useDevices Composable', () => {
         accessType: 'assigned',
         canManage: false,
       });
+    });
+
+    it('should expose reconnecting as a separate display state', async () => {
+      userApi.get.mockResolvedValue({
+        data: [{ id: 'device-reconnecting', name: 'Device', status: 'reconnecting' }],
+      });
+
+      const { loadDevices, selectedDevice } = useDevices();
+      await loadDevices();
+
+      expect(selectedDevice.value).toMatchObject({
+        status: 'reconnecting',
+        isConnected: false,
+        isReconnecting: true,
+        connectionLabel: 'Menghubungkan ulang',
+      });
+    });
+
+    it('should ignore socket events without an explicit connection status', async () => {
+      userApi.get.mockResolvedValue({
+        data: [{ id: 'device-online', name: 'Device', status: 'open' }],
+      });
+
+      const { loadDevices, devices } = useDevices();
+      await loadDevices();
+      const statusListener = listenToDeviceStatus.mock.calls.find(
+        ([deviceId]) => deviceId === 'device-online',
+      )?.[1];
+
+      expect(statusListener).toBeTypeOf('function');
+      statusListener(undefined);
+      expect(devices.value[0].status).toBe('open');
     });
   });
 });

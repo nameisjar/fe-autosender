@@ -171,7 +171,9 @@ function humanStatus(s) {
     open: "open",
     connected: "open",
     connecting: "connecting",
+    reconnecting: "reconnecting",
     pending: "pending",
+    logged_out: "perlu pairing",
     closed: "close",
     disconnected: "close",
     close: "close",
@@ -183,7 +185,7 @@ function humanStatus(s) {
 function statusClass(s) {
   const key = String(s || "").toLowerCase();
   if (key === "open" || key === "connected") return "is-open";
-  if (key === "connecting" || key === "pending") return "is-pending";
+  if (key === "connecting" || key === "reconnecting" || key === "pending") return "is-pending";
   return "is-closed";
 }
 

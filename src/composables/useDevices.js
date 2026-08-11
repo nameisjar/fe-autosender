@@ -3,6 +3,7 @@ import { userApi } from '../api/http.js';
 import {
   listenToDeviceAccessChanges,
   listenToDeviceStatus,
+  listenToSocketConnection,
   connectSocket,
 } from '../api/socket.js';
 
@@ -17,49 +18,111 @@ const healthLoading = ref({});
 
 // 🆕 Track socket listeners untuk cleanup
 let socketCleanups = [];
+let loadPromise = null;
+let latestLoadDevices = null;
+let lifecycleListenersReady = false;
+let lastResyncAt = 0;
+
+const RESYNC_THROTTLE_MS = 5000;
+const FALLBACK_POLL_MS = 60000;
+
+function normalizeDeviceStatus(status) {
+  const value = String(status || '').trim().toLowerCase();
+  if (value === 'open' || value === 'connected') return 'open';
+  if (value === 'connecting' || value === 'pending') return 'connecting';
+  if (value === 'reconnecting') return 'reconnecting';
+  if (value === 'logged_out') return 'logged_out';
+  if (value === 'close' || value === 'closed' || value === 'disconnected') return 'close';
+  return null;
+}
+
+function isTransientStatus(status) {
+  return status === 'connecting' || status === 'reconnecting';
+}
+
+function getConnectionLabel(status) {
+  if (status === 'open') return 'Online';
+  if (status === 'connecting') return 'Menghubungkan';
+  if (status === 'reconnecting') return 'Menghubungkan ulang';
+  if (status === 'logged_out') return 'Perlu pairing';
+  return 'Offline';
+}
+
+function scheduleDeviceResync(force = false) {
+  if (!localStorage.getItem('token') || !latestLoadDevices) return;
+  const now = Date.now();
+  if (!force && now - lastResyncAt < RESYNC_THROTTLE_MS) return;
+  lastResyncAt = now;
+  void latestLoadDevices();
+}
+
+function ensureLifecycleResync() {
+  if (lifecycleListenersReady || typeof window === 'undefined') return;
+  lifecycleListenersReady = true;
+
+  window.addEventListener('focus', () => scheduleDeviceResync());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') scheduleDeviceResync();
+  });
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') scheduleDeviceResync(true);
+  }, FALLBACK_POLL_MS);
+}
 
 export function useDevices() {
   const loadDevices = async () => {
-    try {
-      loading.value = true;
-      const { data } = await userApi.get('/devices');
-      devices.value = Array.isArray(data) ? data : [];
+    if (loadPromise) return loadPromise;
 
-      // 1) If there is a saved selection and it still exists, keep it as-is.
-      //    Do NOT auto-switch to an 'open' device; user may want to operate on another device.
-      const savedDeviceId = localStorage.getItem('device_selected_id');
-      if (savedDeviceId) {
-        const deviceExists = devices.value.find((d) => String(d.id) === String(savedDeviceId));
-        if (deviceExists) {
-          selectedDeviceId.value = String(savedDeviceId);
-          // 🆕 Setup socket listeners setelah load devices
-          setupSocketListeners();
-          return;
+    loadPromise = (async () => {
+      try {
+        loading.value = true;
+        const { data } = await userApi.get('/devices');
+        devices.value = Array.isArray(data)
+          ? data.map((device) => ({
+              ...device,
+              status: normalizeDeviceStatus(device.status) || 'close',
+            }))
+          : [];
+
+        // 1) If there is a saved selection and it still exists, keep it as-is.
+        //    Do NOT auto-switch to an 'open' device; user may want to operate on another device.
+        const savedDeviceId = localStorage.getItem('device_selected_id');
+        if (savedDeviceId) {
+          const deviceExists = devices.value.find((d) => String(d.id) === String(savedDeviceId));
+          if (deviceExists) {
+            selectedDeviceId.value = String(savedDeviceId);
+            setupSocketListeners();
+            return;
+          }
         }
-      }
 
-      // 2) If nothing is selected (or saved selection is invalid), pick a stable default.
-      //    Prefer the first device (NOT prioritizing 'open') to avoid jumping around.
-      const defaultDevice = devices.value[0];
-      if (defaultDevice) {
-        selectedDeviceId.value = String(defaultDevice.id);
-        localStorage.setItem('device_selected_id', String(defaultDevice.id));
-        localStorage.setItem('device_selected_name', defaultDevice.name || 'Unknown Device');
-      } else {
-        selectedDeviceId.value = '';
-        localStorage.removeItem('device_selected_id');
-        localStorage.removeItem('device_selected_name');
-      }
+        // 2) If nothing is selected (or saved selection is invalid), pick a stable default.
+        //    Prefer the first device (NOT prioritizing 'open') to avoid jumping around.
+        const defaultDevice = devices.value[0];
+        if (defaultDevice) {
+          selectedDeviceId.value = String(defaultDevice.id);
+          localStorage.setItem('device_selected_id', String(defaultDevice.id));
+          localStorage.setItem('device_selected_name', defaultDevice.name || 'Unknown Device');
+        } else {
+          selectedDeviceId.value = '';
+          localStorage.removeItem('device_selected_id');
+          localStorage.removeItem('device_selected_name');
+        }
 
-      // 🆕 Setup socket listeners setelah load devices
-      setupSocketListeners();
-    } catch (error) {
-      console.error('Error loading devices:', error);
-      devices.value = [];
-    } finally {
-      loading.value = false;
-    }
+        setupSocketListeners();
+      } catch (error) {
+        console.error('Error loading devices:', error);
+      } finally {
+        loading.value = false;
+        loadPromise = null;
+      }
+    })();
+
+    return loadPromise;
   };
+
+  latestLoadDevices = loadDevices;
+  ensureLifecycleResync();
 
   // 🆕 Setup socket listeners untuk semua devices
   const setupSocketListeners = () => {
@@ -75,9 +138,18 @@ export function useDevices() {
       })
     );
 
+    socketCleanups.push(
+      listenToSocketConnection(() => {
+        scheduleDeviceResync(true);
+      })
+    );
+
     // Listen to status changes for ALL devices
     devices.value.forEach((device) => {
       const cleanup = listenToDeviceStatus(device.id, (newStatus) => {
+        const normalizedStatus = normalizeDeviceStatus(newStatus);
+        if (!normalizedStatus) return;
+
         // console.log(`[useDevices] Device ${device.id) status changed to: ${newStatus}`);
         
         // Update device status in the devices array
@@ -85,7 +157,7 @@ export function useDevices() {
         if (deviceIndex !== -1) {
           devices.value[deviceIndex] = {
             ...devices.value[deviceIndex],
-            status: newStatus,
+            status: normalizedStatus,
           };
           
           // Trigger reactivity by reassigning array
@@ -94,13 +166,12 @@ export function useDevices() {
 
         // 🆕 Jika device yang berubah adalah device yang sedang dipilih dan statusnya close
         if (String(device.id) === String(selectedDeviceId.value)) {
-          const normalizedStatus = String(newStatus || '').toLowerCase();
-          if (normalizedStatus === 'close' || normalizedStatus === 'closed' || normalizedStatus === 'disconnected') {
+          if (normalizedStatus === 'close' || normalizedStatus === 'logged_out') {
             // Emit event untuk memberitahu komponen lain
             try {
               window.dispatchEvent(
                 new CustomEvent('wa:device-session-closed', {
-                  detail: { deviceId: device.id, status: newStatus },
+                  detail: { deviceId: device.id, status: normalizedStatus },
                 })
               );
             } catch (_) {}
@@ -152,6 +223,8 @@ export function useDevices() {
       phone: device.phone || '',
       status: device.status || 'unknown',
       isConnected: device.status === 'open',
+      isReconnecting: isTransientStatus(device.status),
+      connectionLabel: getConnectionLabel(device.status),
       isOwner: device.isOwner !== false,
       accessType: device.accessType || 'owner',
       canManage: device.canManage !== false,
@@ -166,6 +239,8 @@ export function useDevices() {
       phone: d.phone || '',
       status: d.status || 'unknown',
       isConnected: d.status === 'open',
+      isReconnecting: isTransientStatus(d.status),
+      connectionLabel: getConnectionLabel(d.status),
       isOwner: d.isOwner !== false,
       accessType: d.accessType || 'owner',
       canManage: d.canManage !== false,
@@ -283,8 +358,9 @@ export function useDevices() {
 
   onUnmounted(() => {
     window.removeEventListener('wa:device-session-closed', handleDeviceSessionClosed);
-    // 🆕 Cleanup socket listeners saat unmount
-    cleanupSocketListeners();
+    // Socket listeners are module-level because device state is shared by App,
+    // Sidebar, DevicePicker, and pages. One unmount must not disconnect the
+    // remaining consumers from live status updates.
   });
 
   return {

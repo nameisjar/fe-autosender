@@ -12,7 +12,8 @@ export function getSocket() {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: 10,
+      // Keep trying with a capped delay so longer network outages recover.
+      reconnectionAttempts: Infinity,
       transports: ['websocket', 'polling'],
       auth: {
         token: token,
@@ -32,7 +33,7 @@ export function getSocket() {
       console.error('[Socket.IO] Connection error:', error);
     });
 
-    socket.on('reconnect', (attemptNumber) => {
+    socket.io.on('reconnect', (attemptNumber) => {
       // console.log('[Socket.IO] Reconnected after', attemptNumber, 'attempts');
     });
   }
@@ -47,11 +48,12 @@ export function refreshSocketAuth() {
   const token = localStorage.getItem('token');
   if (socket) {
     socket.auth = { token };
-    // Reconnect with new auth if currently connected
+    // Always establish a fresh authenticated handshake. Previously a token
+    // refreshed while disconnected never caused the socket to reconnect.
     if (socket.connected) {
       socket.disconnect();
-      socket.connect();
     }
+    if (token) socket.connect();
   }
 }
 
@@ -95,6 +97,13 @@ export function listenToDeviceStatus(deviceId, callback) {
   return () => {
     socket.off(eventName, handler);
   };
+}
+
+export function listenToSocketConnection(callback) {
+  const socket = connectSocket();
+  const handler = () => callback();
+  socket.on('connect', handler);
+  return () => socket.off('connect', handler);
 }
 
 export function listenToDeviceAccessChanges(callback) {
