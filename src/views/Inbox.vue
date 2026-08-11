@@ -850,6 +850,7 @@ const messageActionMenuStyle = ref(hiddenMessageActionMenuStyle());
 const imagePreview = ref(null);
 const highlightedMessageId = ref('');
 const isPreparingConversation = ref(false);
+const conversationReturnRoute = ref('');
 
 // Reply functionality
 const replyText = ref('');
@@ -1460,7 +1461,7 @@ const onDeviceChange = () => {
   setupSocketListener();
 };
 
-const loadMessages = async () => {
+const loadMessages = async ({ conversationJid = '' } = {}) => {
   if (!selectedDeviceId.value) return;
 
   const requestId = ++latestLoadRequest;
@@ -1479,6 +1480,7 @@ const loadMessages = async () => {
     const inboxRequest = userApi.get(`/devices/${selectedDeviceId.value}/inbox`, {
       params: {
         ...(q.value ? { message: q.value } : {}),
+        ...(conversationJid ? { conversationJid } : {}),
         page: page.value,
         pageSize: pageSize.value,
         _t: Date.now(),
@@ -1498,7 +1500,9 @@ const loadMessages = async () => {
     const { data: outgoingData } = await userApi
       .get(`/devices/${selectedDeviceId.value}/outbox/conversations`, {
         params: {
-          ...(q.value
+          ...(conversationJid
+            ? { recipients: conversationJid }
+            : q.value
             ? { search: q.value }
             : conversationKeys.length > 0
               ? { recipients: conversationKeys.join(',') }
@@ -1889,8 +1893,23 @@ const getInboxNavigationTarget = () => {
   const deviceId = String(route.query.device || '');
   const conversationJid = String(route.query.conversation || '');
   const messageId = String(route.query.message || '');
+  const displayName = String(route.query.displayName || '');
+  const isGroup = String(route.query.isGroup || '') === 'true';
+  const profilePicUrl = String(route.query.profilePicUrl || '');
+  const requestedReturnRoute = String(route.query.returnTo || '');
+  const returnTo = ['contacts', 'groups'].includes(requestedReturnRoute)
+    ? requestedReturnRoute
+    : '';
   if (!deviceId || !conversationJid) return null;
-  return { deviceId, conversationJid, messageId };
+  return {
+    deviceId,
+    conversationJid,
+    messageId,
+    displayName,
+    isGroup,
+    profilePicUrl,
+    returnTo,
+  };
 };
 
 const clearInboxNavigationQuery = () => {
@@ -1898,7 +1917,38 @@ const clearInboxNavigationQuery = () => {
   delete query.device;
   delete query.conversation;
   delete query.message;
+  delete query.displayName;
+  delete query.isGroup;
+  delete query.profilePicUrl;
+  delete query.returnTo;
   return router.replace({ name: 'inbox', query });
+};
+
+const createEmptyConversation = target => {
+  const isGroup = target.isGroup || target.conversationJid.endsWith('@g.us');
+  const fallbackName = isGroup ? 'Grup WhatsApp' : 'Kontak WhatsApp';
+  const displayName = target.displayName || fallbackName;
+  const phone = target.conversationJid.split('@')[0].split(':')[0];
+
+  return {
+    from: target.conversationJid,
+    contact: isGroup
+      ? null
+      : { firstName: displayName, lastName: '', phone, colorCode: null },
+    pushName: isGroup ? null : displayName,
+    groupName: isGroup ? displayName : null,
+    groupPicUrl: isGroup ? target.profilePicUrl || null : null,
+    profilePicUrl: isGroup ? null : target.profilePicUrl || null,
+    isGroup,
+    messages: [],
+    latestMessage: {
+      from: target.conversationJid,
+      message: '',
+      receivedAt: new Date().toISOString(),
+    },
+    messageCount: 0,
+    unreadCount: 0,
+  };
 };
 
 const focusInboxMessage = async messageId => {
@@ -1944,17 +1994,16 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     q.value = '';
     page.value = 1;
 
-    if (reload) await loadMessages();
+    if (reload) await loadMessages({ conversationJid: target.conversationJid });
     if (generation !== inboxNavigationGeneration) return;
     if (deviceChanged) setupSocketListener();
 
     const conversation = conversations.value.find(item =>
       sameConversationJid(item.from, target.conversationJid),
-    );
-    if (conversation) {
-      await viewConversation(conversation, { targetMessageId: target.messageId });
-      if (generation !== inboxNavigationGeneration) return;
-    }
+    ) || createEmptyConversation(target);
+    conversationReturnRoute.value = target.returnTo;
+    await viewConversation(conversation, { targetMessageId: target.messageId });
+    if (generation !== inboxNavigationGeneration) return;
 
     await clearInboxNavigationQuery();
   } finally {
@@ -2139,6 +2188,8 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 
 // Close conversation
 const closeConversation = () => {
+  const returnRoute = conversationReturnRoute.value;
+  conversationReturnRoute.value = '';
   conversationOpenGeneration++;
   latestSentMessagesRequest++;
   isPreparingConversation.value = false;
@@ -2152,6 +2203,7 @@ const closeConversation = () => {
   sendingReactionMessageKey.value = '';
   messageActionMenuKey.value = '';
   selectedConversation.value = null;
+  if (returnRoute) void router.push({ name: returnRoute });
 };
 
 // Auto-resize textarea
@@ -3081,7 +3133,7 @@ onMounted(async () => {
   
   // Load messages if device selected
   if (selectedDeviceId.value) {
-    await loadMessages();
+    await loadMessages({ conversationJid: navigationTarget?.conversationJid || '' });
     
     // ✅ FIXED: Only setup listener once - either if already connected OR wait for 'connect' event above
     if (socket.connected) {
@@ -3093,7 +3145,7 @@ onMounted(async () => {
 });
 
 watch(
-  () => [route.query.device, route.query.conversation, route.query.message],
+  () => [route.query.device, route.query.conversation, route.query.message, route.query.returnTo],
   ([deviceId, conversationJid]) => {
     if (route.name === 'inbox' && deviceId && conversationJid) {
       void openInboxNavigationTarget();

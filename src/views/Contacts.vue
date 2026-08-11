@@ -257,6 +257,12 @@
               <td class="col-name">
                 <div class="contact-name-cell">
                   <div class="contact-avatar-small">
+                    <CachedProfileImage
+                      v-if="contact.profilePicUrl"
+                      :src="contact.profilePicUrl"
+                      :status="contact.profilePictureStatus"
+                      :alt="`Foto profil ${contact.firstName}`"
+                    />
                     <svg
                       viewBox="0 0 24 24"
                       fill="none"
@@ -313,6 +319,20 @@
               </td>
               <td class="col-actions">
                 <div class="action-buttons">
+                  <button
+                    class="btn-chat-table"
+                    @click="openContactChat(contact)"
+                    title="Chat kontak"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3 1.7-5.1A8 8 0 1 1 21 15z" />
+                    </svg>
+                  </button>
                   <button
                     class="btn-edit-table"
                     @click="editContact(contact)"
@@ -792,10 +812,13 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
+import { useRouter } from "vue-router";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import CachedProfileImage from "../components/CachedProfileImage.vue";
 
 const toast = useToast();
+const router = useRouter();
 
 const contacts = ref([]);
 const devices = ref([]);
@@ -980,6 +1003,34 @@ const visibleContacts = computed(() => {
     displayLabels: filteredContactLabels(contact),
   }));
 });
+
+const contactWhatsAppJid = (phone) => {
+  let digits = String(phone || "").replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = `62${digits.slice(1)}`;
+  else if (digits.startsWith("8")) digits = `62${digits}`;
+  return digits ? `${digits}@s.whatsapp.net` : "";
+};
+
+const openContactChat = (contact) => {
+  const conversationJid = contactWhatsAppJid(contact.phone);
+  if (!selectedDeviceId.value || !conversationJid) {
+    toast.error("Pilih perangkat dan pastikan nomor kontak valid");
+    return;
+  }
+
+  const displayName = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
+  void router.push({
+    name: "inbox",
+    query: {
+      device: selectedDeviceId.value,
+      conversation: conversationJid,
+      displayName,
+      isGroup: "false",
+      profilePicUrl: contact.profilePicUrl || "",
+      returnTo: "contacts",
+    },
+  });
+};
 
 // Debounced server-side reload on search/sort/pageSize/label change
 watch([q, sortBy, sortDir, pageSize, selectedLabelFilter], () => {
@@ -1797,7 +1848,7 @@ onMounted(async () => {
 
 .contacts-table .col-actions {
   width: 10%;
-  min-width: 100px;
+  min-width: 132px;
   text-align: center;
 }
 
@@ -1817,12 +1868,16 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .contact-avatar-small svg {
   width: 20px;
   height: 20px;
   color: #1e40af;
+  position: relative;
+  z-index: 1;
 }
 
 .contact-name-text {
@@ -1928,6 +1983,7 @@ onMounted(async () => {
   justify-content: center;
 }
 
+.btn-chat-table,
 .btn-edit-table,
 .btn-delete-table {
   display: inline-flex;
@@ -1939,6 +1995,16 @@ onMounted(async () => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.btn-chat-table {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.btn-chat-table:hover {
+  background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.28);
 }
 
 .btn-edit-table {
@@ -1961,9 +2027,17 @@ onMounted(async () => {
   box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
 
+.btn-chat-table svg,
 .btn-edit-table svg {
   width: 18px;
   height: 18px;
+}
+
+.btn-chat-table svg {
+  color: #047857;
+}
+
+.btn-edit-table svg {
   color: #1e40af;
 }
 

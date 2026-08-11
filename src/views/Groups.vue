@@ -348,14 +348,13 @@
               <td class="col-name">
                 <div class="group-name-cell">
                   <div class="group-avatar-small">
-                    <img
+                    <CachedProfileImage
                       v-if="group.profilePicUrl"
                       :src="group.profilePicUrl"
+                      :status="group.profilePictureStatus"
                       :alt="group.label"
-                      @error="handleImageError"
                     />
                     <svg
-                      v-else
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
                       fill="none"
@@ -407,6 +406,20 @@
               </td>
               <td class="col-actions">
                 <div class="action-buttons">
+                  <button
+                    class="btn-chat-table"
+                    @click="openGroupChat(group)"
+                    title="Chat grup"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3 1.7-5.1A8 8 0 1 1 21 15z" />
+                    </svg>
+                  </button>
                   <button
                     class="btn-leave-table"
                     @click="confirmLeaveGroup(group)"
@@ -645,11 +658,14 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast";
+import CachedProfileImage from "../components/CachedProfileImage.vue";
 
 // ✅ Destructure fungsi yang benar dari useToast
 const { success: showSuccess, error: showError } = useToast();
+const router = useRouter();
 
 // State
 const devices = ref([]);
@@ -788,6 +804,7 @@ const loadGroups = async ({ force = false } = {}) => {
           label: groupName,
           value: groupId,
           profilePicUrl: profilePicUrl,
+          profilePictureStatus: group.profilePictureStatus || "pending",
           meta: {
             participants: participantCount,
           },
@@ -809,6 +826,28 @@ const loadGroups = async ({ force = false } = {}) => {
   } finally {
     loadingGroups.value = false;
   }
+};
+
+const openGroupChat = (group) => {
+  if (!selectedDeviceId.value || !group?.value) {
+    showError("Pilih perangkat dan pastikan grup valid");
+    return;
+  }
+
+  const conversationJid = String(group.value).includes("@")
+    ? String(group.value)
+    : `${group.value}@g.us`;
+  void router.push({
+    name: "inbox",
+    query: {
+      device: selectedDeviceId.value,
+      conversation: conversationJid,
+      displayName: group.label || "Grup WhatsApp",
+      isGroup: "true",
+      profilePicUrl: group.profilePicUrl || "",
+      returnTo: "groups",
+    },
+  });
 };
 
 const handleSync = async () => {
@@ -1005,10 +1044,6 @@ onMounted(async () => {
   }
 });
 
-const handleImageError = (event) => {
-  // Hide the image if it fails to load
-  event.target.style.display = "none";
-};
 </script>
 
 <style scoped>
@@ -1690,6 +1725,7 @@ const handleImageError = (event) => {
   justify-content: center;
 }
 
+.btn-chat-table,
 .btn-leave-table {
   display: inline-flex;
   align-items: center;
@@ -1700,6 +1736,19 @@ const handleImageError = (event) => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.btn-chat-table {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.btn-chat-table:hover {
+  background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.28);
+}
+
+.btn-leave-table {
   background: var(--theme-gradient-danger);
 }
 
@@ -1709,9 +1758,17 @@ const handleImageError = (event) => {
   box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
 
+.btn-chat-table svg,
 .btn-leave-table svg {
   width: 18px;
   height: 18px;
+}
+
+.btn-chat-table svg {
+  color: #047857;
+}
+
+.btn-leave-table svg {
   color: #dc2626;
 }
 
