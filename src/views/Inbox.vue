@@ -118,10 +118,10 @@
     </div>
 
     <!-- Messages Table -->
-    <div class="table-container" v-if="selectedDeviceId">
-      <div v-if="loading" class="loading-state">
+    <div class="table-container" v-if="selectedDeviceId || isOpeningNavigationTarget">
+      <div v-if="loading || isOpeningNavigationTarget" class="loading-state">
         <div class="spinner"></div>
-        <p>Memuat pesan masuk...</p>
+        <p>{{ isOpeningNavigationTarget ? 'Membuka percakapan...' : 'Memuat pesan masuk...' }}</p>
       </div>
 
       <div v-else-if="conversations.length > 0" class="messages-list">
@@ -263,7 +263,12 @@
     </div>
 
     <!-- Message Detail Modal -->
-    <div v-if="selectedConversation" class="modal-overlay" @click="closeConversation">
+    <div
+      v-if="selectedConversation"
+      class="modal-overlay"
+      :class="{ 'modal-overlay--opening-navigation': isOpeningNavigationTarget }"
+      @click="closeConversation"
+    >
       <div
         class="modal conversation-modal"
         :class="{ 'conversation-modal--fullscreen': isConversationFullscreen }"
@@ -744,6 +749,7 @@ import {
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
+const isOpeningNavigationTarget = ref(Boolean(route.query.device && route.query.conversation));
 const DELETED_MESSAGE_TEXT = 'Pesan ini telah dihapus';
 
 const messages = ref([]);
@@ -1759,31 +1765,39 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
   if (!target) return;
 
   const generation = ++inboxNavigationGeneration;
-  const targetDevice = devices.value.find(device => device.id === target.deviceId);
-  if (!targetDevice) {
-    await clearInboxNavigationQuery();
-    return;
-  }
+  isOpeningNavigationTarget.value = true;
 
-  const deviceChanged = selectedDeviceId.value !== target.deviceId;
-  selectedDeviceId.value = target.deviceId;
-  localStorage.setItem('device_selected_id', target.deviceId);
-  q.value = '';
-  page.value = 1;
+  try {
+    const targetDevice = devices.value.find(device => device.id === target.deviceId);
+    if (!targetDevice) {
+      await clearInboxNavigationQuery();
+      return;
+    }
 
-  if (reload) await loadMessages();
-  if (generation !== inboxNavigationGeneration) return;
-  if (deviceChanged) setupSocketListener();
+    const deviceChanged = selectedDeviceId.value !== target.deviceId;
+    selectedDeviceId.value = target.deviceId;
+    localStorage.setItem('device_selected_id', target.deviceId);
+    q.value = '';
+    page.value = 1;
 
-  const conversation = conversations.value.find(item =>
-    sameConversationJid(item.from, target.conversationJid),
-  );
-  if (conversation) {
-    await viewConversation(conversation, { targetMessageId: target.messageId });
+    if (reload) await loadMessages();
     if (generation !== inboxNavigationGeneration) return;
-  }
+    if (deviceChanged) setupSocketListener();
 
-  await clearInboxNavigationQuery();
+    const conversation = conversations.value.find(item =>
+      sameConversationJid(item.from, target.conversationJid),
+    );
+    if (conversation) {
+      await viewConversation(conversation, { targetMessageId: target.messageId });
+      if (generation !== inboxNavigationGeneration) return;
+    }
+
+    await clearInboxNavigationQuery();
+  } finally {
+    if (generation === inboxNavigationGeneration) {
+      isOpeningNavigationTarget.value = false;
+    }
+  }
 };
 
 const loadConversationReactions = async conversationFrom => {
@@ -3673,6 +3687,11 @@ const handleMediaError = (event, message) => {
   justify-content: center;
   z-index: 1000;
   padding: 24px;
+}
+
+.modal-overlay--opening-navigation {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .modal {
