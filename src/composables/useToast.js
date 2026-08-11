@@ -8,28 +8,28 @@ export function setToastInstance(instance) {
 }
 
 export function useToast() {
-  const show = (message, type = 'info', duration = 3000) => {
+  const show = (message, type = 'info', duration = 3000, options = {}) => {
     if (!toastInstance) {
       // console.warn('Toast instance not found. Make sure ToastContainer is mounted in App.vue');
       return;
     }
-    return toastInstance.addToast({ message, type, duration });
+    return toastInstance.addToast({ message, type, duration, ...options });
   };
 
-  const success = (message, duration = 3000) => {
-    return show(message, 'success', duration);
+  const success = (message, duration = 3000, options = {}) => {
+    return show(message, 'success', duration, options);
   };
 
-  const error = (message, duration = 3000) => {
-    return show(message, 'error', duration);
+  const error = (message, duration = 3000, options = {}) => {
+    return show(message, 'error', duration, options);
   };
 
-  const warning = (message, duration = 3000) => {
-    return show(message, 'warning', duration);
+  const warning = (message, duration = 3000, options = {}) => {
+    return show(message, 'warning', duration, options);
   };
 
-  const info = (message, duration = 3000) => {
-    return show(message, 'info', duration);
+  const info = (message, duration = 3000, options = {}) => {
+    return show(message, 'info', duration, options);
   };
 
   return {

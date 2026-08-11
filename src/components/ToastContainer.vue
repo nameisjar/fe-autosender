@@ -5,7 +5,13 @@
         <div
           v-for="toast in toasts"
           :key="toast.id"
-          :class="['toast', `toast-${toast.type}`]"
+          :class="['toast', `toast-${toast.type}`, { 'toast-clickable': isClickable(toast) }]"
+          :role="isClickable(toast) ? 'button' : 'status'"
+          :tabindex="isClickable(toast) ? 0 : undefined"
+          :aria-label="toast.ariaLabel || undefined"
+          @click="activateToast(toast)"
+          @keydown.enter.prevent="activateToast(toast)"
+          @keydown.space.prevent="activateToast(toast)"
           @mouseenter="pauseTimer(toast.id)"
           @mouseleave="resumeTimer(toast.id)"
         >
@@ -29,7 +35,7 @@
             <div class="toast-message">{{ toast.message }}</div>
           </div>
           
-          <button class="toast-close" @click="removeToast(toast.id)" aria-label="Close">
+          <button class="toast-close" @click.stop="removeToast(toast.id)" aria-label="Tutup notifikasi">
             <svg viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -54,7 +60,9 @@ const addToast = (toast) => {
     id,
     message: toast.message,
     type: toast.type || 'info',
-    duration
+    duration,
+    onClick: typeof toast.onClick === 'function' ? toast.onClick : null,
+    ariaLabel: toast.ariaLabel || null,
   });
 
   // Auto dismiss
@@ -63,6 +71,18 @@ const addToast = (toast) => {
   }, duration);
 
   return id;
+};
+
+const isClickable = (toast) => typeof toast?.onClick === 'function';
+
+const activateToast = (toast) => {
+  if (!isClickable(toast)) return;
+
+  const action = toast.onClick;
+  removeToast(toast.id);
+  Promise.resolve(action()).catch((error) => {
+    console.error('Gagal membuka tujuan notifikasi:', error);
+  });
 };
 
 const removeToast = (id) => {
@@ -174,14 +194,13 @@ defineExpose({ addToast, removeToast });
   background: #bfdbfe;
 }
 
-/* Keep every toast readable without losing its semantic background in dark mode. */
-:global(html.dark) .toast {
-  color: #f8fafc;
+.toast-clickable {
+  cursor: pointer;
 }
 
-:global(html.dark) .toast .toast-message,
-:global(html.dark) .toast .toast-close {
-  color: #ffffff;
+.toast-clickable:focus-visible {
+  outline: 3px solid rgba(96, 165, 250, 0.45);
+  outline-offset: 2px;
 }
 
 .toast-icon {
@@ -297,5 +316,14 @@ defineExpose({ addToast, removeToast });
   .toast-message {
     font-size: 13px;
   }
+}
+</style>
+
+<style>
+/* This must stay unscoped because ToastContainer is teleported directly to body. */
+html.dark .toast-container .toast,
+html.dark .toast-container .toast-message,
+html.dark .toast-container .toast-close {
+  color: #ffffff !important;
 }
 </style>

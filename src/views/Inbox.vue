@@ -363,7 +363,11 @@
               v-for="msg in allMessages"
               :key="msg.pkId || msg.tempId"
               class="chat-bubble"
-              :class="msg.type === 'incoming' ? 'incoming' : 'outgoing'"
+              :class="[
+                msg.type === 'incoming' ? 'incoming' : 'outgoing',
+                { 'message-target-highlight': highlightedMessageId === getMessageDomId(msg) },
+              ]"
+              :data-message-id="getMessageDomId(msg)"
             >
               <div class="bubble-content">
                 <!-- Sender name for group incoming messages -->
@@ -718,6 +722,7 @@ import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
 import ReactionPicker from '../components/ReactionPicker.vue';
+import { useRoute, useRouter } from 'vue-router';
 import {
   applyMessageReactionEvent,
   findOwnMessageReaction,
@@ -727,6 +732,8 @@ import {
 } from '../utils/messageReactions.js';
 
 const toast = useToast();
+const route = useRoute();
+const router = useRouter();
 const DELETED_MESSAGE_TEXT = 'Pesan ini telah dihapus';
 
 const messages = ref([]);
@@ -752,6 +759,7 @@ const hiddenMessageActionMenuStyle = () => ({
 });
 const messageActionMenuStyle = ref(hiddenMessageActionMenuStyle());
 const imagePreview = ref(null);
+const highlightedMessageId = ref('');
 
 // Reply functionality
 const replyText = ref('');
@@ -805,6 +813,8 @@ let socketCleanup = null;
 let socketConnectionCleanup = null;
 let latestLoadRequest = 0;
 let latestSentMessagesRequest = 0;
+let messageHighlightTimer = null;
+let inboxNavigationGeneration = 0;
 
 // Computed
 const todayCount = computed(() => {
@@ -1658,7 +1668,7 @@ const setupSocketListener = () => {
   }
 };
 
-const viewConversation = async (conv) => {
+const viewConversation = async (conv, { skipAutoScroll = false } = {}) => {
   const isSameConversation = selectedConversation.value?.from === conv.from;
   
   selectedConversation.value = conv;
@@ -1673,7 +1683,7 @@ const viewConversation = async (conv) => {
       loadConversationReactions(conv.from),
     ]);
     replyText.value = '';
-    setTimeout(() => scrollToBottom(), 100);
+    if (!skipAutoScroll) setTimeout(() => scrollToBottom(), 100);
     return;
   }
   
@@ -1684,7 +1694,78 @@ const viewConversation = async (conv) => {
   ]);
   
   replyText.value = '';
-  setTimeout(() => scrollToBottom(), 100);
+  if (!skipAutoScroll) setTimeout(() => scrollToBottom(), 100);
+};
+
+const getMessageDomId = message => String(
+  message?.id || message?.waMessageId || message?.tempId || message?.pkId || '',
+);
+
+const getInboxNavigationTarget = () => {
+  const deviceId = String(route.query.device || '');
+  const conversationJid = String(route.query.conversation || '');
+  const messageId = String(route.query.message || '');
+  if (!deviceId || !conversationJid) return null;
+  return { deviceId, conversationJid, messageId };
+};
+
+const clearInboxNavigationQuery = () => {
+  const query = { ...route.query };
+  delete query.device;
+  delete query.conversation;
+  delete query.message;
+  return router.replace({ name: 'inbox', query });
+};
+
+const focusInboxMessage = async messageId => {
+  if (!messageId) return;
+  await nextTick();
+
+  const container = chatMessagesContainer.value;
+  const element = Array.from(container?.querySelectorAll('[data-message-id]') || [])
+    .find(item => item.dataset.messageId === messageId);
+  if (!element) return;
+
+  highlightedMessageId.value = messageId;
+  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
+  messageHighlightTimer = setTimeout(() => {
+    if (highlightedMessageId.value === messageId) highlightedMessageId.value = '';
+    messageHighlightTimer = null;
+  }, 2600);
+};
+
+const openInboxNavigationTarget = async ({ reload = true } = {}) => {
+  const target = getInboxNavigationTarget();
+  if (!target) return;
+
+  const generation = ++inboxNavigationGeneration;
+  const targetDevice = devices.value.find(device => device.id === target.deviceId);
+  if (!targetDevice) {
+    await clearInboxNavigationQuery();
+    return;
+  }
+
+  const deviceChanged = selectedDeviceId.value !== target.deviceId;
+  selectedDeviceId.value = target.deviceId;
+  localStorage.setItem('device_selected_id', target.deviceId);
+  q.value = '';
+  page.value = 1;
+
+  if (reload) await loadMessages();
+  if (generation !== inboxNavigationGeneration) return;
+  if (deviceChanged) setupSocketListener();
+
+  const conversation = conversations.value.find(item =>
+    sameConversationJid(item.from, target.conversationJid),
+  );
+  if (conversation) {
+    await viewConversation(conversation, { skipAutoScroll: Boolean(target.messageId) });
+    if (generation !== inboxNavigationGeneration) return;
+    await focusInboxMessage(target.messageId);
+  }
+
+  await clearInboxNavigationQuery();
 };
 
 const loadConversationReactions = async conversationFrom => {
@@ -2793,22 +2874,40 @@ onMounted(async () => {
   
   // Fetch data
   await fetchDevices();
+  const navigationTarget = getInboxNavigationTarget();
+  if (navigationTarget?.deviceId && devices.value.some(device => device.id === navigationTarget.deviceId)) {
+    selectedDeviceId.value = navigationTarget.deviceId;
+    localStorage.setItem('device_selected_id', navigationTarget.deviceId);
+  }
   
   // Load messages if device selected
   if (selectedDeviceId.value) {
-    loadMessages();
+    await loadMessages();
     
     // ✅ FIXED: Only setup listener once - either if already connected OR wait for 'connect' event above
     if (socket.connected) {
       setupSocketListener();
     }
   }
+
+  if (navigationTarget) await openInboxNavigationTarget({ reload: false });
 });
+
+watch(
+  () => [route.query.device, route.query.conversation, route.query.message],
+  ([deviceId, conversationJid]) => {
+    if (route.name === 'inbox' && deviceId && conversationJid) {
+      void openInboxNavigationTarget();
+    }
+  },
+);
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleImagePreviewKeydown);
   window.removeEventListener('pointerdown', handleMessagePopupPointerDown);
   window.removeEventListener('resize', updateMessageActionMenuPosition);
+  if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
+  inboxNavigationGeneration++;
   closeImagePreview();
   clearAttachment();
   clearConversationAvatars();
@@ -3995,6 +4094,17 @@ const handleMediaError = (event, message) => {
   border-radius: 10px;
   object-fit: contain;
   background: rgba(15, 23, 42, 0.08);
+}
+
+.chat-bubble.message-target-highlight .bubble-content {
+  animation: messageTargetPulse 2.6s ease-out;
+  outline: 3px solid rgba(96, 165, 250, 0.85);
+  outline-offset: 3px;
+}
+
+@keyframes messageTargetPulse {
+  0%, 35% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.28); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
 }
 
 .chat-image {

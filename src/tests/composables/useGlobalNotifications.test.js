@@ -25,6 +25,11 @@ const socketHarness = vi.hoisted(() => {
   return { listeners, socket };
 });
 
+const notificationHarness = vi.hoisted(() => ({
+  info: vi.fn(),
+  push: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('../../api/socket.js', () => ({
   connectSocket: vi.fn(() => socketHarness.socket),
   getSocket: vi.fn(() => socketHarness.socket),
@@ -37,7 +42,11 @@ vi.mock('../../api/http.js', () => ({
 }));
 
 vi.mock('../../composables/useToast.js', () => ({
-  useToast: () => ({ info: vi.fn() }),
+  useToast: () => ({ info: notificationHarness.info }),
+}));
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: notificationHarness.push }),
 }));
 
 import { userApi } from '../../api/http.js';
@@ -48,6 +57,8 @@ describe('useGlobalNotifications', () => {
     socketHarness.listeners.clear();
     socketHarness.socket.on.mockClear();
     socketHarness.socket.off.mockClear();
+    notificationHarness.info.mockClear();
+    notificationHarness.push.mockClear();
     localStorage.getItem.mockReturnValue('jwt-token');
     userApi.get.mockResolvedValue({
       data: [{ id: 'device-1', sessionId: 'session-1' }],
@@ -102,5 +113,45 @@ describe('useGlobalNotifications', () => {
     expect(socketHarness.listeners.get('incoming:session-1')).toHaveLength(1);
     wrapper.unmount();
     addEventListenerSpy.mockRestore();
+  });
+
+  it('opens the exact Inbox message when an incoming toast is clicked', async () => {
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+
+    await flushPromises();
+    const [incomingHandler] = socketHarness.listeners.get('incoming:session-1');
+    incomingHandler({
+      id: 'message-1',
+      from: '628123@s.whatsapp.net',
+      message: 'Halo',
+      pushName: 'Niko',
+    });
+
+    expect(notificationHarness.info).toHaveBeenCalledWith(
+      '💬 Niko: Halo',
+      5000,
+      expect.objectContaining({
+        onClick: expect.any(Function),
+        ariaLabel: 'Buka pesan dari Niko',
+      }),
+    );
+
+    const options = notificationHarness.info.mock.calls[0][2];
+    await options.onClick();
+    expect(notificationHarness.push).toHaveBeenCalledWith({
+      name: 'inbox',
+      query: {
+        device: 'device-1',
+        conversation: '628123@s.whatsapp.net',
+        message: 'message-1',
+      },
+    });
+
+    wrapper.unmount();
   });
 });

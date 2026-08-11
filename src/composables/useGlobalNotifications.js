@@ -2,10 +2,12 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { useToast } from './useToast.js';
 import { userApi } from '../api/http.js';
+import { useRouter } from 'vue-router';
 
 /** Global toast and sound notifications for incoming WhatsApp messages. */
 export function useGlobalNotifications() {
   const toast = useToast();
+  const router = useRouter();
   const devices = ref([]);
   let socketCleanup = null;
   let connectionCleanup = null;
@@ -99,10 +101,22 @@ export function useGlobalNotifications() {
 
     uniqueSessionIds.forEach((sessionId) => {
       const eventName = `incoming:${sessionId}`;
+      const device = userDevices.find(item => item.sessionId === sessionId);
       const handler = (data) => {
         const senderName = getSenderName(data);
         const preview = data.message?.substring(0, 50) || 'Media/File';
-        toast.info(`💬 ${senderName}: ${preview}`);
+        const openInboxMessage = () => router.push({
+          name: 'inbox',
+          query: {
+            device: device?.id || '',
+            conversation: data.from || '',
+            message: data.id || '',
+          },
+        });
+        toast.info(`💬 ${senderName}: ${preview}`, 5000, {
+          onClick: openInboxMessage,
+          ariaLabel: `Buka pesan dari ${senderName}`,
+        });
         void playNotificationSound();
       };
 
