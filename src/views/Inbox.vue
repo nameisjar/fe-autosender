@@ -354,7 +354,17 @@
         </div>
         <div class="modal-body chat-body">
           <div
+            v-if="isPreparingConversation"
+            class="conversation-opening-overlay"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="conversation-opening-spinner" aria-hidden="true"></span>
+            <span>Menyiapkan percakapan...</span>
+          </div>
+          <div
             class="chat-messages"
+            :class="{ 'chat-messages--preparing': isPreparingConversation }"
             ref="chatMessagesContainer"
             @scroll.passive="closeMessagePopups"
           >
@@ -760,6 +770,7 @@ const hiddenMessageActionMenuStyle = () => ({
 const messageActionMenuStyle = ref(hiddenMessageActionMenuStyle());
 const imagePreview = ref(null);
 const highlightedMessageId = ref('');
+const isPreparingConversation = ref(false);
 
 // Reply functionality
 const replyText = ref('');
@@ -815,6 +826,7 @@ let latestLoadRequest = 0;
 let latestSentMessagesRequest = 0;
 let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
+let conversationOpenGeneration = 0;
 
 // Computed
 const todayCount = computed(() => {
@@ -1668,33 +1680,35 @@ const setupSocketListener = () => {
   }
 };
 
-const viewConversation = async (conv, { skipAutoScroll = false } = {}) => {
-  const isSameConversation = selectedConversation.value?.from === conv.from;
-  
+const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
+  const generation = ++conversationOpenGeneration;
+  isPreparingConversation.value = true;
   selectedConversation.value = conv;
 
-  // ✅ Mark all messages in this conversation as read
-  await markConversationAsRead(conv.from);
-  
-  // Jangan reload jika conversation yang sama (preserve real-time messages)
-  if (isSameConversation) {
+  try {
+    // Mark all messages in this conversation as read before showing it.
+    await markConversationAsRead(conv.from);
+
     await Promise.all([
       loadSentMessagesFromDatabase(conv.from),
       loadConversationReactions(conv.from),
     ]);
+
+    if (generation !== conversationOpenGeneration) return;
+
     replyText.value = '';
-    if (!skipAutoScroll) setTimeout(() => scrollToBottom(), 100);
-    return;
+    await nextTick();
+
+    const didFocusTarget = targetMessageId
+      ? await focusInboxMessage(String(targetMessageId))
+      : false;
+
+    if (!didFocusTarget) scrollToBottom();
+  } finally {
+    if (generation === conversationOpenGeneration) {
+      isPreparingConversation.value = false;
+    }
   }
-  
-  // Load from database untuk conversation baru
-  await Promise.all([
-    loadSentMessagesFromDatabase(conv.from),
-    loadConversationReactions(conv.from),
-  ]);
-  
-  replyText.value = '';
-  if (!skipAutoScroll) setTimeout(() => scrollToBottom(), 100);
 };
 
 const getMessageDomId = message => String(
@@ -1718,21 +1732,26 @@ const clearInboxNavigationQuery = () => {
 };
 
 const focusInboxMessage = async messageId => {
-  if (!messageId) return;
+  if (!messageId) return false;
   await nextTick();
 
   const container = chatMessagesContainer.value;
   const element = Array.from(container?.querySelectorAll('[data-message-id]') || [])
     .find(item => item.dataset.messageId === messageId);
-  if (!element) return;
+  if (!container || !element) return false;
+
+  const centeredTop = element.offsetTop
+    - Math.max(0, (container.clientHeight - element.offsetHeight) / 2);
+  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  container.scrollTop = Math.min(maxScrollTop, Math.max(0, centeredTop));
 
   highlightedMessageId.value = messageId;
-  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
   messageHighlightTimer = setTimeout(() => {
     if (highlightedMessageId.value === messageId) highlightedMessageId.value = '';
     messageHighlightTimer = null;
   }, 2600);
+  return true;
 };
 
 const openInboxNavigationTarget = async ({ reload = true } = {}) => {
@@ -1760,9 +1779,8 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     sameConversationJid(item.from, target.conversationJid),
   );
   if (conversation) {
-    await viewConversation(conversation, { skipAutoScroll: Boolean(target.messageId) });
+    await viewConversation(conversation, { targetMessageId: target.messageId });
     if (generation !== inboxNavigationGeneration) return;
-    await focusInboxMessage(target.messageId);
   }
 
   await clearInboxNavigationQuery();
@@ -1943,7 +1961,9 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 
 // Close conversation
 const closeConversation = () => {
+  conversationOpenGeneration++;
   latestSentMessagesRequest++;
+  isPreparingConversation.value = false;
   isConversationFullscreen.value = false;
   resetAttachmentDrag();
   closeImagePreview();
@@ -2908,6 +2928,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateMessageActionMenuPosition);
   if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
   inboxNavigationGeneration++;
+  conversationOpenGeneration++;
   closeImagePreview();
   clearAttachment();
   clearConversationAvatars();
@@ -3810,6 +3831,7 @@ const handleMediaError = (event, message) => {
   flex-direction: column;
   max-height: none;
   overflow: hidden;
+  position: relative;
 }
 
 .chat-messages {
@@ -3820,6 +3842,37 @@ const handleMediaError = (event, message) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.chat-messages--preparing {
+  visibility: hidden;
+}
+
+.conversation-opening-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.conversation-opening-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--theme-border-strong);
+  border-top-color: var(--theme-accent);
+  border-radius: 50%;
+  animation: conversation-opening-spin 0.7s linear infinite;
+}
+
+@keyframes conversation-opening-spin {
+  to { transform: rotate(360deg); }
 }
 
 .chat-bubble {
