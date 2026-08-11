@@ -326,14 +326,13 @@
                   >
                     <svg
                       viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
+                      fill="currentColor"
+                      aria-hidden="true"
                     >
-                      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-3.8-.8L3 21l1.7-4.6A8.5 8.5 0 1 1 21 11.5z" />
-                      <circle cx="8.5" cy="12" r="1" fill="currentColor" stroke="none" />
-                      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-                      <circle cx="15.5" cy="12" r="1" fill="currentColor" stroke="none" />
+                      <path d="M12 3C6.49 3 2 6.81 2 11.5c0 2.66 1.45 5.13 3.91 6.74L4.7 21.46a.75.75 0 0 0 .96.96l4.02-1.51c.76.14 1.54.21 2.32.21 5.51 0 10-3.81 10-8.5S17.51 3 12 3Z" />
+                      <circle cx="8" cy="12" r="1.15" fill="#ffffff" />
+                      <circle cx="12" cy="12" r="1.15" fill="#ffffff" />
+                      <circle cx="16" cy="12" r="1.15" fill="#ffffff" />
                     </svg>
                   </button>
                   <button

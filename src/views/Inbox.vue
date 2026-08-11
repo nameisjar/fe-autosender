@@ -851,6 +851,7 @@ const imagePreview = ref(null);
 const highlightedMessageId = ref('');
 const isPreparingConversation = ref(false);
 const conversationReturnRoute = ref('');
+const conversationOpenedFromNavigation = ref(false);
 
 // Reply functionality
 const replyText = ref('');
@@ -2120,6 +2121,7 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     if (generation !== inboxNavigationGeneration) return;
     conversation = mergeNavigationMetadata(conversation, target);
     conversationReturnRoute.value = target.returnTo;
+    conversationOpenedFromNavigation.value = true;
     await viewConversation(conversation, { targetMessageId: target.messageId });
     if (generation !== inboxNavigationGeneration) return;
 
@@ -2307,7 +2309,9 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 // Close conversation
 const closeConversation = () => {
   const returnRoute = conversationReturnRoute.value;
+  const shouldRestoreInbox = conversationOpenedFromNavigation.value && !returnRoute;
   conversationReturnRoute.value = '';
+  conversationOpenedFromNavigation.value = false;
   conversationOpenGeneration++;
   latestSentMessagesRequest++;
   isPreparingConversation.value = false;
@@ -2321,7 +2325,13 @@ const closeConversation = () => {
   sendingReactionMessageKey.value = '';
   messageActionMenuKey.value = '';
   selectedConversation.value = null;
-  if (returnRoute) void router.push({ name: returnRoute });
+  if (returnRoute) {
+    void router.push({ name: returnRoute });
+  } else if (shouldRestoreInbox) {
+    q.value = '';
+    page.value = 1;
+    void loadMessages();
+  }
 };
 
 // Auto-resize textarea
