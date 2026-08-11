@@ -60,8 +60,10 @@ export const groupMessageReactions = (message, reactions) => {
     const current = grouped.get(reaction.emoji) || {
       emoji: reaction.emoji,
       count: 0,
+      members: [],
     };
     current.count += 1;
+    current.members.push(reaction);
     grouped.set(reaction.emoji, current);
   }
 

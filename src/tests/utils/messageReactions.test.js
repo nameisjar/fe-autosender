@@ -32,10 +32,10 @@ describe('message reaction helpers', () => {
     ];
 
     expect(groupMessageReactions({ type: 'outgoing', waMessageId: 'wa-1' }, reactions)).toEqual([
-      { emoji: '😂', count: 2, title: '2 reaksi' },
+      { emoji: '😂', count: 2, members: reactions.slice(0, 2), title: '2 reaksi' },
     ]);
     expect(groupMessageReactions({ type: 'incoming', id: 'wa-1' }, reactions)).toEqual([
-      { emoji: '👍', count: 1, title: '1 reaksi' },
+      { emoji: '👍', count: 1, members: [reactions[2]], title: '1 reaksi' },
     ]);
   });
 

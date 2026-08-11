@@ -513,17 +513,20 @@
                 class="bubble-reactions"
                 :class="msg.type"
               >
-                <span
+                <button
                   v-for="reaction in getReactionGroups(msg)"
                   :key="reaction.emoji"
+                  type="button"
                   class="reaction-chip"
                   :title="reaction.title"
+                  :aria-label="`Lihat ${reaction.title} ${reaction.emoji}`"
+                  @click.stop="openReactionDetails(msg, reaction.emoji)"
                 >
                   <span class="reaction-emoji">{{ reaction.emoji }}</span>
                   <span v-if="reaction.count > 1" class="reaction-count">
                     {{ reaction.count }}
                   </span>
-                </span>
+                </button>
               </div>
               <div
                 v-if="canReactToMessage(msg)"
@@ -691,6 +694,64 @@
 
     <Teleport to="body">
       <div
+        v-if="activeReactionDetails"
+        class="reaction-details-overlay"
+        @click="closeReactionDetails"
+      >
+        <section
+          class="reaction-details-dialog"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="`Daftar pemberi reaction ${activeReactionDetails.emoji}`"
+          @click.stop
+        >
+          <header class="reaction-details-header">
+            <div>
+              <h3>
+                <span aria-hidden="true">{{ activeReactionDetails.emoji }}</span>
+                Reaction
+              </h3>
+              <p>{{ activeReactionDetails.count }} orang</p>
+            </div>
+            <button
+              type="button"
+              class="reaction-details-close"
+              aria-label="Tutup daftar reaction"
+              @click="closeReactionDetails"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </header>
+
+          <ul class="reaction-member-list">
+            <li
+              v-for="member in activeReactionDetails.members"
+              :key="member.reactorJid"
+              class="reaction-member"
+            >
+              <span class="reaction-member-avatar" aria-hidden="true">
+                {{ getReactionMemberInitial(member) }}
+              </span>
+              <span class="reaction-member-identity">
+                <strong>{{ getReactionMemberName(member) }}</strong>
+                <small v-if="getReactionMemberPhone(member)">
+                  {{ getReactionMemberPhone(member) }}
+                </small>
+              </span>
+              <span class="reaction-member-emoji" aria-hidden="true">
+                {{ activeReactionDetails.emoji }}
+              </span>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
         v-if="imagePreview"
         class="image-preview-overlay"
         role="dialog"
@@ -761,6 +822,7 @@ const err = ref('');
 const selectedConversation = ref(null);
 const isConversationFullscreen = ref(false);
 const conversationReactions = ref([]);
+const reactionDetails = ref(null);
 const reactionPickerMessageKey = ref('');
 const reactionPickerAnchor = ref(null);
 const sendingReactionMessageKey = ref('');
@@ -890,6 +952,48 @@ const isDeletedForEveryone = message => Boolean(
 
 const getReactionMessageKey = message =>
   `${message?.type || 'unknown'}:${getMessageReactionTargetId(message) || ''}`;
+
+const activeReactionDetails = computed(() => {
+  if (!reactionDetails.value) return null;
+  const message = allMessages.value.find(item =>
+    getReactionMessageKey(item) === reactionDetails.value.messageKey
+  );
+  if (!message) return null;
+
+  return getReactionGroups(message).find(group =>
+    group.emoji === reactionDetails.value.emoji
+  ) || null;
+});
+
+const openReactionDetails = (message, emoji) => {
+  closeMessagePopups();
+  reactionDetails.value = {
+    messageKey: getReactionMessageKey(message),
+    emoji,
+  };
+};
+
+const closeReactionDetails = () => {
+  reactionDetails.value = null;
+};
+
+const getReactionMemberPhone = member => {
+  if (!member || member.reactorJid === 'me') return '';
+  const phone = String(member.reactorPhone || '').replace(/\D/g, '');
+  return phone ? `+${phone}` : formatWhatsAppIdentity(member.reactorJid);
+};
+
+const getReactionMemberName = member => {
+  if (member?.reactorJid === 'me') return 'Anda';
+  return String(member?.reactorDisplayName || '').trim()
+    || getReactionMemberPhone(member)
+    || 'Tidak dikenal';
+};
+
+const getReactionMemberInitial = member => {
+  const name = getReactionMemberName(member);
+  return name === 'Anda' ? 'A' : name.replace(/^\+/, '').charAt(0).toUpperCase() || '?';
+};
 
 const getOwnReaction = message =>
   findOwnMessageReaction(message, conversationReactions.value);
@@ -1656,6 +1760,12 @@ const setupSocketListener = () => {
 
     const handleReaction = data => {
       applyInboxReactionEvent(data);
+      if (
+        selectedConversation.value?.from
+        && sameConversationJid(selectedConversation.value.from, data?.conversationJid)
+      ) {
+        void loadConversationReactions(selectedConversation.value.from);
+      }
     };
 
     const handleDeletedMessage = data => {
@@ -1983,6 +2093,7 @@ const closeConversation = () => {
   closeImagePreview();
   clearAttachment();
   conversationReactions.value = [];
+  closeReactionDetails();
   reactionPickerMessageKey.value = '';
   sendingReactionMessageKey.value = '';
   messageActionMenuKey.value = '';
@@ -3025,6 +3136,12 @@ function closeImagePreview() {
 function handleImagePreviewKeydown(event) {
   if (event.key !== 'Escape') return;
 
+  if (reactionDetails.value) {
+    event.preventDefault();
+    closeReactionDetails();
+    return;
+  }
+
   if (imagePreview.value) {
     event.preventDefault();
     closeImagePreview();
@@ -3961,7 +4078,17 @@ const handleMediaError = (event, message) => {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   color: var(--theme-text-secondary);
   font-size: 12px;
+  font-family: inherit;
   line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.reaction-chip:hover,
+.reaction-chip:focus-visible {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+  outline: none;
 }
 
 .reaction-emoji {
@@ -3972,6 +4099,150 @@ const handleMediaError = (event, message) => {
 .reaction-count {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.reaction-details-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.68);
+  backdrop-filter: blur(4px);
+}
+
+.reaction-details-dialog {
+  width: min(420px, 100%);
+  max-height: min(560px, calc(100vh - 40px));
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 18px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.32);
+  animation: reaction-details-enter 0.16s ease-out;
+}
+
+.reaction-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.reaction-details-header h3,
+.reaction-details-header p {
+  margin: 0;
+}
+
+.reaction-details-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.reaction-details-header p {
+  margin-top: 4px;
+  color: var(--theme-text-muted);
+  font-size: 13px;
+}
+
+.reaction-details-close {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+
+.reaction-details-close:hover {
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+}
+
+.reaction-details-close svg {
+  width: 19px;
+  height: 19px;
+}
+
+.reaction-member-list {
+  max-height: min(440px, calc(100vh - 150px));
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.reaction-member {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 12px;
+}
+
+.reaction-member + .reaction-member {
+  border-top: 1px solid var(--theme-border);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.reaction-member-avatar {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  font-weight: 800;
+}
+
+.reaction-member-identity {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.reaction-member-identity strong,
+.reaction-member-identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reaction-member-identity strong {
+  color: var(--theme-text);
+  font-size: 14px;
+}
+
+.reaction-member-identity small {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.reaction-member-emoji {
+  flex: 0 0 auto;
+  font-size: 22px;
+}
+
+@keyframes reaction-details-enter {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .message-reaction-control {
