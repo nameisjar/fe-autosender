@@ -734,6 +734,16 @@
             >
               <span class="reaction-member-avatar" aria-hidden="true">
                 {{ getReactionMemberInitial(member) }}
+                <img
+                  v-if="getReactionMemberProfileUrl(member)"
+                  :key="getReactionMemberProfileUrl(member)"
+                  :src="getReactionMemberProfileUrl(member)"
+                  alt=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  @load="handleReactionProfileLoad(member)"
+                  @error="handleReactionProfileError($event, member)"
+                />
               </span>
               <span class="reaction-member-identity">
                 <strong>{{ getReactionMemberName(member) }}</strong>
@@ -823,6 +833,7 @@ const selectedConversation = ref(null);
 const isConversationFullscreen = ref(false);
 const conversationReactions = ref([]);
 const reactionDetails = ref(null);
+const reactionProfileRetryVersions = ref({});
 const reactionPickerMessageKey = ref('');
 const reactionPickerAnchor = ref(null);
 const sendingReactionMessageKey = ref('');
@@ -895,6 +906,8 @@ let latestSentMessagesRequest = 0;
 let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
 let conversationOpenGeneration = 0;
+const reactionProfileRetryCounts = new Map();
+const reactionProfileRetryTimers = new Map();
 
 // Computed
 const todayCount = computed(() => {
@@ -975,6 +988,47 @@ const openReactionDetails = (message, emoji) => {
 
 const closeReactionDetails = () => {
   reactionDetails.value = null;
+  for (const timer of reactionProfileRetryTimers.values()) clearTimeout(timer);
+  reactionProfileRetryTimers.clear();
+  reactionProfileRetryCounts.clear();
+};
+
+const getReactionMemberProfileUrl = member => {
+  const source = String(member?.reactorProfilePicUrl || '').trim();
+  if (!source) return '';
+  const key = String(member?.reactorJid || source);
+  const version = reactionProfileRetryVersions.value[key] || 0;
+  const separator = source.includes('?') ? '&' : '?';
+  return `${mediaUrl(source)}${separator}profileRetry=${version}`;
+};
+
+const handleReactionProfileLoad = member => {
+  const key = String(member?.reactorJid || '');
+  if (!key) return;
+  const timer = reactionProfileRetryTimers.get(key);
+  if (timer) clearTimeout(timer);
+  reactionProfileRetryTimers.delete(key);
+  reactionProfileRetryCounts.delete(key);
+};
+
+const handleReactionProfileError = (event, member) => {
+  if (event?.currentTarget) event.currentTarget.style.display = 'none';
+  const key = String(member?.reactorJid || '');
+  if (!key || member?.reactorProfileStatus === 'unavailable') return;
+
+  const attempt = reactionProfileRetryCounts.get(key) || 0;
+  const retryDelays = [2000, 4000, 8000, 12000];
+  if (attempt >= retryDelays.length || reactionProfileRetryTimers.has(key)) return;
+
+  reactionProfileRetryCounts.set(key, attempt + 1);
+  const timer = setTimeout(() => {
+    reactionProfileRetryTimers.delete(key);
+    reactionProfileRetryVersions.value = {
+      ...reactionProfileRetryVersions.value,
+      [key]: (reactionProfileRetryVersions.value[key] || 0) + 1,
+    };
+  }, retryDelays[attempt]);
+  reactionProfileRetryTimers.set(key, timer);
 };
 
 const getReactionMemberPhone = member => {
@@ -3054,6 +3108,7 @@ onUnmounted(() => {
   if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
   inboxNavigationGeneration++;
   conversationOpenGeneration++;
+  closeReactionDetails();
   closeImagePreview();
   clearAttachment();
   clearConversationAvatars();
@@ -4199,6 +4254,7 @@ const handleMediaError = (event, message) => {
 }
 
 .reaction-member-avatar {
+  position: relative;
   flex: 0 0 40px;
   width: 40px;
   height: 40px;
@@ -4208,6 +4264,16 @@ const handleMediaError = (event, message) => {
   background: var(--theme-accent-soft);
   color: var(--theme-accent);
   font-weight: 800;
+  overflow: hidden;
+}
+
+.reaction-member-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--theme-surface-soft);
 }
 
 .reaction-member-identity {
