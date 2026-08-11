@@ -1461,7 +1461,7 @@ const onDeviceChange = () => {
   setupSocketListener();
 };
 
-const loadMessages = async ({ conversationJid = '' } = {}) => {
+const loadMessages = async () => {
   if (!selectedDeviceId.value) return;
 
   const requestId = ++latestLoadRequest;
@@ -1480,7 +1480,6 @@ const loadMessages = async ({ conversationJid = '' } = {}) => {
     const inboxRequest = userApi.get(`/devices/${selectedDeviceId.value}/inbox`, {
       params: {
         ...(q.value ? { message: q.value } : {}),
-        ...(conversationJid ? { conversationJid } : {}),
         page: page.value,
         pageSize: pageSize.value,
         _t: Date.now(),
@@ -1500,9 +1499,7 @@ const loadMessages = async ({ conversationJid = '' } = {}) => {
     const { data: outgoingData } = await userApi
       .get(`/devices/${selectedDeviceId.value}/outbox/conversations`, {
         params: {
-          ...(conversationJid
-            ? { recipients: conversationJid }
-            : q.value
+          ...(q.value
             ? { search: q.value }
             : conversationKeys.length > 0
               ? { recipients: conversationKeys.join(',') }
@@ -1951,6 +1948,124 @@ const createEmptyConversation = target => {
   };
 };
 
+const mergeNavigationMetadata = (conversation, target) => {
+  const isGroup = Boolean(
+    target.isGroup
+    || conversation?.isGroup
+    || target.conversationJid.endsWith('@g.us'),
+  );
+  const displayName = target.displayName || '';
+  const phone = target.conversationJid.split('@')[0].split(':')[0];
+
+  return {
+    ...conversation,
+    isGroup,
+    groupName: isGroup
+      ? (conversation?.groupName || displayName || null)
+      : conversation?.groupName || null,
+    groupPicUrl: isGroup
+      ? (conversation?.groupPicUrl || target.profilePicUrl || null)
+      : conversation?.groupPicUrl || null,
+    profilePicUrl: !isGroup
+      ? (conversation?.profilePicUrl || target.profilePicUrl || null)
+      : conversation?.profilePicUrl || null,
+    contact: !isGroup && !conversation?.contact && displayName
+      ? { firstName: displayName, lastName: '', phone, colorCode: null }
+      : conversation?.contact || null,
+    pushName: !isGroup
+      ? (conversation?.pushName || displayName || null)
+      : conversation?.pushName || null,
+  };
+};
+
+const fetchNavigationConversation = async target => {
+  try {
+    const [inboxResponse, outboxResponse] = await Promise.all([
+      userApi.get(`/devices/${target.deviceId}/inbox`, {
+        params: {
+          conversationJid: target.conversationJid,
+          page: 1,
+          pageSize: 1,
+          _t: Date.now(),
+        },
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      }),
+      userApi.get(`/devices/${target.deviceId}/outbox/conversations`, {
+        params: { recipients: target.conversationJid, _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      }).catch(() => ({ data: [] })),
+    ]);
+
+    const inboxPayload = inboxResponse?.data;
+    const incoming = Array.isArray(inboxPayload)
+      ? inboxPayload
+      : Array.isArray(inboxPayload?.data)
+        ? inboxPayload.data
+        : [];
+    const outgoingPayload = outboxResponse?.data;
+    const outgoing = Array.isArray(outgoingPayload)
+      ? outgoingPayload
+      : Array.isArray(outgoingPayload?.data)
+        ? outgoingPayload.data
+        : [];
+    const incomingMessages = incoming
+      .filter(message => sameConversationJid(message.from, target.conversationJid))
+      .sort((left, right) => new Date(left.receivedAt) - new Date(right.receivedAt));
+    const outgoingSummary = outgoing.find(message =>
+      sameConversationJid(message.to, target.conversationJid)
+    ) || null;
+
+    if (incomingMessages.length === 0 && !outgoingSummary) {
+      return createEmptyConversation(target);
+    }
+
+    const newestIncoming = incomingMessages[incomingMessages.length - 1] || null;
+    const identityMessage = [...incomingMessages].reverse().find(message =>
+      message.groupName || message.pushName || message.contact
+    ) || newestIncoming;
+    const outgoingLatest = outgoingSummary
+      ? {
+          ...outgoingSummary,
+          from: target.conversationJid,
+          message: outgoingSummary.message || '',
+          receivedAt: outgoingSummary.createdAt,
+          isOutgoing: true,
+        }
+      : null;
+    const latestMessage = !newestIncoming
+      ? outgoingLatest
+      : !outgoingLatest
+        ? newestIncoming
+        : new Date(outgoingLatest.receivedAt) > new Date(newestIncoming.receivedAt)
+          ? outgoingLatest
+          : newestIncoming;
+    const isGroup = Boolean(
+      target.isGroup
+      || target.conversationJid.endsWith('@g.us')
+      || identityMessage?.isGroup
+      || outgoingSummary?.isGroup,
+    );
+
+    return mergeNavigationMetadata({
+      from: target.conversationJid,
+      contact: identityMessage?.contact || outgoingSummary?.contact || null,
+      pushName: identityMessage?.pushName || outgoingSummary?.pushName || null,
+      groupName: identityMessage?.groupName || outgoingSummary?.groupName || null,
+      groupPicUrl: identityMessage?.groupPicUrl || outgoingSummary?.groupPicUrl || null,
+      profilePicUrl: identityMessage?.profilePicUrl || outgoingSummary?.profilePicUrl || null,
+      isGroup,
+      messages: incomingMessages,
+      latestMessage: latestMessage || createEmptyConversation(target).latestMessage,
+      messageCount: Number(inboxPayload?.metadata?.totalMessages)
+        || incomingMessages.length + (Number(outgoingSummary?.messageCount) || 0),
+      unreadCount: incomingMessages.filter(message => !message.isRead).length,
+    }, target);
+  } catch (error) {
+    toast.error(error?.response?.data?.message || 'Gagal memuat percakapan tujuan');
+    return createEmptyConversation(target);
+  }
+};
+
 const focusInboxMessage = async messageId => {
   if (!messageId) return false;
   await nextTick();
@@ -1994,13 +2109,16 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     q.value = '';
     page.value = 1;
 
-    if (reload) await loadMessages({ conversationJid: target.conversationJid });
+    if (reload) await loadMessages();
     if (generation !== inboxNavigationGeneration) return;
     if (deviceChanged) setupSocketListener();
 
-    const conversation = conversations.value.find(item =>
+    let conversation = conversations.value.find(item =>
       sameConversationJid(item.from, target.conversationJid),
-    ) || createEmptyConversation(target);
+    );
+    if (!conversation) conversation = await fetchNavigationConversation(target);
+    if (generation !== inboxNavigationGeneration) return;
+    conversation = mergeNavigationMetadata(conversation, target);
     conversationReturnRoute.value = target.returnTo;
     await viewConversation(conversation, { targetMessageId: target.messageId });
     if (generation !== inboxNavigationGeneration) return;
@@ -3133,7 +3251,7 @@ onMounted(async () => {
   
   // Load messages if device selected
   if (selectedDeviceId.value) {
-    await loadMessages({ conversationJid: navigationTarget?.conversationJid || '' });
+    await loadMessages();
     
     // ✅ FIXED: Only setup listener once - either if already connected OR wait for 'connect' event above
     if (socket.connected) {

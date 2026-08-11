@@ -149,7 +149,46 @@ describe('useGlobalNotifications', () => {
         device: 'device-1',
         conversation: '628123@s.whatsapp.net',
         message: 'message-1',
+        displayName: 'Niko',
+        isGroup: 'false',
+        profilePicUrl: '',
       },
+    });
+
+    wrapper.unmount();
+  });
+
+  it('keeps the WhatsApp group name when a group notification opens Inbox', async () => {
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+
+    await flushPromises();
+    const [incomingHandler] = socketHarness.listeners.get('incoming:session-1');
+    incomingHandler({
+      id: 'group-message-1',
+      from: '120363421277671136@g.us',
+      message: 'Halo grup',
+      pushName: 'Niko',
+      groupName: 'IND 1-1 PS2 607',
+      groupPicUrl: '/inbox-profile/device-1/group',
+    });
+
+    expect(notificationHarness.info.mock.calls[0][0]).toContain(
+      'IND 1-1 PS2 607: Halo grup',
+    );
+    await notificationHarness.info.mock.calls[0][2].onClick();
+    expect(notificationHarness.push).toHaveBeenCalledWith({
+      name: 'inbox',
+      query: expect.objectContaining({
+        conversation: '120363421277671136@g.us',
+        displayName: 'IND 1-1 PS2 607',
+        isGroup: 'true',
+        profilePicUrl: '/inbox-profile/device-1/group',
+      }),
     });
 
     wrapper.unmount();

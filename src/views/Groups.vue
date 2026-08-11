@@ -417,7 +417,10 @@
                       stroke="currentColor"
                       stroke-width="2"
                     >
-                      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3 1.7-5.1A8 8 0 1 1 21 15z" />
+                      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-3.8-.8L3 21l1.7-4.6A8.5 8.5 0 1 1 21 11.5z" />
+                      <circle cx="8.5" cy="12" r="1" fill="currentColor" stroke="none" />
+                      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+                      <circle cx="15.5" cy="12" r="1" fill="currentColor" stroke="none" />
                     </svg>
                   </button>
                   <button
@@ -1739,13 +1742,28 @@ onMounted(async () => {
 }
 
 .btn-chat-table {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #047857;
+  background: linear-gradient(135deg, #d1fae5 0%, #99f6e4 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  box-shadow: 0 2px 5px rgba(16, 185, 129, 0.16);
 }
 
 .btn-chat-table:hover {
   background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(16, 185, 129, 0.28);
+}
+
+:global(html.dark) .btn-chat-table {
+  color: #6ee7b7;
+  background: rgba(5, 150, 105, 0.16);
+  border-color: rgba(110, 231, 183, 0.34);
+  box-shadow: none;
+}
+
+:global(html.dark) .btn-chat-table:hover {
+  color: #a7f3d0;
+  background: rgba(5, 150, 105, 0.28);
 }
 
 .btn-leave-table {
@@ -1765,7 +1783,7 @@ onMounted(async () => {
 }
 
 .btn-chat-table svg {
-  color: #047857;
+  color: currentColor;
 }
 
 .btn-leave-table svg {

@@ -22,11 +22,13 @@ export function useGlobalNotifications() {
   };
 
   const getSenderName = (data) => {
+    if ((data.isGroup || data.from?.endsWith('@g.us')) && data.groupName) {
+      return data.groupName;
+    }
     if (data.contact) {
       return `${data.contact.firstName} ${data.contact.lastName || ''}`.trim();
     }
     if (data.pushName) return data.pushName;
-    if (data.isGroup && data.groupName) return data.groupName;
     return formatPhone(data.from);
   };
 
@@ -111,6 +113,9 @@ export function useGlobalNotifications() {
             device: device?.id || '',
             conversation: data.from || '',
             message: data.id || '',
+            displayName: senderName,
+            isGroup: String(Boolean(data.isGroup || data.from?.endsWith('@g.us'))),
+            profilePicUrl: data.groupPicUrl || data.profilePicUrl || '',
           },
         });
         toast.info(`💬 ${senderName}: ${preview}`, 5000, {
