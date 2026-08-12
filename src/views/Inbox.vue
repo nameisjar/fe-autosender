@@ -1798,9 +1798,7 @@ const setupSocketListener = () => {
           sentMessages.value[msgIndex].status = newStatus;
 
           if (newStatus === 'error') {
-            const errorMessage = data.errorCode === '463'
-              ? 'WhatsApp menolak pesan karena privacy token penerima belum tersedia (kode 463).'
-              : `WhatsApp menolak pesan${data.errorCode ? ` (kode ${data.errorCode})` : ''}.`;
+            const errorMessage = `WhatsApp menolak pesan${data.errorCode ? ` (kode ${data.errorCode})` : ''}.`;
             toast.error(errorMessage);
           }
           
