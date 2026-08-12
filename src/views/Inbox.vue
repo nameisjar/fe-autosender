@@ -1787,8 +1787,22 @@ const setupSocketListener = () => {
         const currentLevel = statusHierarchy[currentStatus] || 0;
         const newLevel = statusHierarchy[newStatus] || 0;
         
-        if (newLevel > currentLevel) {
+        // WhatsApp can return a terminal NACK after it initially accepted the
+        // stanza (server_ack). Show the red error icon immediately, but never
+        // overwrite a message that was already delivered/read.
+        const shouldApplyError =
+          newStatus === 'error' &&
+          ['sending', 'server_ack'].includes(currentStatus);
+
+        if (shouldApplyError || newLevel > currentLevel) {
           sentMessages.value[msgIndex].status = newStatus;
+
+          if (newStatus === 'error') {
+            const errorMessage = data.errorCode === '463'
+              ? 'WhatsApp menolak pesan karena privacy token penerima belum tersedia (kode 463).'
+              : `WhatsApp menolak pesan${data.errorCode ? ` (kode ${data.errorCode})` : ''}.`;
+            toast.error(errorMessage);
+          }
           
           // Also update waMessageId if it was null before
           if (!sentMessages.value[msgIndex].waMessageId && data.waMessageId) {
@@ -2649,7 +2663,7 @@ const sendMediaReply = async () => {
     if (summaryIndex >= 0) outgoingConversationSummaries.value.splice(summaryIndex, 1);
     outgoingConversationSummaries.value.unshift(summary);
 
-    toast.success('Media berhasil dikirim');
+    toast.info('Media diterima server, menunggu konfirmasi WhatsApp');
     setTimeout(() => scrollToBottom(), 50);
   } catch (error) {
     const msgIndex = sentMessages.value.findIndex(message => message.tempId === tempId);
@@ -2658,7 +2672,11 @@ const sendMediaReply = async () => {
       sentMessages.value = [...sentMessages.value];
     }
     toast.error(
-      error?.response?.data?.message || error?.message || 'Gagal mengirim media',
+      error?.response?.data?.message ||
+      error?.response?.data?.errors?.[0]?.error ||
+      error?.response?.data?.error ||
+      error?.message ||
+      'Gagal mengirim media',
     );
   } finally {
     sendingReply.value = false;
@@ -2764,7 +2782,7 @@ const sendReply = async () => {
       }
     }
     
-    toast.success('Pesan berhasil dikirim');
+    toast.info('Pesan diterima server, menunggu konfirmasi WhatsApp');
 
     const existingSummaryIndex = outgoingConversationSummaries.value.findIndex(
       message => message.to === recipient,
@@ -2800,7 +2818,11 @@ const sendReply = async () => {
       sentMessages.value[msgIndex].status = 'error';
     }
     
-    const errorMsg = e?.response?.data?.message || e?.response?.data?.error || e?.message;
+    const errorMsg =
+      e?.response?.data?.message ||
+      e?.response?.data?.errors?.[0]?.error ||
+      e?.response?.data?.error ||
+      e?.message;
     
     if (errorMsg?.includes('Session not found') || errorMsg?.includes('unauthorized') || e?.response?.status === 401) {
       toast.error('Session WhatsApp tidak ditemukan. Device perlu di-pairing ulang atau pilih device lain yang aktif.');
