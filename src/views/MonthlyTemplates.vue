@@ -1859,6 +1859,41 @@ onMounted(() => {
   height: 18px;
 }
 
+/* Dark mode contrast */
+:global(html.dark) .wrapper {
+  --theme-text: #ffffff;
+  --theme-text-secondary: #f8fafc;
+  --theme-text-muted: #cbd5e1;
+}
+
+:global(html.dark) .template-field label,
+:global(html.dark) .template-field span,
+:global(html.dark) .template-field p {
+  color: #f8fafc !important;
+}
+
+:global(html.dark) .month-badge {
+  color: #c4b5fd;
+  border-color: #818cf8;
+}
+
+:global(html.dark) .course-icon svg,
+:global(html.dark) .preview-icon svg {
+  color: #93c5fd;
+}
+
+:global(html.dark) .btn-view {
+  color: #7dd3fc;
+}
+
+:global(html.dark) .btn-delete {
+  color: #fca5a5;
+}
+
+:global(html.dark) .import-info p {
+  color: #bfdbfe !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .wrapper {
