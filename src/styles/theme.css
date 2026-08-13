@@ -417,6 +417,119 @@ html.dark :where(.pdf-template, .pdf-container, #pdf-render-container) :where(in
     color-scheme: light !important;
 }
 
+/*
+ * Template pages need page-level selectors here instead of scoped component
+ * overrides. This keeps their text readable even when the generic dark-theme
+ * rules and component styles are emitted in a different bundle order.
+ */
+html.dark .templates-page {
+    --theme-text: #ffffff;
+    --theme-text-secondary: #ffffff;
+    --theme-text-muted: #ffffff;
+}
+
+html.dark .templates-page :where(
+    .message-label,
+    .message-preview,
+    .lesson-badge,
+    .btn-edit,
+    .btn-delete,
+    .btn-action.import,
+    .form-hint,
+    .import-info p
+) {
+    color: #ffffff !important;
+}
+
+html.dark .templates-page :where(
+    .course-icon svg,
+    .preview-icon svg,
+    .preview-icon-file svg,
+    .lesson-badge svg,
+    .btn-edit svg,
+    .btn-delete svg,
+    .btn-action.import svg
+) {
+    color: #ffffff !important;
+}
+
+html.dark .monthly-templates-page {
+    --theme-text: #ffffff;
+    --theme-text-secondary: #ffffff;
+    --theme-text-muted: #ffffff;
+}
+
+html.dark .monthly-templates-page :where(
+    .template-field label,
+    .template-field span,
+    .template-field p,
+    .month-badge,
+    .btn-view,
+    .btn-edit,
+    .btn-delete,
+    .import-info p
+) {
+    color: #ffffff !important;
+}
+
+html.dark .monthly-templates-page :where(
+    .course-icon svg,
+    .preview-icon svg,
+    .month-badge svg,
+    .btn-view svg,
+    .btn-edit svg,
+    .btn-delete svg
+) {
+    color: #ffffff !important;
+}
+
+/* Monthly feedback: selected comments and informational text used dark
+ * light-mode blues that became difficult to read on dark surfaces. */
+html.dark .monthly-feedback-page {
+    --theme-text: #ffffff;
+    --theme-text-secondary: #ffffff;
+    --theme-text-muted: #e2e8f0;
+}
+
+html.dark .monthly-feedback-page :where(
+    .step-badge,
+    .recipients-info-box,
+    .selected-count-badge,
+    .badge-count-compact,
+    .comment-item.selected .checkbox-text,
+    .badge-count,
+    .auto-filled-header,
+    .auto-field label,
+    .auto-field span,
+    .auto-field p,
+    .auto-label,
+    .auto-value,
+    .preview-link,
+    .rate-limit-header,
+    .rate-value
+) {
+    color: #ffffff !important;
+}
+
+/* Table actions and contact import keep their semantic backgrounds while the
+ * foreground switches to white for sufficient dark-mode contrast. */
+html.dark .admin-tutors-page :where(
+    .btn-edit-table,
+    .btn-delete-table,
+    .btn-edit-table svg,
+    .btn-delete-table svg
+),
+html.dark .contacts-page :where(
+    .btn-import,
+    .btn-import svg,
+    .btn-edit-table,
+    .btn-delete-table,
+    .btn-edit-table svg,
+    .btn-delete-table svg
+) {
+    color: #ffffff !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     body {
         transition: none;

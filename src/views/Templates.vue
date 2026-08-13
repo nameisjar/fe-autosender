@@ -1,5 +1,5 @@
 <template>
-  <div class="wrapper">
+  <div class="wrapper templates-page">
     <div class="page-header">
       <div class="header-content">
         <h2>
@@ -2592,43 +2592,6 @@ loadFeedbacks();
 .btn-import-confirm svg {
   width: 16px;
   height: 16px;
-}
-
-/* Dark mode contrast */
-:global(html.dark) .wrapper {
-  --theme-text: #ffffff;
-  --theme-text-secondary: #f8fafc;
-  --theme-text-muted: #cbd5e1;
-}
-
-:global(html.dark) .message-label,
-:global(html.dark) .message-preview {
-  color: #f8fafc !important;
-}
-
-:global(html.dark) .lesson-badge {
-  color: #c4b5fd;
-  border-color: #818cf8;
-}
-
-:global(html.dark) .course-icon svg,
-:global(html.dark) .preview-icon svg,
-:global(html.dark) .preview-icon-file svg,
-:global(html.dark) .btn-action.import {
-  color: #93c5fd;
-}
-
-:global(html.dark) .btn-edit {
-  color: #7dd3fc;
-}
-
-:global(html.dark) .btn-delete {
-  color: #fca5a5;
-}
-
-:global(html.dark) .form-hint,
-:global(html.dark) .import-info p {
-  color: #bfdbfe !important;
 }
 
 /* Responsive for Import Modal */

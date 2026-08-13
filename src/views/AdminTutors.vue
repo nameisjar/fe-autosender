@@ -1,5 +1,5 @@
 <template>
-  <div class="wrapper">
+  <div class="wrapper admin-tutors-page">
     <div class="page-header">
       <div class="header-content">
         <h2>

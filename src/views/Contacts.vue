@@ -1,5 +1,5 @@
 <template>
-  <div class="wrapper">
+  <div class="wrapper contacts-page">
     <div class="page-header">
       <div class="header-content">
         <h2>
