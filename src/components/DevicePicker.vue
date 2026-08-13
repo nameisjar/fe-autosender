@@ -21,21 +21,23 @@
         </svg>
       </div>
       <div class="device-info-text">
-        <div class="device-name-compact">
-          {{ selectedDevice.name || "Unknown" }}
-          <span v-if="selectedDevice.phone" class="device-phone-inline">
-            - {{ selectedDevice.phone }}
-          </span>
-          <!-- 🆕 Health Badge -->
-          <span 
-            v-if="selectedDeviceHealth" 
+        <div class="device-name-row">
+          <div class="device-name-compact">
+            {{ selectedDevice.name || "Unknown" }}
+            <span v-if="selectedDevice.phone" class="device-phone-inline">
+              - {{ selectedDevice.phone }}
+            </span>
+          </div>
+          <button
+            type="button"
             class="health-pill"
-            :class="getHealthBadge(selectedDevice.id).color"
+            :class="selectedDeviceHealth ? getHealthBadge(selectedDevice.id).color : 'gray'"
             :title="getHealthTooltip(selectedDevice.id)"
+            aria-label="Buka detail kesehatan device"
             @click.stop="showHealthModal = true"
           >
-            {{ getHealthBadge(selectedDevice.id).label }}
-          </span>
+            {{ selectedDeviceHealth ? getHealthBadge(selectedDevice.id).label : 'Device Health' }}
+          </button>
         </div>
         <div
           class="device-status-compact"
@@ -97,7 +99,7 @@
       <div v-if="showHealthModal" class="health-modal-overlay" @click.self="showHealthModal = false">
         <div class="health-modal">
           <div class="health-modal-header">
-            <h3>Device Health - {{ selectedDevice?.name }}</h3>
+            <h3>Kesehatan Device - {{ selectedDevice?.name }}</h3>
             <button class="close-btn" @click="showHealthModal = false">&times;</button>
           </div>
           <div class="health-modal-body">
@@ -112,32 +114,37 @@
                 <div class="status-text">
                   <span class="status-label">{{ getStatusLabel(selectedDeviceHealth.healthStatus) }}</span>
                   <span class="status-time" v-if="selectedDeviceHealth.stats?.lastConnected">
-                    Last seen {{ formatDate(selectedDeviceHealth.stats?.lastConnected) }}
+                    Terakhir terhubung {{ formatDate(selectedDeviceHealth.stats?.lastConnected) }}
                   </span>
                 </div>
+              </div>
+
+              <div class="connection-summary" :class="selectedDeviceHealth.connectionStatus || selectedDevice?.status">
+                <span>Status koneksi</span>
+                <strong>{{ modalConnectionLabel }}</strong>
               </div>
 
               <!-- Stats Grid -->
               <div class="stats-grid">
                 <div class="stat-box">
                   <span class="stat-value">{{ selectedDeviceHealth.todayMessages || 0 }}</span>
-                  <span class="stat-label">Messages (today)</span>
+                  <span class="stat-label">Terkirim hari ini</span>
                 </div>
                 <div class="stat-box" :class="{ 'has-warning': selectedDeviceHealth.recentRateLimits > 0 }">
                   <span class="stat-value">{{ selectedDeviceHealth.recentRateLimits || 0 }}</span>
-                  <span class="stat-label">Rate Limits (24h)</span>
+                  <span class="stat-label">Rate limit (24 jam)</span>
                 </div>
-                <div class="stat-box" :class="{ 'has-error': selectedDeviceHealth.recentConnectionErrors > 0 }">
-                  <span class="stat-value">{{ selectedDeviceHealth.recentConnectionErrors || 0 }}</span>
-                  <span class="stat-label">Errors (24h)</span>
+                <div class="stat-box" :class="{ 'has-error': recentErrorCount > 0 }">
+                  <span class="stat-value">{{ recentErrorCount }}</span>
+                  <span class="stat-label">Gangguan (24 jam)</span>
                 </div>
               </div>
 
               <!-- Pause Notice -->
               <div v-if="selectedDeviceHealth.isPaused" class="notice warning">
-                <strong>Paused</strong>
-                <span>{{ selectedDeviceHealth.pauseReason || 'Manually paused' }}</span>
-                <span v-if="selectedDeviceHealth.resumeAt" class="notice-meta">Resumes {{ formatDate(selectedDeviceHealth.resumeAt) }}</span>
+                <strong>Pengiriman dijeda</strong>
+                <span>{{ selectedDeviceHealth.pauseReason || 'Dijeda secara manual' }}</span>
+                <span v-if="selectedDeviceHealth.resumeAt" class="notice-meta">Dilanjutkan {{ formatDate(selectedDeviceHealth.resumeAt) }}</span>
               </div>
 
               <!-- Recommendation -->
@@ -148,7 +155,7 @@
               <!-- Activity Log -->
               <div v-if="recentSignals.length" class="activity-section">
                 <div class="section-header">
-                  <span class="section-title">Activity</span>
+                  <span class="section-title">Aktivitas</span>
                   <span class="section-count">{{ recentSignals.length }}</span>
                 </div>
                 <div class="activity-list">
@@ -179,27 +186,34 @@
                   class="btn-toggle"
                   @click="showAllSignals = !showAllSignals"
                 >
-                  {{ showAllSignals ? 'Show less' : `View all ${recentSignals.length} events` }}
+                  {{ showAllSignals ? 'Tampilkan lebih sedikit' : `Lihat semua ${recentSignals.length} aktivitas` }}
                 </button>
               </div>
 
               <!-- Actions -->
               <div class="action-bar">
+                <button
+                  v-if="selectedDeviceHealth.requiresPairing && selectedDevice?.canManage"
+                  class="btn primary"
+                  @click="handlePairingDevice"
+                >
+                  Pairing Ulang
+                </button>
                 <button 
-                  v-if="selectedDeviceHealth.isPaused"
+                  v-else-if="selectedDeviceHealth.isPaused && selectedDeviceHealth.isConnected && selectedDevice?.canManage"
                   class="btn primary"
                   @click="handleResumeDevice"
                   :disabled="healthModalLoading || pauseResumeLoading"
                 >
-                  Resume
+                  Lanjutkan Pengiriman
                 </button>
                 <button 
-                  v-else-if="selectedDeviceHealth.healthStatus !== 'banned'"
+                  v-else-if="selectedDeviceHealth.isConnected && selectedDeviceHealth.healthStatus !== 'banned' && selectedDevice?.canManage"
                   class="btn secondary"
                   @click="handlePauseDevice"
                   :disabled="healthModalLoading || pauseResumeLoading"
                 >
-                  Pause
+                  Jeda Pengiriman
                 </button>
                 <button 
                   class="btn icon-only"
@@ -214,8 +228,8 @@
               </div>
             </template>
             <div v-else class="empty-state">
-              <p>No data available</p>
-              <button class="btn secondary" @click="refreshHealth">Load Data</button>
+              <p>Data kesehatan belum tersedia</p>
+              <button class="btn secondary" @click="refreshHealth">Muat Data</button>
             </div>
           </div>
         </div>
@@ -226,9 +240,12 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useDevices } from "../composables/useDevices.js";
+import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 
 const emit = defineEmits(["device-changed"]);
+const router = useRouter();
 
 // Device management dari composable
 const {
@@ -262,6 +279,19 @@ const visibleSignals = computed(() => {
   if (showAllSignals.value) return recentSignals.value;
   return recentSignals.value.slice(0, SIGNALS_LIMIT);
 });
+const modalConnectionLabel = computed(() => {
+  if (selectedDeviceHealth.value?.requiresPairing) return "Perlu pairing";
+  const status = selectedDeviceHealth.value?.connectionStatus || selectedDevice.value?.status;
+  return getDeviceStatusLabel({
+    status,
+    sessionId: selectedDevice.value?.sessionId,
+  });
+});
+const recentErrorCount = computed(() => Number(
+  selectedDeviceHealth.value?.recentErrors
+  ?? selectedDeviceHealth.value?.recentConnectionErrors
+  ?? 0
+));
 
 // Handle select device
 function handleSelectDevice(deviceId) {
@@ -281,7 +311,7 @@ function handleSelectDevice(deviceId) {
 // 🆕 Health tooltip
 function getHealthTooltip(deviceId) {
   const badge = getHealthBadge(deviceId);
-  return `Health: ${badge.label} - Click for details`;
+  return `Kesehatan: ${badge.label} - Klik untuk melihat detail`;
 }
 
 // 🆕 Format date helper
@@ -299,12 +329,13 @@ function formatDate(dateString) {
 // 🆕 Format signal type
 function formatSignalType(type) {
   const typeMap = {
-    'rate_limit': 'Rate limited',
-    'forced_logout': 'Logged out',
-    'connection_error': 'Connection error',
-    'banned': 'Banned',
-    'reconnected': 'Connected',
-    'resumed': 'Resumed',
+    'rate_limit': 'Terkena rate limit',
+    'forced_logout': 'Logout dari WhatsApp',
+    'connection_error': 'Gangguan koneksi',
+    'delivery_failed': 'Pengiriman gagal',
+    'banned': 'Nomor diblokir',
+    'reconnected': 'Berhasil terhubung',
+    'resumed': 'Pengiriman dilanjutkan',
   };
   return typeMap[type] || type;
 }
@@ -315,6 +346,7 @@ function getSignalClass(type) {
     'rate_limit': 'warning',
     'forced_logout': 'error',
     'connection_error': 'error',
+    'delivery_failed': 'error',
     'banned': 'error',
     'reconnected': 'success',
     'resumed': 'info',
@@ -325,11 +357,11 @@ function getSignalClass(type) {
 // 🆕 Get status label
 function getStatusLabel(status) {
   const labels = {
-    'healthy': 'Healthy',
-    'warning': 'Warning',
-    'critical': 'Critical',
-    'paused': 'Paused',
-    'banned': 'Banned',
+    'healthy': 'Baik',
+    'warning': 'Perlu diperhatikan',
+    'critical': 'Kritis',
+    'paused': 'Pengiriman dijeda',
+    'banned': 'Nomor diblokir',
   };
   return labels[status] || status;
 }
@@ -341,9 +373,9 @@ function shouldShowConfidence(type) {
 
 function getConfidenceTooltip(confidence) {
   const tooltips = {
-    'high': 'High confidence detection',
-    'medium': 'Medium confidence',
-    'low': 'Low confidence - needs verification',
+    'high': 'Tingkat keyakinan deteksi tinggi',
+    'medium': 'Tingkat keyakinan deteksi sedang',
+    'low': 'Tingkat keyakinan rendah - perlu verifikasi',
   };
   return tooltips[confidence] || '';
 }
@@ -391,6 +423,11 @@ async function handleResumeDevice() {
   } finally {
     pauseResumeLoading.value = false;
   }
+}
+
+async function handlePairingDevice() {
+  showHealthModal.value = false;
+  await router.push({ name: 'add-device' });
 }
 
 // 🆕 Load health when modal opens
@@ -478,7 +515,16 @@ defineExpose({
   min-width: 0;
 }
 
+.device-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .device-name-compact {
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--theme-text);
@@ -630,8 +676,11 @@ defineExpose({
 .health-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   padding: 2px 8px;
-  margin-left: 8px;
+  margin: 0;
+  border: 1px solid transparent;
   font-size: 11px;
   font-weight: 600;
   border-radius: 10px;
@@ -664,6 +713,7 @@ defineExpose({
 .health-pill.gray {
   background: var(--theme-surface-soft);
   color: var(--theme-text-muted);
+  border-color: var(--theme-border);
 }
 
 .health-pill-small {
@@ -813,6 +863,31 @@ defineExpose({
 .health-header.critical { background: var(--theme-danger-soft); border: 1px solid var(--theme-danger-border); }
 .health-header.paused { background: var(--theme-surface-soft); border: 1px solid var(--theme-border); }
 .health-header.banned { background: var(--theme-danger-soft); border: 1px solid var(--theme-danger-border); }
+
+.connection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.connection-summary strong {
+  color: var(--theme-text);
+  font-size: 13px;
+}
+
+.connection-summary.open strong { color: var(--theme-success-text); }
+.connection-summary.connecting strong,
+.connection-summary.reconnecting strong { color: var(--theme-warning-text); }
+.connection-summary.close strong,
+.connection-summary.logged_out strong { color: var(--theme-danger-text); }
 
 .status-dot {
   width: 10px;
@@ -1108,5 +1183,155 @@ defineExpose({
 /* Keep old styles for backwards compat - can remove later */
 .health-status-card {
   display: none;
+}
+
+@media (max-width: 640px) {
+  .device-info-compact {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .device-avatar-compact {
+    width: 36px;
+    height: 36px;
+  }
+
+  .device-name-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .device-name-compact,
+  .device-phone-inline {
+    max-width: 100%;
+    font-size: 13px;
+  }
+
+  .health-pill {
+    min-height: 32px;
+    max-width: 100%;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  .btn-change-compact {
+    min-height: 36px;
+    padding: 7px 10px;
+  }
+
+  .health-modal-overlay {
+    align-items: flex-end;
+    padding: max(8px, env(safe-area-inset-top)) 0 0;
+  }
+
+  .health-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 8px);
+    max-height: calc(100dvh - 8px);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .health-modal-header {
+    flex-shrink: 0;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .health-modal-header h3 {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .close-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .health-modal-body {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    padding: 14px;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .health-header {
+    padding: 12px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .stat-box {
+    min-width: 0;
+    padding: 12px 6px;
+    text-align: center;
+  }
+
+  .stat-box .stat-value {
+    font-size: 20px;
+  }
+
+  .stat-box .stat-label {
+    line-height: 1.25;
+  }
+
+  .activity-item {
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr);
+  }
+
+  .activity-time {
+    grid-column: 2;
+    white-space: normal;
+  }
+
+  .action-bar {
+    position: sticky;
+    bottom: -14px;
+    z-index: 2;
+    margin: 0 -14px;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+    background: var(--theme-surface);
+    border-color: var(--theme-border);
+  }
+
+  .action-bar .btn:not(.icon-only) {
+    min-height: 44px;
+  }
+
+  .btn.icon-only {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-bar {
+    flex-wrap: wrap;
+  }
+
+  .action-bar .btn:not(.icon-only) {
+    min-width: calc(100% - 52px);
+  }
 }
 </style>

@@ -310,11 +310,18 @@ export function useDevices() {
   const getHealthBadge = (deviceId) => {
     const health = deviceHealthCache.value[deviceId];
     if (!health) return { label: '-', color: 'gray', icon: '' };
+
+    if (health.requiresPairing) {
+      return { label: 'Perlu pairing', color: 'red', icon: '' };
+    }
+    if (health.connectionStatus === 'connecting' || health.connectionStatus === 'reconnecting') {
+      return { label: 'Menghubungkan', color: 'yellow', icon: '' };
+    }
     
     const statusMap = {
       healthy: { label: 'Baik', color: 'green', icon: '' },
       warning: { label: 'Periksa', color: 'yellow', icon: '' },
-      critical: { label: 'Error', color: 'red', icon: '' },
+      critical: { label: 'Kritis', color: 'red', icon: '' },
       paused: { label: 'Dijeda', color: 'gray', icon: '' },
       banned: { label: 'Banned', color: 'red', icon: '' },
     };
