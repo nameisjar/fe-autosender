@@ -291,7 +291,11 @@
               </svg>
               Pilih Jadwal
             </label>
-            <select v-model="selections[selectedGroup.name]" class="schedule-select">
+            <select
+              v-model="selections[selectedGroup.name]"
+              class="schedule-select"
+              :disabled="savingMessage"
+            >
               <option v-for="b in selectedGroup.broadcasts" :key="b.id" :value="b.id">
                 {{ fmtWithDay(b.schedule) }} — {{ statusShort(b) }}
               </option>
@@ -367,13 +371,67 @@
           </div>
 
           <div class="detail-section" v-if="selectedOf(selectedGroup)?.message">
-            <label class="detail-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              Pesan
-            </label>
-            <div class="message-preview">{{ selectedOf(selectedGroup).message }}</div>
+            <div class="message-section-header">
+              <label class="detail-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Pesan
+              </label>
+              <button
+                v-if="!isEditingMessage && canEditMessage(selectedOf(selectedGroup))"
+                type="button"
+                class="btn-edit-message"
+                @click="startEditingMessage(selectedOf(selectedGroup))"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                </svg>
+                Edit Pesan
+              </button>
+            </div>
+
+            <template v-if="isEditingMessage">
+              <textarea
+                v-model="messageDraft"
+                class="message-editor"
+                rows="8"
+                maxlength="65535"
+                :disabled="savingMessage"
+                aria-label="Edit isi pesan terjadwal"
+              ></textarea>
+              <div class="message-editor-footer">
+                <span class="message-character-count">
+                  {{ messageDraft.length.toLocaleString("id-ID") }} karakter
+                </span>
+                <div class="message-editor-actions">
+                  <button
+                    type="button"
+                    class="btn-cancel-message"
+                    :disabled="savingMessage"
+                    @click="cancelEditingMessage"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-save-message"
+                    :disabled="
+                      savingMessage ||
+                      !messageDraft.trim() ||
+                      messageDraft === selectedOf(selectedGroup)?.message
+                    "
+                    @click="saveEditedMessage"
+                  >
+                    {{ savingMessage ? "Menyimpan..." : "Simpan Pesan" }}
+                  </button>
+                </div>
+              </div>
+            </template>
+            <div v-else class="message-preview">
+              {{ selectedOf(selectedGroup).message }}
+            </div>
           </div>
 
           <div class="detail-section" v-if="selectedOf(selectedGroup)?.mediaPath">
@@ -1662,6 +1720,71 @@ const loadBroadcastsByName = async (name) => {
     }));
 };
 
+const isEditingMessage = ref(false);
+const messageDraft = ref("");
+const savingMessage = ref(false);
+
+const canEditMessage = (broadcast) => {
+  if (!broadcast || broadcast.isSent) return false;
+  const scheduleTime = new Date(broadcast.schedule).getTime();
+  return Number.isFinite(scheduleTime) && scheduleTime > Date.now();
+};
+
+const startEditingMessage = (broadcast) => {
+  if (!canEditMessage(broadcast)) return;
+  messageDraft.value = String(broadcast.message || "");
+  isEditingMessage.value = true;
+};
+
+const cancelEditingMessage = () => {
+  if (savingMessage.value) return;
+  isEditingMessage.value = false;
+  messageDraft.value = "";
+};
+
+const saveEditedMessage = async () => {
+  const broadcast = selectedGroup.value ? selectedOf(selectedGroup.value) : null;
+  if (!broadcast || savingMessage.value) return;
+
+  if (!canEditMessage(broadcast)) {
+    toast.error("Jadwal ini sudah tidak dapat diedit");
+    cancelEditingMessage();
+    return;
+  }
+
+  if (!messageDraft.value.trim()) {
+    toast.error("Pesan wajib diisi");
+    return;
+  }
+
+  if (messageDraft.value === broadcast.message) {
+    cancelEditingMessage();
+    return;
+  }
+
+  savingMessage.value = true;
+  try {
+    await userApi.patch(`/broadcasts/${broadcast.id}/message`, {
+      message: messageDraft.value,
+    });
+
+    broadcast.message = messageDraft.value;
+    if (selectedGroup.value?._originalSample?.id === broadcast.id) {
+      selectedGroup.value._originalSample.message = messageDraft.value;
+    }
+
+    isEditingMessage.value = false;
+    messageDraft.value = "";
+    toast.success("Pesan jadwal berhasil diperbarui");
+  } catch (e) {
+    const errorMessage =
+      e?.response?.data?.message || e?.message || "Gagal memperbarui pesan jadwal";
+    toast.error(errorMessage);
+  } finally {
+    savingMessage.value = false;
+  }
+};
+
 const openDetailModal = async (group) => {
   // hydrate broadcasts list for this name
   try {
@@ -1682,6 +1805,8 @@ const openDetailModal = async (group) => {
 };
 
 const closeDetailModal = () => {
+  if (savingMessage.value) return;
+  cancelEditingMessage();
   showDetailModal.value = false;
   selectedGroup.value = null;
   outgoingRows.value = [];
@@ -1692,6 +1817,7 @@ watch(
   () => selections.value?.[selectedGroup.value?.name],
   () => {
     if (!selectedGroup.value) return;
+    cancelEditingMessage();
     const selectedBroadcast = selectedOf(selectedGroup.value);
     if (selectedBroadcast?.id) loadOutgoing(selectedBroadcast.id);
   }
@@ -2471,6 +2597,45 @@ onMounted(async () => {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.schedule-select:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.message-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn-edit-message {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid var(--theme-info-border);
+  border-radius: 8px;
+  background: var(--theme-info-soft);
+  color: var(--theme-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit-message:hover {
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+.btn-edit-message svg {
+  width: 14px;
+  height: 14px;
+  color: #3b82f6;
+}
+
 .message-preview {
   padding: 14px 16px;
   background: var(--theme-surface-soft);
@@ -2483,6 +2648,79 @@ onMounted(async () => {
   white-space: pre-wrap;
   max-height: 200px;
   overflow-y: auto;
+}
+
+.message-editor {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  background: var(--theme-surface-soft);
+  border: 1.5px solid #3b82f6;
+  border-radius: 10px;
+  color: var(--theme-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.message-editor:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.message-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.message-character-count {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.message-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-cancel-message,
+.btn-save-message {
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-message {
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-soft);
+  color: var(--theme-text);
+}
+
+.btn-save-message {
+  border: 1px solid #2563eb;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+}
+
+.btn-cancel-message:hover:not(:disabled),
+.btn-save-message:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn-cancel-message:disabled,
+.btn-save-message:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .media-preview {
@@ -3081,5 +3319,25 @@ onMounted(async () => {
 .btn-show-more:hover {
   background: var(--theme-surface-soft);
   border-color: var(--theme-border-strong);
+}
+
+@media (max-width: 520px) {
+  .message-section-header,
+  .message-editor-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .btn-edit-message,
+  .message-editor-actions,
+  .btn-cancel-message,
+  .btn-save-message {
+    width: 100%;
+  }
+
+  .message-editor-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>
