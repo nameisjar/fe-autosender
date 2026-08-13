@@ -4,6 +4,9 @@ import { useToast } from './useToast.js';
 import { userApi } from '../api/http.js';
 import { useRouter } from 'vue-router';
 
+const NOTIFICATION_DEDUP_TTL_MS = 10 * 60 * 1000;
+const MAX_RECENT_NOTIFICATIONS = 1000;
+
 /** Global toast and sound notifications for incoming WhatsApp messages. */
 export function useGlobalNotifications() {
   const toast = useToast();
@@ -14,6 +17,29 @@ export function useGlobalNotifications() {
   let refreshTimer = null;
   let setupGeneration = 0;
   let audioContext = null;
+  const recentNotifications = new Map();
+
+  const isDuplicateNotification = (sessionId, messageId, now = Date.now()) => {
+    if (!messageId) return false;
+
+    const key = `${sessionId}:${messageId}`;
+    const expiresAt = recentNotifications.get(key);
+    if (expiresAt && expiresAt > now) return true;
+
+    recentNotifications.set(key, now + NOTIFICATION_DEDUP_TTL_MS);
+    if (recentNotifications.size > MAX_RECENT_NOTIFICATIONS) {
+      for (const [recentKey, recentExpiresAt] of recentNotifications) {
+        if (recentExpiresAt <= now) recentNotifications.delete(recentKey);
+      }
+      while (recentNotifications.size > MAX_RECENT_NOTIFICATIONS) {
+        const oldestKey = recentNotifications.keys().next().value;
+        if (!oldestKey) break;
+        recentNotifications.delete(oldestKey);
+      }
+    }
+
+    return false;
+  };
 
   const formatPhone = (jid) => {
     if (!jid) return '';
@@ -105,6 +131,8 @@ export function useGlobalNotifications() {
       const eventName = `incoming:${sessionId}`;
       const device = userDevices.find(item => item.sessionId === sessionId);
       const handler = (data) => {
+        if (isDuplicateNotification(sessionId, data?.id)) return;
+
         const senderName = getSenderName(data);
         const preview = data.message?.substring(0, 50) || 'Media/File';
         const openInboxMessage = () => router.push({
@@ -178,6 +206,7 @@ export function useGlobalNotifications() {
     if (connectionCleanup) connectionCleanup();
     if (refreshTimer) clearTimeout(refreshTimer);
     setupGeneration++;
+    recentNotifications.clear();
 
     window.removeEventListener('deviceChanged', scheduleListenerRefresh);
     window.removeEventListener('device:changed', scheduleListenerRefresh);

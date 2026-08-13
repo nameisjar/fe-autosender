@@ -973,6 +973,7 @@ const conversationOpenedFromNavigation = ref(false);
 const replyText = ref('');
 const sendingReply = ref(false);
 const sentMessages = ref([]);
+const sentMessagesConversationJid = ref('');
 const replyTextarea = ref(null);
 const chatMessagesContainer = ref(null);
 const attachmentInput = ref(null);
@@ -1569,6 +1570,7 @@ const onDeviceChange = () => {
   latestSentMessagesRequest++;
   selectedConversation.value = null;
   sentMessages.value = [];
+  sentMessagesConversationJid.value = '';
   conversationReactions.value = [];
   clearConversationAvatars();
   localStorage.setItem('device_selected_id', selectedDeviceId.value);
@@ -1965,16 +1967,42 @@ const setupSocketListener = () => {
 
 const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   const generation = ++conversationOpenGeneration;
+  const conversationFrom = conv.from;
+  const isDifferentConversation = !sameConversationJid(
+    sentMessagesConversationJid.value,
+    conversationFrom,
+  );
+
+  if (isDifferentConversation) {
+    // Invalidate the previous outbox request before changing the selected
+    // conversation. Otherwise its response can overwrite the new chat.
+    latestSentMessagesRequest++;
+    sentMessages.value = [];
+    sentMessagesConversationJid.value = conversationFrom;
+    conversationReactions.value = [];
+    replyText.value = '';
+    clearAttachment();
+    resetAttachmentDrag();
+    closeMessagePopups();
+  }
+
   isPreparingConversation.value = true;
   selectedConversation.value = conv;
 
   try {
     // Mark all messages in this conversation as read before showing it.
-    await markConversationAsRead(conv.from);
+    await markConversationAsRead(conversationFrom);
+
+    // A different conversation may have been selected while the read-status
+    // request was still in flight. Do not start stale history requests.
+    if (
+      generation !== conversationOpenGeneration
+      || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
+    ) return;
 
     await Promise.all([
-      loadSentMessagesFromDatabase(conv.from),
-      loadConversationReactions(conv.from),
+      loadSentMessagesFromDatabase(conversationFrom),
+      loadConversationReactions(conversationFrom),
     ]);
 
     if (generation !== conversationOpenGeneration) return;
@@ -2319,6 +2347,12 @@ const markConversationAsRead = async (from) => {
 const loadSentMessagesFromDatabase = async (conversationFrom) => {
   const requestId = ++latestSentMessagesRequest;
   const requestedDeviceId = selectedDeviceId.value;
+
+  if (!sameConversationJid(sentMessagesConversationJid.value, conversationFrom)) {
+    sentMessages.value = [];
+    sentMessagesConversationJid.value = conversationFrom;
+  }
+
   try {
     const device = devices.value.find(d => d.id === selectedDeviceId.value);
     if (!device) {
@@ -2350,6 +2384,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
       requestId !== latestSentMessagesRequest
       || requestedDeviceId !== selectedDeviceId.value
       || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
+      || !sameConversationJid(sentMessagesConversationJid.value, conversationFrom)
     ) return;
     
     // ✅ CRITICAL: Handle different response formats
@@ -2397,6 +2432,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
       requestId === latestSentMessagesRequest
       && requestedDeviceId === selectedDeviceId.value
       && sameConversationJid(selectedConversation.value?.from, conversationFrom)
+      && sameConversationJid(sentMessagesConversationJid.value, conversationFrom)
     ) {
       toast.error(e?.response?.data?.message || 'Gagal memuat riwayat pesan terkirim');
     }
@@ -2411,6 +2447,7 @@ const closeConversation = () => {
   conversationOpenedFromNavigation.value = false;
   conversationOpenGeneration++;
   latestSentMessagesRequest++;
+  sentMessagesConversationJid.value = '';
   isPreparingConversation.value = false;
   isConversationFullscreen.value = false;
   resetAttachmentDrag();

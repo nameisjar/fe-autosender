@@ -294,7 +294,7 @@
             <select
               v-model="selections[selectedGroup.name]"
               class="schedule-select"
-              :disabled="savingMessage"
+              :disabled="savingMessage || savingMedia"
             >
               <option v-for="b in selectedGroup.broadcasts" :key="b.id" :value="b.id">
                 {{ fmtWithDay(b.schedule) }} — {{ statusShort(b) }}
@@ -379,7 +379,11 @@
                 Pesan
               </label>
               <button
-                v-if="!isEditingMessage && canEditMessage(selectedOf(selectedGroup))"
+                v-if="
+                  !isEditingMessage &&
+                  !isEditingMedia &&
+                  canEditMessage(selectedOf(selectedGroup))
+                "
                 type="button"
                 class="btn-edit-message"
                 @click="startEditingMessage(selectedOf(selectedGroup))"
@@ -434,16 +438,41 @@
             </div>
           </div>
 
-          <div class="detail-section" v-if="selectedOf(selectedGroup)?.mediaPath">
-            <label class="detail-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="m21 15-5-5L5 21" />
-              </svg>
-              Media
-            </label>
-            <div class="media-preview">
+          <div class="detail-section" v-if="selectedOf(selectedGroup)">
+            <div class="message-section-header">
+              <label class="detail-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+                Media
+              </label>
+              <button
+                v-if="
+                  !isEditingMedia &&
+                  !isEditingMessage &&
+                  canEditMessage(selectedOf(selectedGroup))
+                "
+                type="button"
+                class="btn-edit-message"
+                @click="startEditingMedia"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                {{ selectedOf(selectedGroup)?.mediaPath ? "Ganti Media" : "Tambah Media" }}
+              </button>
+            </div>
+
+            <div
+              v-if="
+                selectedOf(selectedGroup)?.mediaPath &&
+                !mediaWillBeRemoved &&
+                !isEditingMedia
+              "
+              class="media-preview"
+            >
               <a
                 :href="mediaUrl(selectedOf(selectedGroup).mediaPath)"
                 target="_blank"
@@ -460,7 +489,7 @@
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
-                Lihat Media
+                {{ displayMediaFileName(selectedOf(selectedGroup)) }}
               </a>
               <img
                 v-if="isImagePath(selectedOf(selectedGroup).mediaPath)"
@@ -468,6 +497,59 @@
                 alt="media"
                 class="media-thumb"
               />
+            </div>
+
+            <div
+              v-else-if="!isEditingMedia"
+              class="no-media-placeholder"
+            >
+              Tidak ada media pada jadwal ini
+            </div>
+
+            <div
+              v-if="isEditingMedia"
+              class="media-editor-panel"
+            >
+              <MediaUpload
+                v-model="scheduledMediaDraftModel"
+                :existing-url="
+                  selectedOf(selectedGroup)?.mediaPath
+                    ? mediaUrl(selectedOf(selectedGroup).mediaPath)
+                    : ''
+                "
+                :existing-name="displayMediaFileName(selectedOf(selectedGroup))"
+                :accept-types="scheduledMediaAccept"
+                :max-size="scheduledMediaMaxSize"
+                :disabled="savingMedia"
+                :removed="mediaWillBeRemoved"
+                compact
+                embedded
+                @remove-existing="markMediaForRemoval"
+                @restore-existing="undoRemoveMedia"
+              />
+
+              <p class="media-editor-help">
+                Maksimal 25 MB. Mendukung gambar, video, audio, dan dokumen.
+              </p>
+
+              <div class="message-editor-actions media-editor-actions">
+                <button
+                  type="button"
+                  class="btn-cancel-message"
+                  :disabled="savingMedia"
+                  @click="cancelEditingMedia"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  class="btn-save-message"
+                  :disabled="savingMedia || (!mediaDraft && !mediaWillBeRemoved)"
+                  @click="saveEditedMedia"
+                >
+                  {{ savingMedia ? "Menyimpan..." : "Simpan Media" }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -711,6 +793,7 @@ import { deviceApi, userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import { mediaUrl } from "../utils/mediaUrl.js";
 import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
+import MediaUpload from "../components/MediaUpload.vue";
 
 const toast = useToast();
 
@@ -1298,6 +1381,7 @@ const load = async () => {
         schedule: row.sampleSchedule || row.nextSchedule,
         message: row.sampleMessage,
         mediaPath: row.sampleMediaPath,
+        mediaFileName: row.sampleMediaFileName || null,
         recipients: Array.isArray(row.sampleRecipients) ? row.sampleRecipients : [],
         status: row.sampleStatus,
         isSent: row.sampleIsSent,
@@ -1500,6 +1584,12 @@ const onDeviceChange = () => {
 };
 
 const isImagePath = (p) => /\.(png|jpe?g|webp|gif)$/i.test(p || "");
+
+const displayMediaFileName = (broadcast) => {
+  if (broadcast?.mediaFileName) return broadcast.mediaFileName;
+  const normalizedPath = String(broadcast?.mediaPath || "").replace(/\\/g, "/");
+  return normalizedPath.split("/").pop() || "Lihat Media";
+};
 
 // Fungsi untuk mendapatkan informasi pesan yang gagal terkirim
 const getFailedInfo = (b) => {
@@ -1711,6 +1801,7 @@ const loadBroadcastsByName = async (name) => {
       schedule: b.schedule,
       message: b.message,
       mediaPath: b.mediaPath,
+      mediaFileName: b.mediaFileName || null,
       recipients: Array.isArray(b.recipients) ? b.recipients : [],
       status: b.status,
       isSent: b.isSent,
@@ -1732,6 +1823,7 @@ const canEditMessage = (broadcast) => {
 
 const startEditingMessage = (broadcast) => {
   if (!canEditMessage(broadcast)) return;
+  cancelEditingMedia();
   messageDraft.value = String(broadcast.message || "");
   isEditingMessage.value = true;
 };
@@ -1785,6 +1877,103 @@ const saveEditedMessage = async () => {
   }
 };
 
+const scheduledMediaAccept =
+  ".jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.webm,.mp3,.ogg,.wav,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp,.rtf,.json,.zip,.rar,.7z";
+const scheduledMediaMaxSize = 25 * 1024 * 1024;
+const isEditingMedia = ref(false);
+const savingMedia = ref(false);
+const mediaDraft = ref(null);
+const mediaWillBeRemoved = ref(false);
+const scheduledMediaDraftModel = computed({
+  get: () => mediaDraft.value,
+  set: (file) => {
+    mediaDraft.value = file;
+    if (file) mediaWillBeRemoved.value = false;
+  },
+});
+
+const clearMediaSelection = () => {
+  if (savingMedia.value) return;
+  mediaDraft.value = null;
+};
+
+const cancelEditingMedia = () => {
+  if (savingMedia.value) return;
+  clearMediaSelection();
+  mediaWillBeRemoved.value = false;
+  isEditingMedia.value = false;
+};
+
+const startEditingMedia = () => {
+  const broadcast = selectedGroup.value ? selectedOf(selectedGroup.value) : null;
+  if (!canEditMessage(broadcast)) return;
+  cancelEditingMessage();
+  clearMediaSelection();
+  mediaWillBeRemoved.value = false;
+  isEditingMedia.value = true;
+};
+
+const markMediaForRemoval = () => {
+  clearMediaSelection();
+  mediaWillBeRemoved.value = true;
+};
+
+const undoRemoveMedia = () => {
+  if (savingMedia.value) return;
+  mediaWillBeRemoved.value = false;
+};
+
+const saveEditedMedia = async () => {
+  const broadcast = selectedGroup.value ? selectedOf(selectedGroup.value) : null;
+  if (!broadcast || savingMedia.value) return;
+
+  if (!canEditMessage(broadcast)) {
+    toast.error("Jadwal ini sudah tidak dapat diedit");
+    cancelEditingMedia();
+    return;
+  }
+
+  if (!mediaDraft.value && !mediaWillBeRemoved.value) return;
+
+  savingMedia.value = true;
+  try {
+    let response;
+    if (mediaWillBeRemoved.value) {
+      response = await userApi.delete(`/broadcasts/${broadcast.id}/media`);
+    } else {
+      const formData = new FormData();
+      formData.append("media", mediaDraft.value);
+      response = await userApi.patch(`/broadcasts/${broadcast.id}/media`, formData);
+    }
+
+    const nextMediaPath = response?.data?.mediaPath || null;
+    const nextMediaFileName = response?.data?.mediaFileName || null;
+    broadcast.mediaPath = nextMediaPath;
+    broadcast.mediaFileName = nextMediaFileName;
+    if (selectedGroup.value?._originalSample?.id === broadcast.id) {
+      selectedGroup.value._originalSample.mediaPath = nextMediaPath;
+      selectedGroup.value._originalSample.mediaFileName = nextMediaFileName;
+    }
+
+    const successMessage = mediaWillBeRemoved.value
+      ? "Media berhasil dihapus dari jadwal"
+      : nextMediaPath
+        ? "Media jadwal berhasil diperbarui"
+        : "Perubahan media berhasil disimpan";
+
+    mediaDraft.value = null;
+    mediaWillBeRemoved.value = false;
+    isEditingMedia.value = false;
+    toast.success(successMessage);
+  } catch (e) {
+    const errorMessage =
+      e?.response?.data?.message || e?.message || "Gagal memperbarui media jadwal";
+    toast.error(errorMessage);
+  } finally {
+    savingMedia.value = false;
+  }
+};
+
 const openDetailModal = async (group) => {
   // hydrate broadcasts list for this name
   try {
@@ -1805,8 +1994,9 @@ const openDetailModal = async (group) => {
 };
 
 const closeDetailModal = () => {
-  if (savingMessage.value) return;
+  if (savingMessage.value || savingMedia.value) return;
   cancelEditingMessage();
+  cancelEditingMedia();
   showDetailModal.value = false;
   selectedGroup.value = null;
   outgoingRows.value = [];
@@ -1818,6 +2008,7 @@ watch(
   () => {
     if (!selectedGroup.value) return;
     cancelEditingMessage();
+    cancelEditingMedia();
     const selectedBroadcast = selectedOf(selectedGroup.value);
     if (selectedBroadcast?.id) loadOutgoing(selectedBroadcast.id);
   }
@@ -2765,6 +2956,43 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.no-media-placeholder {
+  padding: 14px 16px;
+  border: 1px dashed var(--theme-border-strong);
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.media-editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--theme-info-border);
+  border-radius: 10px;
+  background: var(--theme-info-soft);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.media-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.media-editor-help {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.media-editor-help {
+  margin: 0;
+}
+
 .recipients-grid {
   display: flex;
   flex-wrap: wrap;
@@ -3339,5 +3567,6 @@ onMounted(async () => {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
+
 }
 </style>

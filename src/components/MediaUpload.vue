@@ -1,6 +1,9 @@
 <template>
-  <div class="card">
-    <div class="card-header">
+  <div
+    class="card"
+    :class="{ 'is-compact': compact, 'is-embedded': embedded }"
+  >
+    <div v-if="!embedded" class="card-header">
       <h3 class="card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -37,25 +40,27 @@
         class="upload-zone"
         :class="{
           'is-dragover': isDragOver,
-          'has-media': modelValue,
-          'is-empty': !modelValue,
+          'has-media': hasMedia,
+          'is-empty': !hasMedia && !removed,
+          'is-disabled': disabled,
         }"
         @drop.prevent="onDrop"
-        @dragover.prevent="isDragOver = true"
+        @dragover.prevent="onDragOver"
         @dragleave.prevent="isDragOver = false"
         @dragend.prevent="isDragOver = false"
-        @click="!modelValue && triggerFileInput()"
+        @click="!hasMedia && !removed && triggerFileInput()"
       >
         <input
           ref="fileInput"
           type="file"
           @change="onFile"
           :accept="acceptTypes"
+          :disabled="disabled"
           hidden
         />
 
         <!-- Empty State -->
-        <div v-if="!modelValue" class="upload-empty">
+        <div v-if="!hasMedia && !removed" class="upload-empty">
           <div class="upload-icon-wrapper">
             <svg
               class="upload-icon"
@@ -79,7 +84,12 @@
             </p>
             <p class="upload-subtitle">Mendukung: Gambar, Video, Audio, dan Dokumen</p>
           </div>
-          <button type="button" class="btn-upload" @click.stop="triggerFileInput">
+          <button
+            type="button"
+            class="btn-upload"
+            :disabled="disabled"
+            @click.stop="triggerFileInput"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
@@ -89,13 +99,31 @@
           </button>
         </div>
 
+        <div v-else-if="removed" class="removed-preview">
+          <div>
+            <strong>Media akan dihapus</strong>
+            <span>Perubahan diterapkan setelah disimpan.</span>
+          </div>
+          <button type="button" :disabled="disabled" @click.stop="restoreExisting">
+            Urungkan
+          </button>
+        </div>
+
         <!-- File Preview -->
         <div v-else class="media-preview-wrapper">
           <!-- Image Preview -->
           <div v-if="isImage" class="media-preview image-preview">
-            <img :src="mediaPreview" alt="Preview" />
+            <img :src="currentPreview" :alt="displayName || 'Preview media'" />
+            <span v-if="displayName" class="preview-file-name" :title="displayName">
+              {{ displayName }}
+            </span>
             <div class="preview-overlay">
-              <button type="button" class="btn-change" @click.stop="triggerFileInput">
+              <button
+                type="button"
+                class="btn-change"
+                :disabled="disabled"
+                @click.stop="triggerFileInput"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -107,7 +135,12 @@
                 </svg>
                 Ganti
               </button>
-              <button type="button" class="btn-remove" @click.stop="removeMedia">
+              <button
+                type="button"
+                class="btn-remove"
+                :disabled="disabled"
+                @click.stop="removeMedia"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -135,13 +168,16 @@
               </svg>
             </div>
             <div class="doc-details">
-              <p class="doc-name">{{ mediaName }}</p>
-              <p class="doc-size">{{ formatFileSize(modelValue.size) }}</p>
+              <p class="doc-name">{{ displayName }}</p>
+              <p class="doc-size">
+                {{ modelValue ? formatFileSize(modelValue.size) : "Media saat ini" }}
+              </p>
             </div>
             <div class="doc-actions">
               <button
                 type="button"
                 class="btn-icon"
+                :disabled="disabled"
                 @click.stop="triggerFileInput"
                 title="Ganti file"
               >
@@ -158,6 +194,7 @@
               <button
                 type="button"
                 class="btn-icon btn-icon-danger"
+                :disabled="disabled"
                 @click.stop="removeMedia"
                 title="Hapus file"
               >
@@ -182,7 +219,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useToast } from "../composables/useToast.js";
 
 const props = defineProps({
@@ -192,31 +229,89 @@ const props = defineProps({
   },
   maxSize: {
     type: Number,
-    default: 10 * 1024 * 1024, // 10MB
+    default: 25 * 1024 * 1024,
   },
   acceptTypes: {
     type: String,
     default: ".png,.jpg,.jpeg,.webp,.gif,.mp4,.mp3,.wav,.pdf,.doc,.docx,.xls,.xlsx,.txt",
   },
+  existingUrl: {
+    type: String,
+    default: "",
+  },
+  existingName: {
+    type: String,
+    default: "",
+  },
+  compact: {
+    type: Boolean,
+    default: false,
+  },
+  embedded: {
+    type: Boolean,
+    default: false,
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  removed: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "remove-existing", "restore-existing"]);
 
 const toast = useToast();
 const isDragOver = ref(false);
 const fileInput = ref(null);
 const mediaPreview = ref("");
 
-const isImage = computed(() => props.modelValue?.type?.startsWith("image"));
-const mediaName = computed(() => props.modelValue?.name || "");
+const hasExisting = computed(() => Boolean(props.existingUrl) && !props.removed);
+const hasMedia = computed(() => Boolean(props.modelValue) || hasExisting.value);
+const displayName = computed(
+  () => props.modelValue?.name || props.existingName || "Media terjadwal"
+);
+const isImage = computed(() => {
+  if (props.modelValue) return props.modelValue.type?.startsWith("image/");
+  return /\.(avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(
+    props.existingName || props.existingUrl
+  );
+});
+const currentPreview = computed(() => mediaPreview.value || props.existingUrl);
+
+function releasePreview() {
+  if (mediaPreview.value) URL.revokeObjectURL(mediaPreview.value);
+  mediaPreview.value = "";
+}
+
+watch(
+  () => props.modelValue,
+  (file) => {
+    releasePreview();
+    if (file?.type?.startsWith("image/")) {
+      mediaPreview.value = URL.createObjectURL(file);
+    }
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(releasePreview);
 
 function triggerFileInput() {
-  if (props.modelValue) return;
+  if (props.disabled) return;
+  if (fileInput.value) fileInput.value.value = "";
   fileInput.value?.click();
+}
+
+function onDragOver() {
+  if (!props.disabled) isDragOver.value = true;
 }
 
 function onDrop(e) {
   isDragOver.value = false;
+  if (props.disabled) return;
   const file = e.dataTransfer?.files?.[0];
   if (file) {
     handleFile(file);
@@ -224,6 +319,7 @@ function onDrop(e) {
 }
 
 function onFile(e) {
+  if (props.disabled) return;
   const file = e.target.files?.[0];
   if (file) {
     handleFile(file);
@@ -243,20 +339,45 @@ function handleFile(file) {
     return;
   }
 
-  emit("update:modelValue", file);
-  if (file.type?.startsWith("image")) {
-    mediaPreview.value = URL.createObjectURL(file);
-  } else {
-    mediaPreview.value = "";
+  if (!isAcceptedFile(file)) {
+    toast.error("Jenis file tidak didukung");
+    if (fileInput.value) fileInput.value.value = "";
+    return;
   }
+
+  emit("update:modelValue", file);
 }
 
 function removeMedia() {
-  emit("update:modelValue", null);
-  mediaPreview.value = "";
+  if (props.disabled) return;
+  if (props.modelValue) {
+    emit("update:modelValue", null);
+  } else if (hasExisting.value) {
+    emit("remove-existing");
+  }
   if (fileInput.value) {
     fileInput.value.value = "";
   }
+}
+
+function restoreExisting() {
+  if (!props.disabled) emit("restore-existing");
+}
+
+function isAcceptedFile(file) {
+  const accepted = props.acceptTypes
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  if (!accepted.length) return true;
+
+  const fileName = String(file.name || "").toLowerCase();
+  const fileType = String(file.type || "").toLowerCase();
+  return accepted.some((rule) => {
+    if (rule.startsWith(".")) return fileName.endsWith(rule);
+    if (rule.endsWith("/*")) return fileType.startsWith(rule.slice(0, -1));
+    return fileType === rule;
+  });
 }
 
 function formatFileSize(bytes) {
@@ -275,6 +396,18 @@ function formatFileSize(bytes) {
   border: 1px solid var(--theme-border);
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card.is-embedded {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.card.is-embedded .card-body {
+  padding: 0;
 }
 
 .card-header {
@@ -371,6 +504,11 @@ function formatFileSize(bytes) {
   background: var(--theme-info-soft);
   transform: scale(1.01);
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.upload-zone.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .upload-zone.has-media {
@@ -486,6 +624,23 @@ function formatFileSize(bytes) {
   border-radius: 12px;
 }
 
+.preview-file-name {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .image-preview:hover .preview-overlay {
   opacity: 1;
 }
@@ -527,6 +682,15 @@ function formatFileSize(bytes) {
 .btn-remove svg {
   width: 16px;
   height: 16px;
+}
+
+.btn-change:disabled,
+.btn-remove:disabled,
+.btn-upload:disabled,
+.btn-icon:disabled,
+.removed-preview button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .document-preview {
@@ -611,6 +775,71 @@ function formatFileSize(bytes) {
   background: var(--theme-danger-soft);
 }
 
+.removed-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--theme-danger-border);
+  border-radius: 10px;
+  background: var(--theme-danger-soft);
+  color: var(--theme-danger-text);
+}
+
+.removed-preview > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.removed-preview span {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.removed-preview button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.card.is-compact .upload-zone.is-empty {
+  padding: 24px 18px;
+}
+
+.card.is-compact .upload-empty {
+  gap: 12px;
+}
+
+.card.is-compact .upload-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.card.is-compact .upload-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.card.is-compact .image-preview {
+  min-height: 160px;
+  padding: 12px;
+}
+
+.card.is-compact .image-preview img {
+  max-height: 220px;
+}
+
+.card.is-compact .media-preview.document-preview {
+  padding: 14px;
+}
+
 @media (max-width: 640px) {
   .upload-zone.is-empty {
     padding: 32px 20px;
@@ -633,6 +862,32 @@ function formatFileSize(bytes) {
 
   .upload-subtitle {
     font-size: 12px;
+  }
+
+  .card.is-compact .upload-zone.is-empty {
+    padding: 20px 14px;
+  }
+
+  .card.is-compact .image-preview {
+    min-height: 140px;
+  }
+
+  .removed-preview {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .document-preview {
+    align-items: flex-start;
+  }
+}
+
+@media (hover: none) {
+  .image-preview .preview-overlay {
+    align-items: flex-end;
+    padding-bottom: 14px;
+    background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.72));
+    opacity: 1;
   }
 }
 </style>

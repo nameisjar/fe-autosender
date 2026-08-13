@@ -158,6 +158,31 @@ describe('useGlobalNotifications', () => {
     wrapper.unmount();
   });
 
+  it('shows only one toast when the same incoming message event is repeated', async () => {
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+
+    await flushPromises();
+    const [incomingHandler] = socketHarness.listeners.get('incoming:session-1');
+    const message = {
+      id: 'duplicate-message-1',
+      from: '628123@s.whatsapp.net',
+      message: 'Pesan yang sama',
+      pushName: 'Alya',
+    };
+
+    incomingHandler(message);
+    incomingHandler(message);
+    incomingHandler(message);
+
+    expect(notificationHarness.info).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+  });
+
   it('keeps the WhatsApp group name when a group notification opens Inbox', async () => {
     const wrapper = mount(defineComponent({
       setup() {
