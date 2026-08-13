@@ -816,6 +816,13 @@ import {
   groupMessageReactions,
   sameConversationJid,
 } from '../utils/messageReactions.js';
+import {
+  createOutgoingMessageId,
+  mergeOutgoingResponseStatus,
+  mergeOutgoingSnapshotStatuses,
+  mergeOutgoingStatus,
+  normalizeOutgoingUiStatus,
+} from '../utils/outgoingStatus.js';
 
 const toast = useToast();
 const route = useRoute();
@@ -1775,54 +1782,37 @@ const setupSocketListener = () => {
         const currentStatus = sentMessages.value[msgIndex].status;
         const newStatus = data.status;
         
-        const statusHierarchy = {
-          error: 0,
-          sending: 1,
-          server_ack: 2,
-          delivery_ack: 3,
-          read: 4,
-          played: 5
-        };
-        
-        const currentLevel = statusHierarchy[currentStatus] || 0;
-        const newLevel = statusHierarchy[newStatus] || 0;
-        
-        // WhatsApp can return a terminal NACK after it initially accepted the
-        // stanza (server_ack). Show the red error icon immediately, but never
-        // overwrite a message that was already delivered/read.
-        const shouldApplyError =
-          newStatus === 'error' &&
-          ['sending', 'server_ack'].includes(currentStatus);
+        const normalizedCurrentStatus = normalizeOutgoingUiStatus(currentStatus) || 'sending';
+        const mergedStatus = mergeOutgoingStatus(currentStatus, newStatus);
+        let messageChanged = false;
 
-        if (shouldApplyError || newLevel > currentLevel) {
-          sentMessages.value[msgIndex].status = newStatus;
+        if (mergedStatus !== normalizedCurrentStatus) {
+          sentMessages.value[msgIndex].status = mergedStatus;
+          messageChanged = true;
 
-          if (newStatus === 'error') {
+          if (mergedStatus === 'error') {
             const errorMessage = `WhatsApp menolak pesan${data.errorCode ? ` (kode ${data.errorCode})` : ''}.`;
             toast.error(errorMessage);
           }
-          
-          // Also update waMessageId if it was null before
-          if (!sentMessages.value[msgIndex].waMessageId && data.waMessageId) {
-            sentMessages.value[msgIndex].waMessageId = data.waMessageId;
-          }
-          
-          if (data.readCount !== undefined) {
-            sentMessages.value[msgIndex].readCount = data.readCount;
-            sentMessages.value[msgIndex].readBy = data.readBy || [];
-          }
-          
-          sentMessages.value = [...sentMessages.value];
-
-          // ✅ Toast notification untuk status update dinonaktifkan
-          // Status sudah terlihat dari icon checkmark di chat bubble
-        } else if (newLevel === currentLevel) {
-          if (data.readCount !== undefined && data.readCount > (sentMessages.value[msgIndex].readCount || 0)) {
-            sentMessages.value[msgIndex].readCount = data.readCount;
-            sentMessages.value[msgIndex].readBy = data.readBy || [];
-            sentMessages.value = [...sentMessages.value];
-          }
         }
+
+        if (!sentMessages.value[msgIndex].waMessageId && data.waMessageId) {
+          sentMessages.value[msgIndex].waMessageId = data.waMessageId;
+          messageChanged = true;
+        }
+
+        if (
+          data.readCount !== undefined &&
+          data.readCount > (sentMessages.value[msgIndex].readCount || 0)
+        ) {
+          sentMessages.value[msgIndex].readCount = data.readCount;
+          sentMessages.value[msgIndex].readBy = data.readBy || [];
+          messageChanged = true;
+        }
+
+        if (messageChanged) sentMessages.value = [...sentMessages.value];
+
+        // Status pengiriman terlihat dari ikon pada bubble chat.
       }
     };
 
@@ -2267,26 +2257,11 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
     // Kita perlu oldest first untuk chat UI
     messages = messages.reverse();
     
-    // Transform to sentMessages format
-    sentMessages.value = messages.map((msg, index) => {
+    // Transform the database snapshot before merging it with newer local events.
+    const snapshotMessages = messages.map(msg => {
       const dbStatus = msg.status?.toLowerCase() || '';
       
-      // Map database status to UI status
-      let uiStatus = 'server_ack';
-      
-      if (dbStatus === 'delivery_ack') {
-        uiStatus = 'delivery_ack';
-      } else if (dbStatus === 'read') {
-        uiStatus = 'read';
-      } else if (dbStatus === 'played') {
-        uiStatus = 'read';
-      } else if (dbStatus === 'failed' || dbStatus === 'error') {
-        uiStatus = 'error';
-      } else if (dbStatus === 'pending') {
-        uiStatus = 'sending';
-      } else if (dbStatus === 'revoked') {
-        uiStatus = 'revoked';
-      }
+      const uiStatus = normalizeOutgoingUiStatus(dbStatus) || 'sending';
       
       return {
         tempId: msg.id,
@@ -2304,9 +2279,10 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
       };
     });
     
-    // ✅ CRITICAL: Force Vue reactivity trigger
-    // Ensure Vue detects array change and re-renders UI
-    sentMessages.value = [...sentMessages.value];
+    sentMessages.value = mergeOutgoingSnapshotStatuses(
+      sentMessages.value,
+      snapshotMessages,
+    );
   } catch (e) {
     if (
       requestId === latestSentMessagesRequest
@@ -2594,7 +2570,7 @@ const sendMediaReply = async () => {
     audio: '[Audio]',
     document: file.name,
   };
-  const tempId = `media-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const tempId = createOutgoingMessageId();
   const optimisticMessage = {
     tempId,
     text: caption || placeholders[kind],
@@ -2619,23 +2595,34 @@ const sendMediaReply = async () => {
     const formData = new FormData();
     formData.append('recipient', recipient);
     formData.append('caption', caption);
+    formData.append('messageId', tempId);
     formData.append('media', file);
 
     const { data } = await deviceApi.post('/messages/send/media', formData);
     const saved = data?.message;
     if (!saved?.id) throw new Error('Media terkirim tetapi data pesan tidak ditemukan');
 
-    const msgIndex = sentMessages.value.findIndex(message => message.tempId === tempId);
+    const savedMessageId = saved.waMessageId || saved.id;
+    const msgIndex = sentMessages.value.findIndex(message =>
+      message.tempId === tempId ||
+      message.tempId === savedMessageId ||
+      message.waMessageId === savedMessageId
+    );
+    let responseUiStatus = normalizeOutgoingUiStatus(saved.status) || 'sending';
     if (msgIndex >= 0) {
+      responseUiStatus = mergeOutgoingResponseStatus(
+        sentMessages.value[msgIndex].status,
+        saved.status,
+      );
       sentMessages.value[msgIndex] = {
         ...sentMessages.value[msgIndex],
-        tempId: saved.id,
-        waMessageId: saved.waMessageId || saved.id,
+        tempId: savedMessageId,
+        waMessageId: savedMessageId,
         text: saved.message || optimisticMessage.text,
         mediaPath: saved.mediaPath || localPreviewUrl,
         fileName: saved.fileName || optimisticMessage.fileName,
         timestamp: saved.createdAt || optimisticMessage.timestamp,
-        status: 'server_ack',
+        status: responseUiStatus,
       };
       sentMessages.value = [...sentMessages.value];
     }
@@ -2647,12 +2634,17 @@ const sendMediaReply = async () => {
     const previousSummary = summaryIndex >= 0
       ? outgoingConversationSummaries.value[summaryIndex]
       : null;
+    responseUiStatus = mergeOutgoingResponseStatus(
+      previousSummary?.status || responseUiStatus,
+      responseUiStatus,
+    );
     const summary = {
       ...previousSummary,
       ...saved,
       to: recipient,
       message: saved.message || optimisticMessage.text,
       createdAt: saved.createdAt || optimisticMessage.timestamp,
+      status: responseUiStatus,
       messageCount:
         (Number(previousSummary?.messageCount) || 0) +
         (previousSummary?.id === saved.id ? 0 : 1),
@@ -2661,7 +2653,9 @@ const sendMediaReply = async () => {
     if (summaryIndex >= 0) outgoingConversationSummaries.value.splice(summaryIndex, 1);
     outgoingConversationSummaries.value.unshift(summary);
 
-    toast.info('Media diterima server, menunggu konfirmasi WhatsApp');
+    // Status pengiriman sudah ditampilkan oleh ikon pada bubble chat.
+    // Toast hanya digunakan untuk kegagalan agar respons awal server tidak
+    // disalahartikan sebagai konfirmasi bahwa media telah sampai ke penerima.
     setTimeout(() => scrollToBottom(), 50);
   } catch (error) {
     const msgIndex = sentMessages.value.findIndex(message => message.tempId === tempId);
@@ -2695,7 +2689,7 @@ const sendReply = async () => {
   if (!replyText.value.trim()) return;
 
   const messageText = replyText.value.trim();
-  const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const tempId = createOutgoingMessageId();
   
   const optimisticMessage = {
     tempId,
@@ -2733,6 +2727,7 @@ const sendReply = async () => {
         type: isGroup ? 'group' : 'number',
         message: messageText,
         delay: 0,
+        options: { messageId: tempId },
       }
     ]);
 
@@ -2747,15 +2742,33 @@ const sendReply = async () => {
       throw new Error('Tidak ada hasil dari pengiriman pesan');
     }
     
-    const waMessageId = results[0]?.result?.key?.id;
-    const messageTimestamp = results[0]?.result?.messageTimestamp;
+    const resultEntry = results[0];
+    const savedMessage = resultEntry?.message || resultEntry?.outgoingMessage || null;
+    const databaseStatus = savedMessage?.status || resultEntry?.status;
+    // The durable row was reserved before send and is the canonical tracking
+    // identity. Prefer it over the transport response so an unexpected Baileys
+    // ID mismatch cannot detach the optimistic bubble from later DB updates.
+    const waMessageId =
+      savedMessage?.waMessageId ||
+      savedMessage?.id ||
+      resultEntry?.result?.key?.id;
+    const messageTimestamp = resultEntry?.result?.messageTimestamp;
 
-    const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
+    const msgIndex = sentMessages.value.findIndex(m =>
+      m.tempId === tempId ||
+      m.tempId === waMessageId ||
+      m.waMessageId === waMessageId
+    );
+    let responseUiStatus = normalizeOutgoingUiStatus(databaseStatus) || 'sending';
     
     if (msgIndex !== -1) {
+      responseUiStatus = mergeOutgoingResponseStatus(
+        sentMessages.value[msgIndex].status,
+        databaseStatus,
+      );
       sentMessages.value[msgIndex] = {
         ...sentMessages.value[msgIndex],
-        status: 'server_ack',
+        status: responseUiStatus,
         waMessageId: waMessageId,
         tempId: waMessageId,
         timestamp: messageTimestamp ? new Date(Number(messageTimestamp) * 1000).toISOString() : sentMessages.value[msgIndex].timestamp,
@@ -2768,7 +2781,7 @@ const sendReply = async () => {
           tempId: waMessageId,
           text: messageText,
           timestamp: messageTimestamp ? new Date(Number(messageTimestamp) * 1000).toISOString() : new Date().toISOString(),
-          status: 'server_ack',
+          status: responseUiStatus,
           waMessageId: waMessageId,
           isGroup: selectedConversation.value.isGroup || false,
           readBy: [],
@@ -2780,14 +2793,16 @@ const sendReply = async () => {
       }
     }
     
-    toast.info('Pesan diterima server, menunggu konfirmasi WhatsApp');
-
     const existingSummaryIndex = outgoingConversationSummaries.value.findIndex(
       message => message.to === recipient,
     );
     const existingSummary = existingSummaryIndex >= 0
       ? outgoingConversationSummaries.value[existingSummaryIndex]
       : null;
+    responseUiStatus = mergeOutgoingResponseStatus(
+      existingSummary?.status || responseUiStatus,
+      responseUiStatus,
+    );
     const summary = {
       ...existingSummary,
       id: waMessageId || tempId,
@@ -2797,7 +2812,7 @@ const sendReply = async () => {
       createdAt: messageTimestamp
         ? new Date(Number(messageTimestamp) * 1000).toISOString()
         : new Date().toISOString(),
-      status: 'server_ack',
+      status: responseUiStatus,
       isGroup,
       contact: selectedConversation.value.contact || existingSummary?.contact || null,
       messageCount:
