@@ -143,7 +143,7 @@
         <table class="schedules-table" v-if="!loading && visibleGroups.length > 0">
           <thead>
             <tr>
-              <th class="col-expand"></th>
+              <th class="col-expand">Detail</th>
               <th class="col-name">Nama Jadwal</th>
               <th class="col-schedule">Waktu Jadwal</th>
               <th class="col-status">Status</th>
@@ -2130,7 +2130,7 @@ onMounted(async () => {
 }
 
 .col-expand {
-  width: 50px;
+  width: 80px;
   text-align: center;
 }
 

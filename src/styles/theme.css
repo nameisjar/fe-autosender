@@ -393,6 +393,13 @@ html.dark .recipient-chip svg {
     color: #ffffff !important;
 }
 
+/* Status labels stay readable on semantic dark-mode backgrounds. */
+html.dark .status-badge,
+html.dark .btn-toggle-status,
+html.dark .btn-toggle-status svg {
+    color: #ffffff !important;
+}
+
 /* Keep primary page titles text-only across user and admin menus. */
 .page-header .header-content > h2 > svg:first-child,
 .page-header > div:first-child > h2 > svg:first-child {
