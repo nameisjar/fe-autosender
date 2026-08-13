@@ -848,6 +848,23 @@ const labelToPhones = computed(() => {
   return map;
 });
 
+const normalizeRecipientPhone = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  let normalized = raw
+    .replace(/@(s\.whatsapp\.net|c\.us|lid)$/i, "")
+    .replace(/\D/g, "");
+
+  if (normalized.startsWith("0")) {
+    normalized = `62${normalized.slice(1)}`;
+  } else if (normalized.startsWith("8")) {
+    normalized = `62${normalized}`;
+  }
+
+  return normalized;
+};
+
 // Map nomor telepon ke nama kontak
 const phoneToContactMap = computed(() => {
   const map = {};
@@ -861,16 +878,15 @@ const phoneToContactMap = computed(() => {
     const fullName = lastName ? `${firstName} ${lastName}` : firstName;
     const displayName = fullName || phone;
 
-    // Normalisasi nomor untuk pencocokan yang lebih baik
-    const normalized = phone.replace(/@s\.whatsapp\.net$/i, "").replace(/\D/g, "");
+    // Normalisasi nomor agar format 08..., 8..., 62..., dan JID WhatsApp cocok.
+    const normalized = normalizeRecipientPhone(phone);
 
     // Simpan dengan berbagai format untuk matching yang lebih baik
     map[phone] = displayName;
     map[normalized] = displayName;
-    map[`${phone}@s.whatsapp.net`] = displayName;
     map[`${normalized}@s.whatsapp.net`] = displayName;
+    map[`${normalized}@c.us`] = displayName;
 
-    // Tambahkan format dengan +62 jika dimulai dengan 62
     if (normalized.startsWith("62")) {
       map[`+${normalized}`] = displayName;
     }
@@ -904,14 +920,9 @@ const getPhoneDisplay = (phoneNum) => {
   }
 
   // Coba dengan normalisasi
-  const normalized = phoneStr.replace(/@s\.whatsapp\.net$/i, "").replace(/\D/g, "");
+  const normalized = normalizeRecipientPhone(phoneStr);
   if (phoneToContactMap.value[normalized]) {
     return phoneToContactMap.value[normalized];
-  }
-
-  // Coba cari dengan suffix @s.whatsapp.net
-  if (phoneToContactMap.value[`${phoneStr}@s.whatsapp.net`]) {
-    return phoneToContactMap.value[`${phoneStr}@s.whatsapp.net`];
   }
 
   if (phoneToContactMap.value[`${normalized}@s.whatsapp.net`]) {
@@ -1087,8 +1098,14 @@ const labelRecipientLabels = (b) => {
   if (!b) return [];
   const arr = Array.isArray(b.recipients) ? b.recipients : [];
   return arr
-    .filter((r) => typeof r === "string" && r.toLowerCase().startsWith("label_"))
-    .map((r) => String(r).slice("label_".length));
+    .filter(
+      (r) =>
+        typeof r === "string" &&
+        (r.toLowerCase() === "all" || r.toLowerCase().startsWith("label_"))
+    )
+    .map((r) =>
+      r.toLowerCase() === "all" ? "Semua Kontak" : String(r).slice("label_".length)
+    );
 };
 
 const canDelete = (b) => b && !b.isSent && b.status !== false;
@@ -1355,6 +1372,7 @@ const phoneRecipients = (b) => {
       // exclude groups strictly
       .filter((r) => !isGroupJid(r))
       .filter((r) => !r.toLowerCase().startsWith("label"))
+      .filter((r) => r.toLowerCase() !== "all")
       .filter((r) => r.length > 0)
   );
 
@@ -1372,10 +1390,7 @@ const phoneRecipients = (b) => {
   return Array.from(set);
 };
 
-const normalizeNumber = (num) =>
-  String(num)
-    .trim()
-    .replace(/@s\.whatsapp\.net$/i, "");
+const normalizeNumber = (num) => normalizeRecipientPhone(num) || String(num || "").trim();
 
 const devices = ref([]);
 const selectedDeviceId = ref(localStorage.getItem("device_selected_id") || "");
@@ -2544,10 +2559,6 @@ onMounted(async () => {
   background: var(--theme-gradient-info);
   color: #1e40af;
   border-color: var(--theme-info-border);
-}
-
-:global(html.dark) .group-chip {
-  color: #fff;
 }
 
 .label-chip {

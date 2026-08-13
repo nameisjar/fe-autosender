@@ -387,6 +387,12 @@ html.dark .recipients-info-box strong {
     color: #ffffff !important;
 }
 
+/* Recipient chips use semantic colors in light mode and white text in dark mode. */
+html.dark .recipient-chip,
+html.dark .recipient-chip svg {
+    color: #ffffff !important;
+}
+
 /* Keep primary page titles text-only across user and admin menus. */
 .page-header .header-content > h2 > svg:first-child,
 .page-header > div:first-child > h2 > svg:first-child {
