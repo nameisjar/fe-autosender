@@ -700,12 +700,31 @@ const loadGroupNames = async () => {
       return;
     }
 
-    // 🆕 Primary: Load dari database (ambil juga yang inactive supaya nama grup tetap ada saat WA offline)
+    // Primary: Load seluruh halaman dari database. Ambil juga grup inactive agar
+    // nama grup untuk jadwal lama tetap tersedia saat WhatsApp sedang offline.
     try {
-      const { data } = await userApi.get(`/whatsapp-groups/device/${deviceId}/active`, {
-        params: { includeInactive: 1 },
-      });
-      const groups = Array.isArray(data?.data) ? data.data : [];
+      const groups = [];
+      const pageSize = 200;
+      let currentPage = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data } = await userApi.get(
+          `/whatsapp-groups/device/${deviceId}/active`,
+          {
+            params: {
+              includeInactive: 1,
+              page: currentPage,
+              pageSize,
+            },
+          }
+        );
+
+        const pageGroups = Array.isArray(data?.data) ? data.data : [];
+        groups.push(...pageGroups);
+        hasMore = data?.metadata?.hasMore === true;
+        currentPage += 1;
+      }
 
       const map = {};
       for (const g of groups) {
