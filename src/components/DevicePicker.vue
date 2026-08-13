@@ -21,32 +21,44 @@
         </svg>
       </div>
       <div class="device-info-text">
-        <div class="device-name-row">
-          <div class="device-name-compact">
-            {{ selectedDevice.name || "Unknown" }}
-            <span v-if="selectedDevice.phone" class="device-phone-inline">
-              - {{ selectedDevice.phone }}
+        <div class="device-name-compact">
+          {{ selectedDevice.name || "Unknown" }}
+          <span v-if="selectedDevice.phone" class="device-phone-inline">
+            - {{ selectedDevice.phone }}
+          </span>
+        </div>
+        <div class="device-meta-row">
+          <div
+            class="device-status-compact"
+            :class="{ online: selectedDevice.isConnected, reconnecting: selectedDevice.isReconnecting }"
+          >
+            ● {{ selectedDevice.connectionLabel }}
+            <span v-if="selectedDeviceHealth?.isPaused" class="paused-indicator">
+              • Dijeda
             </span>
           </div>
           <button
             type="button"
-            class="health-pill"
-            :class="selectedDeviceHealth ? getHealthBadge(selectedDevice.id).color : 'gray'"
+            class="health-pill health-icon-button"
+            :class="healthTriggerPresentation.color"
             :title="getHealthTooltip(selectedDevice.id)"
             aria-label="Buka detail kesehatan device"
             @click.stop="showHealthModal = true"
           >
-            {{ selectedDeviceHealth ? getHealthBadge(selectedDevice.id).label : 'Device Health' }}
+            <svg
+              class="health-detail-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 12h4l2.2-5 4.1 10 2.2-5H21" />
+            </svg>
+            <span class="sr-only">{{ healthTriggerPresentation.label }}</span>
           </button>
-        </div>
-        <div
-          class="device-status-compact"
-          :class="{ online: selectedDevice.isConnected, reconnecting: selectedDevice.isReconnecting }"
-        >
-          ● {{ selectedDevice.connectionLabel }}
-          <span v-if="selectedDeviceHealth?.isPaused" class="paused-indicator">
-            • Paused
-          </span>
         </div>
       </div>
       <button
@@ -287,6 +299,17 @@ const modalConnectionLabel = computed(() => {
     sessionId: selectedDevice.value?.sessionId,
   });
 });
+const healthTriggerPresentation = computed(() => {
+  const health = selectedDeviceHealth.value;
+  const connectionStatus = health?.connectionStatus || selectedDevice.value?.status;
+
+  if (!health || health.requiresPairing || connectionStatus !== 'open') {
+    return { label: 'Detail', color: 'detail' };
+  }
+
+  const badge = getHealthBadge(selectedDevice.value?.id);
+  return { label: badge.label, color: badge.color };
+});
 const recentErrorCount = computed(() => Number(
   selectedDeviceHealth.value?.recentErrors
   ?? selectedDeviceHealth.value?.recentConnectionErrors
@@ -515,10 +538,12 @@ defineExpose({
   min-width: 0;
 }
 
-.device-name-row {
+.device-meta-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-top: 4px;
   min-width: 0;
 }
 
@@ -690,6 +715,33 @@ defineExpose({
   color: var(--theme-text-muted);
 }
 
+.health-pill .health-detail-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.health-icon-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .health-pill:hover {
   transform: scale(1.05);
   opacity: 0.9;
@@ -714,6 +766,12 @@ defineExpose({
   background: var(--theme-surface-soft);
   color: var(--theme-text-muted);
   border-color: var(--theme-border);
+}
+
+.health-pill.detail {
+  background: var(--theme-info-soft);
+  border-color: var(--theme-info-border);
+  color: var(--theme-info-text);
 }
 
 .health-pill-small {
@@ -1199,9 +1257,9 @@ defineExpose({
     height: 36px;
   }
 
-  .device-name-row {
-    align-items: flex-start;
-    flex-direction: column;
+  .device-meta-row {
+    align-items: center;
+    flex-direction: row;
     gap: 6px;
   }
 
@@ -1212,10 +1270,15 @@ defineExpose({
   }
 
   .health-pill {
-    min-height: 32px;
+    min-height: 40px;
     max-width: 100%;
-    padding: 6px 10px;
     white-space: nowrap;
+  }
+
+  .health-icon-button {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
   }
 
   .btn-change-compact {
