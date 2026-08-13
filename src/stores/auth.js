@@ -23,7 +23,7 @@ export const useAuthStore = defineStore('auth', {
             }
         },
         // 🆕 Logout action dengan clear cache
-        async logout() {
+        async logout({ redirect = true } = {}) {
             try {
                 await userApi.post('/auth/logout', {}, {
                     __skipAuthRefresh: true,
@@ -53,8 +53,11 @@ export const useAuthStore = defineStore('auth', {
                 console.warn('Could not clear localStorage:', e);
             }
             
-            // Redirect to login
-            window.location.href = '/login';
+            // Redirect can be handled by the caller when it needs to finish a
+            // transition before leaving the current page.
+            if (redirect) {
+                window.location.href = '/login';
+            }
         },
     },
 });

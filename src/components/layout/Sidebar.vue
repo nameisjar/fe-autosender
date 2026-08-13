@@ -374,8 +374,14 @@
           </div>
         </div>
       </div>
-      <button class="logout-btn" @click="logout">
-        <svg viewBox="0 0 24 24" fill="none">
+      <button
+        class="logout-btn"
+        type="button"
+        :disabled="isLoggingOut"
+        :aria-busy="isLoggingOut"
+        @click="logout"
+      >
+        <svg v-if="!isLoggingOut" viewBox="0 0 24 24" fill="none">
           <path
             d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
             stroke="currentColor"
@@ -391,14 +397,35 @@
             stroke-linejoin="round"
           />
         </svg>
-        <span>Logout</span>
+        <span v-else class="logout-button-spinner" aria-hidden="true"></span>
+        <span>{{ isLoggingOut ? "Keluar..." : "Logout" }}</span>
       </button>
     </div>
   </aside>
+
+  <Teleport to="body">
+    <Transition name="logout-loading">
+      <div
+        v-if="isLoggingOut"
+        class="logout-loading-overlay"
+        role="status"
+        aria-live="assertive"
+        aria-label="Sedang keluar dari aplikasi"
+      >
+        <div class="logout-loading-card">
+          <span class="logout-loading-spinner" aria-hidden="true"></span>
+          <div class="logout-loading-copy">
+            <strong>Sedang keluar...</strong>
+            <span>Mohon tunggu sebentar</span>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
-import { onMounted, computed, ref, onUnmounted, watch } from "vue";
+import { onMounted, computed, ref, onUnmounted, watch, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../../stores/auth.js";
 import { useGroups } from "../../composables/useGroups.js";
@@ -406,6 +433,7 @@ import { useDevices } from "../../composables/useDevices.js";
 import { deviceApi } from "../../api/http.js";
 import { listenToDeviceStatus } from "../../api/socket.js";
 import { useTheme } from "../../composables/useTheme.js";
+import { useToast } from "../../composables/useToast.js";
 
 const props = defineProps({
   isOpen: {
@@ -421,6 +449,7 @@ const route = useRoute();
 const auth = useAuthStore();
 const { clearGroups } = useGroups();
 const { theme, setTheme } = useTheme();
+const toast = useToast();
 const themeOptions = [
   { value: "light", label: "Terang", icon: "☀", description: "Selalu gunakan tema terang" },
   { value: "dark", label: "Gelap", icon: "☾", description: "Selalu gunakan tema gelap" },
@@ -667,12 +696,48 @@ const getInitials = (name) => {
   return name.charAt(0).toUpperCase();
 };
 
+const isLoggingOut = ref(false);
+const MIN_LOGOUT_LOADING_MS = 550;
+
+const wait = (duration) =>
+  new Promise((resolve) => window.setTimeout(resolve, duration));
+
+const waitForLogoutOverlayPaint = async () => {
+  await nextTick();
+
+  if (typeof window.requestAnimationFrame !== "function") return;
+
+  await new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(resolve);
+    });
+  });
+};
+
 const logout = async () => {
-  clearGroups();
-  localStorage.removeItem("device_selected_id");
-  localStorage.removeItem("device_selected_name");
-  emit("close");
-  await auth.logout();
+  if (isLoggingOut.value) return;
+
+  isLoggingOut.value = true;
+  const loadingStartedAt = Date.now();
+
+  try {
+    clearGroups();
+    localStorage.removeItem("device_selected_id");
+    localStorage.removeItem("device_selected_name");
+    emit("close");
+    await waitForLogoutOverlayPaint();
+    await auth.logout({ redirect: false });
+
+    const elapsed = Date.now() - loadingStartedAt;
+    const remainingDuration = Math.max(0, MIN_LOGOUT_LOADING_MS - elapsed);
+    if (remainingDuration > 0) await wait(remainingDuration);
+
+    window.location.href = "/login";
+  } catch (error) {
+    isLoggingOut.value = false;
+    console.error("Gagal logout dari aplikasi:", error);
+    toast.error("Gagal keluar dari aplikasi. Silakan coba lagi.");
+  }
 };
 </script>
 
@@ -960,9 +1025,111 @@ nav a.router-link-active .nav-icon {
   border-color: var(--theme-danger-border);
 }
 
+.logout-btn:disabled {
+  cursor: wait;
+  opacity: 0.8;
+}
+
 .logout-btn svg {
   width: 18px;
   height: 18px;
+}
+
+.logout-button-spinner,
+.logout-loading-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  animation: logout-spin 0.8s linear infinite;
+}
+
+.logout-button-spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  border-color: rgba(239, 68, 68, 0.3);
+  border-top-color: #ef4444;
+}
+
+.logout-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(4px);
+  cursor: wait;
+}
+
+.logout-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 270px;
+  padding: 22px 24px;
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.35);
+  will-change: transform, opacity;
+}
+
+.logout-loading-spinner {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-width: 3px;
+  border-color: rgba(59, 130, 246, 0.22);
+  border-top-color: #3b82f6;
+}
+
+.logout-loading-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.logout-loading-copy strong {
+  color: var(--theme-text);
+  font-size: 16px;
+}
+
+.logout-loading-copy span {
+  color: var(--theme-text-muted);
+  font-size: 13px;
+}
+
+.logout-loading-enter-active,
+.logout-loading-leave-active {
+  transition: opacity 0.26s ease;
+}
+
+.logout-loading-enter-active .logout-loading-card,
+.logout-loading-leave-active .logout-loading-card {
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
+}
+
+.logout-loading-enter-from,
+.logout-loading-leave-to {
+  opacity: 0;
+}
+
+.logout-loading-enter-from .logout-loading-card,
+.logout-loading-leave-to .logout-loading-card {
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+}
+
+@keyframes logout-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Scrollbar Styling */
