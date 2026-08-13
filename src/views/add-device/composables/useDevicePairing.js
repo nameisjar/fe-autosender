@@ -2,6 +2,7 @@ import { onUnmounted, ref, watch } from "vue";
 import QRCode from "qrcode";
 import { cache } from "../../../utils/cache.js";
 import { API_BASE } from "../../../api/http.js";
+import { consumeManualDeviceLogout } from "../../../utils/manualDeviceLogout.js";
 
 const MIN_RETRY_INTERVAL = 2000;
 
@@ -377,6 +378,13 @@ export function useDevicePairing({
 
     const ns = String(newStatus || "").toLowerCase();
     const os = String(oldStatus || "").toLowerCase();
+    const isDisconnectTransition =
+      (os === "open" || os === "connected") &&
+      (ns === "close" || ns === "closed" || ns === "disconnected" || ns === "logged_out");
+    const expectedDisconnect =
+      isDisconnectTransition &&
+      (waitingDisconnect.value ||
+        consumeManualDeviceLogout(selectedDevice.value?.id || deviceId.value));
 
     if (waitingDisconnect.value && (ns === "close" || ns === "closed" || ns === "disconnected")) {
       if (disconnectInterval) {
@@ -403,7 +411,7 @@ export function useDevicePairing({
       controllerActive.value = false;
     }
 
-    if ((os === "open" || os === "connected") && (ns === "close" || ns === "closed" || ns === "disconnected")) {
+    if (isDisconnectTransition) {
       pairingLoading.value = false;
       qr.value = "";
       asciiQr.value = "";
@@ -418,7 +426,9 @@ export function useDevicePairing({
       controller = null;
       controllerActive.value = false;
 
-      toast?.warning?.("Device terputus dari WhatsApp. Silakan lakukan pairing ulang.");
+      if (!expectedDisconnect) {
+        toast?.warning?.("Device terputus dari WhatsApp. Silakan lakukan pairing ulang.");
+      }
     }
   });
 

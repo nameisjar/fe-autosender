@@ -71,7 +71,7 @@
           >
             <option value="">📱 Pilih Perangkat</option>
             <option v-for="d in devices" :key="d.id" :value="d.id">
-              {{ d.name || d.id }} — {{ d.status }}
+              {{ d.name || d.id }} — {{ getDeviceStatusLabel(d) }}
             </option>
           </select>
 
@@ -907,6 +907,7 @@ import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
+import { getDeviceStatusLabel } from '../utils/deviceStatus.js';
 import ReactionPicker from '../components/ReactionPicker.vue';
 import { useRoute, useRouter } from 'vue-router';
 import {

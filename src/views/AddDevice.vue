@@ -36,6 +36,7 @@
         :deviceStats="deviceStats"
         :messageStats="messageStats"
         :deleting="deleting"
+        :loggingOut="loggingOut"
         :isTutor="isTutor"
         :tutorReachedLimit="tutorReachedLimit"
         :loading="devicesLoading"
@@ -51,6 +52,7 @@
         @reload="fetchDevices(true)"
         @openAddDeviceModal="openAddDeviceModal"
         @deleteOne="deleteOne"
+        @logoutOne="logoutOne"
         @openAssignments="openAssignments"
         @nextPage="nextPage"
         @prevPage="prevPage"
@@ -75,6 +77,16 @@
       @cancel="cancelDelete"
     />
 
+    <LogoutDeviceModal
+      :modelValue="showLogoutModal"
+      :device="deviceToLogout"
+      :loggingOut="loggingOut"
+      :humanStatus="humanStatus"
+      :statusClass="statusClass"
+      @confirm="confirmLogout"
+      @cancel="cancelLogout"
+    />
+
     <AssignDeviceModal
       :modelValue="showAssignModal"
       :device="assignmentDevice"
@@ -95,12 +107,21 @@ import { userApi } from "../api/http.js";
 import { useAuthStore } from "../stores/auth.js";
 import { useGroups } from "../composables/useGroups.js";
 import { useToast } from "../composables/useToast.js";
+import {
+  clearManualDeviceLogout,
+  markManualDeviceLogout,
+} from "../utils/manualDeviceLogout.js";
+import {
+  getDeviceStatusClass,
+  getDeviceStatusLabel,
+} from "../utils/deviceStatus.js";
 
 import AddDeviceHeader from "./add-device/components/AddDeviceHeader.vue";
 import DevicePairingPanel from "./add-device/components/DevicePairingPanel.vue";
 import DeviceListTable from "./add-device/components/DeviceListTable.vue";
 import AddDeviceModal from "./add-device/components/AddDeviceModal.vue";
 import DeleteDeviceModal from "./add-device/components/DeleteDeviceModal.vue";
+import LogoutDeviceModal from "./add-device/components/LogoutDeviceModal.vue";
 import AssignDeviceModal from "./add-device/components/AssignDeviceModal.vue";
 
 import { useDevicePairing } from "./add-device/composables/useDevicePairing.js";
@@ -163,30 +184,12 @@ const {
   totalPages,
 } = useDeviceSearchPagination({ devices, humanStatus });
 
-function humanStatus(s) {
-  const key = String(s || "").toLowerCase();
-
-  // Use canonical status labels consistent across the app (other menus show raw status like open/close/etc.)
-  const map = {
-    open: "open",
-    connected: "open",
-    connecting: "connecting",
-    reconnecting: "reconnecting",
-    pending: "pending",
-    logged_out: "perlu pairing",
-    closed: "close",
-    disconnected: "close",
-    close: "close",
-  };
-
-  return map[key] || key || "-";
+function humanStatus(deviceOrStatus, sessionId) {
+  return getDeviceStatusLabel(deviceOrStatus, sessionId);
 }
 
-function statusClass(s) {
-  const key = String(s || "").toLowerCase();
-  if (key === "open" || key === "connected") return "is-open";
-  if (key === "connecting" || key === "reconnecting" || key === "pending") return "is-pending";
-  return "is-closed";
+function statusClass(deviceOrStatus, sessionId) {
+  return getDeviceStatusClass(deviceOrStatus, sessionId);
 }
 
 const nextPage = () => {
@@ -235,6 +238,7 @@ const {
 const name = ref("");
 const loading = ref(false);
 const deleting = ref(false);
+const loggingOut = ref(false);
 
 const showAddDeviceModal = ref(false);
 const openAddDeviceModal = () => {
@@ -244,6 +248,8 @@ const openAddDeviceModal = () => {
 
 const showDeleteModal = ref(false);
 const deviceToDelete = ref(null);
+const showLogoutModal = ref(false);
+const deviceToLogout = ref(null);
 
 const showAssignModal = ref(false);
 const assignmentDevice = ref(null);
@@ -318,6 +324,61 @@ const deleteOne = (d) => {
   if (d?.canManage === false) return;
   deviceToDelete.value = d;
   showDeleteModal.value = true;
+};
+
+const logoutOne = (device) => {
+  if (device?.canManage === false || !device?.id) return;
+  deviceToLogout.value = device;
+  showLogoutModal.value = true;
+};
+
+const cancelLogout = () => {
+  if (loggingOut.value) return;
+  showLogoutModal.value = false;
+  deviceToLogout.value = null;
+};
+
+const confirmLogout = async () => {
+  if (!deviceToLogout.value?.id || loggingOut.value) return;
+
+  const logoutDeviceId = String(deviceToLogout.value.id);
+  loggingOut.value = true;
+  markManualDeviceLogout(logoutDeviceId);
+
+  try {
+    const response = await userApi.post(
+      `/devices/${encodeURIComponent(logoutDeviceId)}/logout`
+    );
+    const result = response?.data || {};
+
+    if (result.remoteLogoutConfirmed) {
+      toast.success(result.message || "Session WhatsApp berhasil diputus");
+    } else {
+      toast.warning(
+        result.message ||
+          "Session lokal sudah dibersihkan, tetapi logout di WhatsApp asli tidak dapat dikonfirmasi"
+      );
+    }
+
+    showLogoutModal.value = false;
+    deviceToLogout.value = null;
+    clearGroups();
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent("wa:device-session-closed", {
+          detail: { deviceId: logoutDeviceId, reason: "manual_logout" },
+        })
+      );
+    } catch (_) {}
+
+    await loadDevices();
+  } catch (error) {
+    clearManualDeviceLogout(logoutDeviceId);
+    toast.error(error?.response?.data?.message || "Gagal logout dari WhatsApp");
+  } finally {
+    loggingOut.value = false;
+  }
 };
 
 const cancelDelete = () => {

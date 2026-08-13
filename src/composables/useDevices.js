@@ -6,6 +6,10 @@ import {
   listenToSocketConnection,
   connectSocket,
 } from '../api/socket.js';
+import {
+  getDeviceStatusLabel,
+  normalizeDeviceStatus,
+} from '../utils/deviceStatus.js';
 
 // 🔄 Inisialisasi dari localStorage
 const devices = ref([]);
@@ -26,26 +30,8 @@ let lastResyncAt = 0;
 const RESYNC_THROTTLE_MS = 5000;
 const FALLBACK_POLL_MS = 60000;
 
-function normalizeDeviceStatus(status) {
-  const value = String(status || '').trim().toLowerCase();
-  if (value === 'open' || value === 'connected') return 'open';
-  if (value === 'connecting' || value === 'pending') return 'connecting';
-  if (value === 'reconnecting') return 'reconnecting';
-  if (value === 'logged_out') return 'logged_out';
-  if (value === 'close' || value === 'closed' || value === 'disconnected') return 'close';
-  return null;
-}
-
 function isTransientStatus(status) {
   return status === 'connecting' || status === 'reconnecting';
-}
-
-function getConnectionLabel(status) {
-  if (status === 'open') return 'Online';
-  if (status === 'connecting') return 'Menghubungkan';
-  if (status === 'reconnecting') return 'Menghubungkan ulang';
-  if (status === 'logged_out') return 'Perlu pairing';
-  return 'Offline';
 }
 
 function scheduleDeviceResync(force = false) {
@@ -222,9 +208,10 @@ export function useDevices() {
       name: device.name || 'Unknown Device',
       phone: device.phone || '',
       status: device.status || 'unknown',
+      sessionId: device.sessionId || null,
       isConnected: device.status === 'open',
       isReconnecting: isTransientStatus(device.status),
-      connectionLabel: getConnectionLabel(device.status),
+      connectionLabel: getDeviceStatusLabel(device),
       isOwner: device.isOwner !== false,
       accessType: device.accessType || 'owner',
       canManage: device.canManage !== false,
@@ -238,9 +225,10 @@ export function useDevices() {
       name: d.name || 'Unknown Device',
       phone: d.phone || '',
       status: d.status || 'unknown',
+      sessionId: d.sessionId || null,
       isConnected: d.status === 'open',
       isReconnecting: isTransientStatus(d.status),
-      connectionLabel: getConnectionLabel(d.status),
+      connectionLabel: getDeviceStatusLabel(d),
       isOwner: d.isOwner !== false,
       accessType: d.accessType || 'owner',
       canManage: d.canManage !== false,

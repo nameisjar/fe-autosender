@@ -125,7 +125,7 @@
           <select v-model="selectedDeviceId" @change="onDeviceChange">
             <option value="">Pilih Perangkat</option>
             <option v-for="d in devices" :key="d.id" :value="d.id">
-              {{ d.name || d.id }} — {{ d.status }}
+              {{ d.name || d.id }} — {{ getDeviceStatusLabel(d) }}
             </option>
           </select>
         </div>
@@ -664,6 +664,7 @@ import { useRouter } from "vue-router";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast";
 import CachedProfileImage from "../components/CachedProfileImage.vue";
+import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 
 // ✅ Destructure fungsi yang benar dari useToast
 const { success: showSuccess, error: showError } = useToast();

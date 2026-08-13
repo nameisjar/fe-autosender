@@ -93,7 +93,7 @@
           >
             <option value="">📱 Pilih Perangkat</option>
             <option v-for="d in devices" :key="d.id" :value="d.id">
-              {{ d.name || d.id }} — {{ d.status }}
+              {{ d.name || d.id }} — {{ getDeviceStatusLabel(d) }}
             </option>
           </select>
 
@@ -652,6 +652,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { deviceApi, userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import { mediaUrl } from "../utils/mediaUrl.js";
+import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 
 const toast = useToast();
 

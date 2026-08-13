@@ -10,7 +10,7 @@ export function useDeviceSearchPagination({ devices, humanStatus }) {
     return devices.value.filter((device) => {
       const nameMatch = device.name && String(device.name).toLowerCase().includes(query);
       const phoneMatch = device.phone && String(device.phone).includes(query);
-      const statusMatch = String(humanStatus(device.status)).toLowerCase().includes(query);
+      const statusMatch = String(humanStatus(device)).toLowerCase().includes(query);
       return nameMatch || phoneMatch || statusMatch;
     });
   });

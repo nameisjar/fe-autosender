@@ -128,7 +128,7 @@
         >
           <td data-label="Device">
             <div class="device-cell">
-              <div class="device-icon-small" :class="statusClass(d.status)">
+              <div class="device-icon-small" :class="statusClass(d)">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -157,9 +157,9 @@
           </td>
 
           <td data-label="Status">
-            <span class="status-badge" :class="statusClass(d.status)">
+            <span class="status-badge" :class="statusClass(d)">
               <span class="status-dot"></span>
-              {{ humanStatus(d.status) }}
+              {{ humanStatus(d) }}
             </span>
           </td>
 
@@ -284,10 +284,24 @@
                 </svg>
               </button>
               <button
+                v-if="d.canManage !== false && d.sessionId"
+                class="btn-logout-table"
+                @click="$emit('logoutOne', d)"
+                :disabled="loggingOut || deleting"
+                title="Logout WhatsApp"
+                aria-label="Logout WhatsApp"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10 17l5-5-5-5" />
+                  <path d="M15 12H3" />
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                </svg>
+              </button>
+              <button
                 v-if="d.canManage !== false"
                 class="btn-delete-table"
                 @click="$emit('deleteOne', d)"
-                :disabled="deleting"
+                :disabled="deleting || loggingOut"
                 title="Hapus Device"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -373,6 +387,7 @@ defineProps({
   deviceStats: { type: Object, default: () => ({}) },
   messageStats: { type: Object, default: () => ({}) },
   deleting: { type: Boolean, default: false },
+  loggingOut: { type: Boolean, default: false },
 
   isTutor: { type: Boolean, default: false },
   tutorReachedLimit: { type: Boolean, default: false },
@@ -397,6 +412,7 @@ defineEmits([
   "reload",
   "openAddDeviceModal",
   "deleteOne",
+  "logoutOne",
   "openAssignments",
   "nextPage",
   "prevPage",
@@ -751,7 +767,8 @@ defineEmits([
 }
 
 .btn-delete-table,
-.btn-assign-table {
+.btn-assign-table,
+.btn-logout-table {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -771,8 +788,20 @@ defineEmits([
   border: 1.5px solid var(--theme-info-border);
 }
 
+.btn-logout-table {
+  background: var(--theme-warning-soft);
+  color: var(--theme-warning-text);
+  border: 1.5px solid var(--theme-warning-border);
+}
+
+.btn-logout-table:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .btn-delete-table svg,
-.btn-assign-table svg {
+.btn-assign-table svg,
+.btn-logout-table svg {
   width: 18px;
   height: 18px;
 }

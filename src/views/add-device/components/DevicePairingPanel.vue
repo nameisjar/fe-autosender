@@ -28,7 +28,7 @@
         <select :value="deviceId" @change="$emit('update:deviceId', $event.target.value)">
           <option value="" disabled>Pilih device</option>
           <option v-for="d in devices" :key="d.id" :value="String(d.id)">
-            {{ d.name }} - {{ humanStatus(d.status) }}{{ d.isOwner === false ? " (Ditugaskan)" : "" }}
+            {{ d.name }} - {{ humanStatus(d) }}{{ d.isOwner === false ? " (Ditugaskan)" : "" }}
           </option>
         </select>
       </div>
