@@ -330,6 +330,22 @@
           </div>
           <div class="modal-header-actions">
             <button
+              v-if="canAddSelectedConversationContact"
+              type="button"
+              class="btn-add-contact"
+              title="Simpan nomor ini ke Kontak"
+              aria-label="Tambah ke kontak"
+              @click="openAddContactModal"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" />
+                <line x1="16" y1="11" x2="22" y2="11" />
+              </svg>
+              <span>Tambah Kontak</span>
+            </button>
+            <button
               type="button"
               class="btn-close btn-fullscreen"
               :title="isConversationFullscreen ? 'Kembali ke ukuran normal' : 'Perbesar percakapan'"
@@ -664,6 +680,90 @@
       </div>
     </div>
 
+    <!-- Add Contact Modal -->
+    <div
+      v-if="addContactModal.show"
+      class="modal-overlay add-contact-overlay"
+      @click="closeAddContactModal"
+    >
+      <form class="modal add-contact-modal" @click.stop @submit.prevent="saveInboxContact">
+        <div class="modal-header add-contact-header">
+          <div>
+            <h3>Tambah Kontak</h3>
+            <p>Simpan nomor dari percakapan ini ke menu Kontak.</p>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            title="Tutup form"
+            aria-label="Tutup form tambah kontak"
+            :disabled="savingContact"
+            @click="closeAddContactModal"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="add-contact-body">
+          <div class="add-contact-grid">
+            <label class="add-contact-field">
+              <span>Nama depan <strong>*</strong></span>
+              <input
+                v-model.trim="addContactModal.firstName"
+                type="text"
+                maxlength="100"
+                autocomplete="off"
+                required
+                autofocus
+                placeholder="Nama depan"
+              />
+            </label>
+            <label class="add-contact-field">
+              <span>Nama belakang</span>
+              <input
+                v-model.trim="addContactModal.lastName"
+                type="text"
+                maxlength="100"
+                autocomplete="off"
+                placeholder="Nama belakang (opsional)"
+              />
+            </label>
+          </div>
+
+          <label class="add-contact-field">
+            <span>Nomor WhatsApp</span>
+            <input :value="addContactModal.phone" type="text" readonly />
+          </label>
+
+          <label class="add-contact-field">
+            <span>Label</span>
+            <input
+              v-model.trim="addContactModal.labels"
+              type="text"
+              autocomplete="off"
+              placeholder="Contoh: Siswa, Orang Tua (opsional)"
+            />
+            <small>Pisahkan beberapa label dengan koma.</small>
+          </label>
+        </div>
+
+        <div class="add-contact-actions">
+          <button type="button" class="btn-cancel" :disabled="savingContact" @click="closeAddContactModal">
+            Batal
+          </button>
+          <button type="submit" class="btn-save-contact" :disabled="savingContact">
+            <svg v-if="savingContact" class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+            </svg>
+            {{ savingContact ? 'Menyimpan...' : 'Simpan Kontak' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
     <!-- Delete Confirmation Modal -->
     <div v-if="deleteModal.show" class="modal-overlay" @click="deleteModal.show = false">
       <div class="modal delete-modal" @click.stop>
@@ -838,6 +938,14 @@ const loading = ref(false);
 const err = ref('');
 const selectedConversation = ref(null);
 const isConversationFullscreen = ref(false);
+const savingContact = ref(false);
+const addContactModal = ref({
+  show: false,
+  firstName: '',
+  lastName: '',
+  phone: '',
+  labels: '',
+});
 const conversationReactions = ref([]);
 const reactionDetails = ref(null);
 const reactionProfileRetryVersions = ref({});
@@ -2312,6 +2420,7 @@ const closeConversation = () => {
   reactionPickerMessageKey.value = '';
   sendingReactionMessageKey.value = '';
   messageActionMenuKey.value = '';
+  addContactModal.value.show = false;
   selectedConversation.value = null;
   if (returnRoute) {
     void router.push({ name: returnRoute });
@@ -3087,6 +3196,152 @@ const getConversationPhone = (conversation) => {
   }
 
   return formatWhatsAppIdentity(conversation.from);
+};
+
+const normalizeInboxContactPhone = (conversation) => {
+  if (!conversation || conversation.isGroup) return '';
+
+  const source = conversation.contact?.phone || conversation.from || '';
+  const raw = String(source).trim();
+  if (!raw || raw.includes('@lid')) return '';
+
+  let phone = raw
+    .split('@')[0]
+    .split(':')[0]
+    .replace(/\D/g, '');
+
+  if (phone.startsWith('0')) {
+    phone = `62${phone.slice(1)}`;
+  } else if (phone.startsWith('8')) {
+    phone = `62${phone}`;
+  }
+
+  return phone;
+};
+
+const isValidInboxContactPhone = phone => /^62\d{8,15}$/.test(String(phone || ''));
+
+const canAddSelectedConversationContact = computed(() => {
+  const conversation = selectedConversation.value;
+  if (!conversation || conversation.isGroup || conversation.contact) return false;
+  return isValidInboxContactPhone(normalizeInboxContactPhone(conversation));
+});
+
+const getSuggestedContactName = conversation => {
+  const candidate = String(conversation?.pushName || '').trim();
+  if (!candidate || ['Kontak', 'Kontak WhatsApp'].includes(candidate)) {
+    return { firstName: '', lastName: '' };
+  }
+
+  const [firstName, ...lastNameParts] = candidate.split(/\s+/);
+  return {
+    firstName: firstName || '',
+    lastName: lastNameParts.join(' '),
+  };
+};
+
+const openAddContactModal = () => {
+  if (!canAddSelectedConversationContact.value) return;
+
+  const suggestedName = getSuggestedContactName(selectedConversation.value);
+  addContactModal.value = {
+    show: true,
+    firstName: suggestedName.firstName,
+    lastName: suggestedName.lastName,
+    phone: normalizeInboxContactPhone(selectedConversation.value),
+    labels: '',
+  };
+};
+
+const closeAddContactModal = () => {
+  if (savingContact.value) return;
+  addContactModal.value = {
+    show: false,
+    firstName: '',
+    lastName: '',
+    phone: '',
+    labels: '',
+  };
+};
+
+const applyCreatedContactToInbox = (conversationFrom, contact) => {
+  messages.value = messages.value.map(message =>
+    sameConversationJid(message.from, conversationFrom)
+      ? { ...message, contact }
+      : message
+  );
+  outgoingConversationSummaries.value = outgoingConversationSummaries.value.map(summary =>
+    sameConversationJid(summary.to, conversationFrom)
+      ? { ...summary, contact }
+      : summary
+  );
+
+  if (sameConversationJid(selectedConversation.value?.from, conversationFrom)) {
+    selectedConversation.value = { ...selectedConversation.value, contact };
+  }
+};
+
+const saveInboxContact = async () => {
+  if (savingContact.value || !selectedConversation.value) return;
+
+  const firstName = addContactModal.value.firstName.trim();
+  const lastName = addContactModal.value.lastName.trim();
+  const phone = addContactModal.value.phone;
+  if (!firstName) {
+    toast.error('Nama depan wajib diisi');
+    return;
+  }
+  if (!isValidInboxContactPhone(phone)) {
+    toast.error('Nomor WhatsApp tidak valid');
+    return;
+  }
+  if (!selectedDeviceId.value) {
+    toast.error('Pilih perangkat terlebih dahulu');
+    return;
+  }
+
+  const conversationFrom = selectedConversation.value.from;
+  savingContact.value = true;
+
+  try {
+    const labels = addContactModal.value.labels
+      .split(',')
+      .map(label => label.trim())
+      .filter(Boolean);
+    const { data } = await userApi.post('/contacts/create', {
+      firstName,
+      lastName,
+      phone,
+      email: '',
+      gender: '',
+      dob: '',
+      labels,
+      deviceId: selectedDeviceId.value,
+    });
+
+    applyCreatedContactToInbox(conversationFrom, {
+      id: data?.contactId || null,
+      firstName,
+      lastName,
+      phone,
+      colorCode: null,
+      ContactLabel: labels.map(name => ({ label: { name } })),
+    });
+    addContactModal.value.show = false;
+    toast.success('Kontak berhasil ditambahkan');
+    await loadMessages();
+  } catch (error) {
+    const errorMessage = error?.response?.data?.message || error?.message || 'Gagal menyimpan kontak';
+    if (error?.response?.status === 400 && /already exists|sudah/i.test(errorMessage)) {
+      toast.warning('Nomor ini sudah tersimpan di Kontak');
+      addContactModal.value.show = false;
+      await loadMessages();
+    } else {
+      toast.error(errorMessage);
+    }
+  } finally {
+    savingContact.value = false;
+  }
 };
 
 const getMessageSenderPhone = (message) => {
@@ -4192,6 +4447,34 @@ const handleMediaError = (event, message) => {
   flex-shrink: 0;
 }
 
+.btn-add-contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--theme-success-border);
+  border-radius: 10px;
+  background: var(--theme-success-soft);
+  color: var(--theme-success-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-add-contact:hover {
+  transform: translateY(-1px);
+  background: var(--theme-gradient-success);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.18);
+}
+
+.btn-add-contact svg {
+  width: 17px;
+  height: 17px;
+}
+
 .modal-header-info {
   display: flex;
   align-items: center;
@@ -4226,6 +4509,115 @@ const handleMediaError = (event, message) => {
 
 .modal-phone + .modal-subtitle::before {
   content: ' · ';
+}
+
+.add-contact-overlay {
+  z-index: 1100;
+}
+
+.add-contact-modal {
+  max-width: 560px;
+}
+
+.add-contact-header p {
+  margin: 5px 0 0;
+  color: var(--theme-text-muted);
+  font-size: 13px;
+}
+
+.add-contact-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 24px;
+  overflow-y: auto;
+}
+
+.add-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.add-contact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.add-contact-field > span {
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.add-contact-field > span strong {
+  color: #ef4444;
+}
+
+.add-contact-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 9px;
+  outline: none;
+  background: var(--theme-input);
+  color: var(--theme-text);
+  font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.add-contact-field input:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+.add-contact-field input[readonly] {
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
+  cursor: default;
+}
+
+.add-contact-field small {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+.add-contact-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 22px;
+  border-top: 1px solid var(--theme-border);
+  background: var(--theme-surface-soft);
+}
+
+.btn-save-contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 138px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.25);
+}
+
+.btn-save-contact:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn-save-contact svg {
+  width: 16px;
+  height: 16px;
 }
 
 .conversation-modal .modal-body.chat-body {
@@ -5380,6 +5772,19 @@ const handleMediaError = (event, message) => {
 
   .btn-fullscreen {
     display: none;
+  }
+
+  .btn-add-contact {
+    width: 36px;
+    padding: 8px;
+  }
+
+  .btn-add-contact span {
+    display: none;
+  }
+
+  .add-contact-grid {
+    grid-template-columns: 1fr;
   }
   
   .chat-body {
