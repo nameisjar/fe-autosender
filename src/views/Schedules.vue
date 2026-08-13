@@ -425,8 +425,8 @@
             </label>
             <div class="recipients-grid">
               <span
-                v-for="lbl in modalGroupRecipients"
-                :key="'g-' + lbl"
+                v-for="(lbl, index) in modalGroupRecipients"
+                :key="`g-${index}-${lbl}`"
                 class="recipient-chip group-chip"
               >
                 <svg
@@ -674,10 +674,29 @@ const statusFilter = ref("upcoming");
 const typeFilter = ref("all");
 
 const groupsMap = ref({});
+const groupNamesVersion = ref(0);
+
+const setGroupsMap = (map) => {
+  groupsMap.value = map;
+  groupNamesVersion.value += 1;
+};
+
+const addGroupToMap = (map, groupId, groupName) => {
+  const rawId = String(groupId || "").trim();
+  const name = String(groupName || "").trim();
+  if (!rawId || !name) return;
+
+  const idOnly = rawId.replace(/@g\.us$/i, "");
+  map[rawId] = name;
+  map[idOnly] = name;
+  map[`${idOnly}@g.us`] = name;
+};
+
 const loadGroupNames = async () => {
   try {
     const deviceId = localStorage.getItem("device_selected_id") || "";
     if (!deviceId) {
+      setGroupsMap({});
       return;
     }
 
@@ -690,23 +709,16 @@ const loadGroupNames = async () => {
 
       const map = {};
       for (const g of groups) {
-        const groupJid = g.id || g.groupId || "";
-        const groupName = g.name || g.subject || "Tanpa Nama";
-
-        if (groupJid) {
-          map[groupJid] = groupName;
-          if (!groupJid.includes("@")) {
-            map[`${groupJid}@g.us`] = groupName;
-          }
-          const idOnly = groupJid.split("@")[0];
-          if (idOnly && idOnly !== groupJid) {
-            map[idOnly] = groupName;
-          }
-        }
+        const groupJid = g.id || g.groupId || g.jid || g.value || "";
+        const groupName =
+          g.name || g.groupName || g.subject || g.label || g.title || "";
+        addGroupToMap(map, groupJid, groupName);
       }
 
-      groupsMap.value = map;
-      return; // Success, exit early
+      if (Object.keys(map).length > 0) {
+        setGroupsMap(map);
+        return; // Success, exit early
+      }
     } catch {
       // Primary method failed, try fallback
     }
@@ -725,12 +737,13 @@ const loadGroupNames = async () => {
       const map = {};
       for (const g of raw) {
         const id = (g.id || g.jid || "").toString();
-        const full = id.includes("@") ? id : `${id}@g.us`;
-        const name = g.subject || g.name || g.title || g.id || "Tanpa Nama";
-        map[full] = name;
+        const name = g.subject || g.groupName || g.name || g.title || "";
+        addGroupToMap(map, id, name);
       }
-      groupsMap.value = map;
-      return; // Success, exit early
+      if (Object.keys(map).length > 0) {
+        setGroupsMap(map);
+        return; // Success, exit early
+      }
     } catch {
       // Fallback also failed, use last resort
     }
@@ -745,18 +758,18 @@ const loadGroupNames = async () => {
           const idOnly = str.split("@")[0];
           // Simpan dengan format yang lebih user-friendly
           if (!map[str]) {
-            map[str] = `Group ${idOnly.substring(0, 8)}`;
+            map[str] = "Grup WhatsApp";
           }
           if (!map[idOnly]) {
-            map[idOnly] = `Group ${idOnly.substring(0, 8)}`;
+            map[idOnly] = "Grup WhatsApp";
           }
         }
       }
     }
-    groupsMap.value = map;
+    setGroupsMap(map);
   } catch {
     // All methods failed, use empty map
-    groupsMap.value = {};
+    setGroupsMap({});
   }
 };
 
@@ -949,7 +962,7 @@ const filtered = computed(() => grouped.value.filter(matchesStatus).filter(match
 
 // --- Recipients caching ---
 // In large datasets, expanding recipients (especially "all" / labels) is expensive.
-// Cache per broadcast id and invalidate when contacts change.
+// Cache per broadcast id and invalidate when contacts or group names change.
 const contactsVersion = ref(0);
 watch(
   contacts,
@@ -962,7 +975,7 @@ watch(
 const recipientsCache = ref(new Map());
 const getRecipientsCached = (broadcast) => {
   if (!broadcast?.id) return { groups: [], labels: [], phones: [] };
-  const key = `${broadcast.id}::${contactsVersion.value}`;
+  const key = `${broadcast.id}::${contactsVersion.value}::${groupNamesVersion.value}`;
   const cached = recipientsCache.value.get(key);
   if (cached) return cached;
 
@@ -974,8 +987,8 @@ const getRecipientsCached = (broadcast) => {
   return value;
 };
 
-// Prevent unbounded growth when contactsVersion changes a lot
-watch(contactsVersion, () => {
+// Prevent unbounded growth when contact or group-name versions change.
+watch([contactsVersion, groupNamesVersion], () => {
   recipientsCache.value = new Map();
 });
 
@@ -1047,7 +1060,7 @@ const groupRecipientLabels = (b) => {
         if (String(key).startsWith(idOnly)) return value;
       }
 
-      return `Group ${idOnly.substring(0, 8)}`;
+      return "Grup WhatsApp";
     });
 };
 
@@ -1390,7 +1403,6 @@ const onDeviceChange = () => {
 
     load();
     loadContacts();
-    loadGroupNames(); // Reload group names when device changes
   }
 };
 
@@ -1439,7 +1451,7 @@ const getFailedInfo = (b) => {
 
         // Jika tetap tidak ditemukan, tampilkan nama generic
         if (!found) {
-          failedGroups.push(`Group (${idOnly.substring(0, 8)}...)`);
+          failedGroups.push("Grup WhatsApp");
         }
       }
     }
@@ -1474,7 +1486,7 @@ const getFailedInfo = (b) => {
             }
           }
           if (!found) {
-            failedGroups.push(`Group (${idOnly.substring(0, 8)}...)`);
+            failedGroups.push("Grup WhatsApp");
           }
         }
       }
@@ -1723,7 +1735,7 @@ const modalPhoneRecipients = computed(() => {
 onMounted(async () => {
   await fetchDevices();
   if (!ensureDeviceKeyValid()) pickDefaultDevice();
-  await Promise.allSettled([load(), loadGroupNames(), loadContacts(), loadSummary()]);
+  await Promise.allSettled([load(), loadContacts()]);
 });
 </script>
 
@@ -2513,6 +2525,10 @@ onMounted(async () => {
   background: var(--theme-gradient-info);
   color: #1e40af;
   border-color: var(--theme-info-border);
+}
+
+:global(html.dark) .group-chip {
+  color: #fff;
 }
 
 .label-chip {
