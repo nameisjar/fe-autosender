@@ -14,9 +14,9 @@
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             <path d="M8 10h.01M12 10h.01M16 10h.01" stroke-linecap="round" />
           </svg>
-          Semua Pesan Terkirim (Admin)
+          Riwayat Pesan (Admin)
         </h2>
-        <p class="subtitle">Monitor dan kelola semua pesan yang telah terkirim</p>
+        <p class="subtitle">Monitor seluruh percobaan pengiriman pesan</p>
       </div>
 
       <!-- Stats Row -->
@@ -26,8 +26,8 @@
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <div>
-            <div class="stat-value">{{ meta.totalMessages || 0 }}</div>
-            <div class="stat-label">Total Pesan</div>
+            <div class="stat-value">{{ statusCounts.total }}</div>
+            <div class="stat-label">Total Percobaan</div>
           </div>
         </div>
         <div class="stat-card">
@@ -35,16 +35,8 @@
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <div>
-            <div class="stat-value">
-              {{
-                displayedRows.filter(
-                  (r) =>
-                    String(r.status).toLowerCase().includes("delivery") ||
-                    String(r.status).toLowerCase().includes("read")
-                ).length
-              }}
-            </div>
-            <div class="stat-label">Terkirim (halaman ini)</div>
+            <div class="stat-value">{{ statusCounts.delivered }}</div>
+            <div class="stat-label">Terkirim</div>
           </div>
         </div>
         <div class="stat-card">
@@ -54,16 +46,8 @@
             <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
           <div>
-            <div class="stat-value">
-              {{
-                displayedRows.filter(
-                  (r) =>
-                    String(r.status).toLowerCase().includes("fail") ||
-                    String(r.status).toLowerCase().includes("error")
-                ).length
-              }}
-            </div>
-            <div class="stat-label">Gagal (halaman ini)</div>
+            <div class="stat-value">{{ statusCounts.failed }}</div>
+            <div class="stat-label">Gagal</div>
           </div>
         </div>
         <div class="stat-card">
@@ -72,13 +56,8 @@
             <polyline points="12 6 12 12 16 14" />
           </svg>
           <div>
-            <div class="stat-value">
-              {{
-                displayedRows.filter((r) => String(r.status).toLowerCase() === "pending")
-                  .length
-              }}
-            </div>
-            <div class="stat-label">Pending (halaman ini)</div>
+            <div class="stat-value">{{ statusCounts.processing }}</div>
+            <div class="stat-label">Diproses</div>
           </div>
         </div>
       </div>
@@ -158,6 +137,15 @@
             @keyup.enter="load(1)"
           />
 
+          <select v-model="sourceFilter" class="filter-select">
+            <option value="">Semua Sumber</option>
+            <option value="inbox">Inbox</option>
+            <option value="broadcast">Broadcast</option>
+            <option value="reminder">Reminder</option>
+            <option value="feedback">Feedback</option>
+            <option value="recurrence">Berulang</option>
+          </select>
+
           <select v-model="sortBy" class="filter-select">
             <option value="createdAt">⏰ Terbaru</option>
             <option value="to">📱 Nomor</option>
@@ -174,7 +162,7 @@
             {{ loading ? "..." : "Cari" }}
           </button>
 
-          <select v-model.number="pageSize" class="page-size-select" @change="load(1)">
+          <select v-model.number="pageSize" class="page-size-select">
             <option :value="10">10</option>
             <option :value="25">25</option>
             <option :value="50">50</option>
@@ -235,7 +223,7 @@
                 <span class="status-badge" :class="badgeClass(r.status)">
                   {{ statusLabel(r.status) }}
                   <span
-                    v-if="isGroup(r.to) && Array.isArray(r.readBy)"
+                    v-if="isGroup(r) && Array.isArray(r.readBy)"
                     class="badge-count"
                     :title="`Dibaca ${r.readBy.length}`"
                   >
@@ -247,7 +235,13 @@
                 <div class="time-cell">{{ fmt(r.createdAt) }}</div>
               </td>
               <td class="col-source">
-                <span v-if="sourceSimple(r) === 'reminder'" class="source-chip reminder">
+                <span v-if="sourceSimple(r) === 'inbox'" class="source-chip inbox">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  Inbox
+                </span>
+                <span v-else-if="sourceSimple(r) === 'reminder'" class="source-chip reminder">
                   <svg
                     viewBox="0 0 24 24"
                     fill="none"
@@ -369,8 +363,8 @@
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
             <div>
-              <h3>Detail Pesan Terkirim</h3>
-              <p class="detail-subtitle">Informasi lengkap pesan broadcast</p>
+              <h3>Detail Pesan</h3>
+              <p class="detail-subtitle">Informasi lengkap pesan keluar</p>
             </div>
           </div>
           <button class="btn-close-modal" @click="closeDetailModal" title="Tutup">
@@ -513,7 +507,16 @@
             </label>
             <div class="source-detail">
               <span
-                v-if="sourceSimple(selectedMessage) === 'reminder'"
+                v-if="sourceSimple(selectedMessage) === 'inbox'"
+                class="source-chip inbox large"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Inbox
+              </span>
+              <span
+                v-else-if="sourceSimple(selectedMessage) === 'reminder'"
                 class="source-chip reminder large"
               >
                 <svg
@@ -578,7 +581,7 @@
           <!-- Group Read Info (if exists) -->
           <div
             class="detail-section"
-            v-if="isGroup(selectedMessage.to) && Array.isArray(selectedMessage.readBy)"
+            v-if="isGroup(selectedMessage) && Array.isArray(selectedMessage.readBy)"
           >
             <label class="detail-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -700,7 +703,13 @@ import { mediaUrl } from "../utils/mediaUrl.js";
 const toast = useToast();
 
 const rows = ref([]);
-const meta = ref({ totalMessages: 0, currentPage: 1, totalPages: 1, hasMore: false });
+const meta = ref({
+  totalMessages: 0,
+  currentPage: 1,
+  totalPages: 1,
+  hasMore: false,
+  statusCounts: { total: 0, delivered: 0, failed: 0, processing: 0 },
+});
 const page = ref(1);
 const pageSize = ref(25);
 const sortBy = ref("createdAt");
@@ -708,6 +717,7 @@ const sortDir = ref("desc");
 const phoneNumber = ref("");
 const tutorQuery = ref("");
 const messageQuery = ref("");
+const sourceFilter = ref("");
 const loading = ref(false);
 const err = ref("");
 
@@ -738,10 +748,17 @@ const isBroadcast = (r) => {
 };
 
 const displayedRows = computed(() => {
-  const list = rows.value || [];
-  if (!tutorQuery.value) return list;
-  const q = tutorQuery.value.trim().toLowerCase();
-  return list.filter((r) => tutorName(r).toLowerCase().includes(q));
+  return rows.value || [];
+});
+
+const statusCounts = computed(() => {
+  const counts = meta.value?.statusCounts || {};
+  return {
+    total: Number(counts.total ?? meta.value?.totalMessages ?? 0),
+    delivered: Number(counts.delivered || 0),
+    failed: Number(counts.failed || 0),
+    processing: Number(counts.processing || 0),
+  };
 });
 
 const deviceTutorMap = ref({});
@@ -836,14 +853,17 @@ const loadGroupNames = async ({ force = false } = {}) => {
 };
 
 // Check if recipient is a group
-const isGroup = (to) => {
-  const recipient = String(to || "");
+const isGroup = (rowOrRecipient) => {
+  if (rowOrRecipient && typeof rowOrRecipient === "object") {
+    if (typeof rowOrRecipient.isGroup === "boolean") return rowOrRecipient.isGroup;
+  }
+  const recipient = String(
+    rowOrRecipient && typeof rowOrRecipient === "object"
+      ? rowOrRecipient.to || ""
+      : rowOrRecipient || ""
+  );
   if (!recipient) return false;
-  if (recipient.includes("@g.us")) return true;
-  // Support raw numeric group IDs stored without suffix
-  if (!recipient.includes("@") && /^\d{8,}$/.test(recipient)) return true;
-  // P3: drop old heuristic ("-") to avoid false positives
-  return false;
+  return recipient.toLowerCase().endsWith("@g.us");
 };
 
 // Get group name from mapping or return cleaned ID
@@ -867,7 +887,7 @@ const getDisplayName = (r) => {
   const recipient = String(r.to || "");
 
   // Check if it's a group
-  if (isGroup(recipient)) {
+  if (isGroup(r)) {
     const groupName = getGroupName(recipient);
     if (groupName) {
       return groupName; // Return group name
@@ -878,7 +898,8 @@ const getDisplayName = (r) => {
 
   // For regular contacts, return contact name
   if (r.contact) {
-    return (r.contact.firstName + " " + (r.contact.lastName || "")).trim();
+    const name = [r.contact.firstName, r.contact.lastName].filter(Boolean).join(" ").trim();
+    if (name) return name;
   }
 
   return "Tidak Ada Nama";
@@ -889,7 +910,7 @@ const getPhoneNumber = (r) => {
   const recipient = String(r.to || "");
 
   // If it's a group, return empty string
-  if (isGroup(recipient)) {
+  if (isGroup(r)) {
     return "";
   }
 
@@ -960,6 +981,8 @@ const load = async (p = page.value) => {
     };
     if (phoneNumber.value) params.phoneNumber = phoneNumber.value;
     if (messageQuery.value) params.message = messageQuery.value;
+    if (tutorQuery.value) params.tutorName = tutorQuery.value;
+    if (sourceFilter.value) params.source = sourceFilter.value;
     const { data } = await userApi.get("/tutors/messages/all", { params });
     rows.value = data.data || [];
     meta.value = data.metadata || meta.value;
@@ -1021,7 +1044,8 @@ const sourceSimple = (r) => {
   const id = String(r?.id || "");
 
   // 🔥 1) PRIORITAS TERTINGGI: Explicit broadcastType dari database
-  const t = r && r.broadcastType ? String(r.broadcastType).toLowerCase() : "";
+  const t = String(r?.sourceType || r?.broadcastType || "").toLowerCase();
+  if (t === "inbox") return "inbox";
   if (t === "reminder") return "reminder";
   if (t === "feedback") return "feedback";
   if (t === "recurrence") return "recurrence";
@@ -1042,7 +1066,7 @@ const sourceSimple = (r) => {
     return "broadcast";
   }
 
-  return "";
+  return "inbox";
 };
 
 const exportCsv = async () => {
@@ -1055,6 +1079,8 @@ const exportCsv = async () => {
     };
     if (phoneNumber.value) params.phoneNumber = phoneNumber.value;
     if (messageQuery.value) params.message = messageQuery.value;
+    if (tutorQuery.value) params.tutorName = tutorQuery.value;
+    if (sourceFilter.value) params.source = sourceFilter.value;
     const resp = await userApi.get("/tutors/messages/all", {
       params,
       responseType: "blob",
@@ -1080,7 +1106,7 @@ const deleteAllSent = async () => {
   // P0: remove dev-only title
   confirmTitle.value = "Konfirmasi";
   confirmMessage.value =
-    "Hapus SEMUA status pesan terkirim pada tampilan ini? Tindakan ini permanen.";
+    "Hapus semua riwayat pesan yang sesuai dengan filter aktif? Tindakan ini permanen dan tidak menghapus jadwal atau broadcast.";
   confirmAction.value = async () => {
     showConfirm.value = false;
     try {
@@ -1089,12 +1115,12 @@ const deleteAllSent = async () => {
       // 1) Hapus semua status di outgoingMessage
       const msgParams = { status: "all" };
       if (phoneNumber.value) msgParams.phoneNumber = phoneNumber.value;
+      if (messageQuery.value) msgParams.message = messageQuery.value;
+      if (tutorQuery.value) msgParams.tutorName = tutorQuery.value;
+      if (sourceFilter.value) msgParams.source = sourceFilter.value;
       await userApi.delete("/tutors/messages/all", { params: msgParams });
 
-      // 2) Sinkron: hapus broadcast yang sudah terkirim (cascade akan bersih-kan BC_*)
-      await userApi.delete("/broadcasts/bulk", { params: { isSent: true } });
-
-      toast.success("Semua pesan terkirim berhasil dihapus");
+      toast.success("Riwayat pesan yang sesuai filter berhasil dihapus");
       await load(1);
     } catch (e) {
       toast.error(e?.response?.data?.message || e?.message || "Gagal menghapus pesan");
@@ -1193,13 +1219,9 @@ onMounted(async () => {
   // P2: prioritize main data load first for better TTl/UX
   await load(1);
 
-  // Run the rest in background
-  void Promise.allSettled([
-    loadTutorMaps(),
-    loadBroadcasts(),
-    loadFbNameMap(),
-    loadGroupNames(),
-  ]);
+  // Group names remain a UI enhancement; tutor and source metadata now come
+  // from the sent-history endpoint without additional per-device requests.
+  void loadGroupNames();
 });
 
 const showDetailModal = ref(false);
@@ -1700,6 +1722,12 @@ const formatReaderJid = (jid) => {
   width: 12px;
   height: 12px;
   flex-shrink: 0;
+}
+
+.source-chip.inbox {
+  background: var(--theme-info-soft);
+  color: #0369a1;
+  border-color: #38bdf8;
 }
 
 .source-chip.reminder {

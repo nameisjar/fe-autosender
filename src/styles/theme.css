@@ -530,6 +530,11 @@ html.dark .contacts-page :where(
     color: #ffffff !important;
 }
 
+html.dark .source-chip,
+html.dark .source-chip svg {
+    color: #ffffff !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     body {
         transition: none;

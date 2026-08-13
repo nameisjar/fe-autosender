@@ -308,7 +308,7 @@
                 stroke-linejoin="round"
               />
             </svg>
-            <span>Semua Pesan Terkirim</span>
+            <span>Riwayat Semua Pesan</span>
           </router-link>
           <router-link to="/admin/monitoring" @click="$emit('close')">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
