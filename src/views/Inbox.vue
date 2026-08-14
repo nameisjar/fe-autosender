@@ -388,6 +388,8 @@
             class="chat-messages"
             ref="chatMessagesContainer"
             @scroll.passive="handleConversationScroll"
+            @wheel.passive="releaseInitialBottomPin"
+            @touchstart.passive="releaseInitialBottomPin"
           >
             <div v-if="loadingOlderMessages" class="history-loading" role="status">
               <span class="conversation-opening-spinner" aria-hidden="true"></span>
@@ -428,6 +430,7 @@
                   alt="Stiker"
                   class="sticker-message"
                   loading="lazy"
+                  @load="handleConversationMediaLoaded"
                   @error="handleStickerError($event, msg)"
                 />
 
@@ -438,6 +441,7 @@
                   class="chat-image"
                   loading="lazy"
                   decoding="async"
+                  @load="handleConversationMediaLoaded"
                   role="button"
                   tabindex="0"
                   title="Klik untuk memperbesar gambar"
@@ -455,6 +459,7 @@
                     controls
                     autoplay
                     preload="metadata"
+                    @loadedmetadata="handleConversationMediaLoaded"
                     @error="handleMediaError($event, msg)"
                   ></video>
                   <button v-else type="button" class="media-load-button" :disabled="hasMediaFailed(msg)" @click="activateMedia(msg)">
@@ -470,6 +475,7 @@
                     controls
                     autoplay
                     preload="metadata"
+                    @loadedmetadata="handleConversationMediaLoaded"
                     @error="handleMediaError($event, msg)"
                   ></audio>
                   <button v-else type="button" class="media-load-button" :disabled="hasMediaFailed(msg)" @click="activateMedia(msg)">
@@ -641,6 +647,7 @@
                 </div>
               </Teleport>
             </div>
+            <div ref="chatBottomAnchor" class="chat-bottom-anchor" aria-hidden="true"></div>
           </div>
           
           <!-- Reply Input -->
@@ -1014,12 +1021,14 @@ const sentMessages = ref([]);
 const sentMessagesConversationJid = ref('');
 const replyTextarea = ref(null);
 const chatMessagesContainer = ref(null);
+const chatBottomAnchor = ref(null);
 const attachmentInput = ref(null);
 const selectedAttachment = ref(null);
 const attachmentPreviewUrl = ref('');
 const isDraggingAttachment = ref(false);
 const failedMediaIds = ref(new Set());
 const activatedMediaIds = ref(new Set());
+const isInitialBottomPinning = ref(false);
 let attachmentDragDepth = 0;
 const conversationAvatarUrls = ref({});
 const failedAvatarKeys = ref(new Set());
@@ -1068,6 +1077,9 @@ let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
 let conversationOpenGeneration = 0;
 let conversationRequestController = null;
+let conversationLayoutObserver = null;
+let bottomPinReleaseTimer = null;
+let bottomScrollGeneration = 0;
 const conversationSnapshotCache = new Map();
 const MAX_CONVERSATION_SNAPSHOTS = 10;
 const reactionProfileRetryCounts = new Map();
@@ -1734,6 +1746,7 @@ const fetchDevices = async () => {
 
 const onDeviceChange = () => {
   cacheCurrentConversationSnapshot();
+  releaseInitialBottomPin();
   conversationRequestController?.abort();
   conversationRequestController = null;
   latestSentMessagesRequest++;
@@ -1943,12 +1956,15 @@ const setupSocketListener = () => {
 
       // If conversation is open, add to chat
       if (isOpenConversation) {
+        const shouldFollowLatestMessage = isConversationNearBottom(140);
         // ✅ Check duplicate in conversation messages too
         const isConvDuplicate = selectedConversation.value.messages.some(m => m.id === data.id);
         if (!isConvDuplicate) {
           selectedConversation.value.messages.push(incomingMessage);
           selectedConversation.value.messageCount++;
-          setTimeout(() => scrollToBottom(), 100);
+          if (shouldFollowLatestMessage) {
+            setTimeout(() => scrollToBottom(), 100);
+          }
         }
 
         // The backend stores every incoming message as unread first. Persist the
@@ -2198,7 +2214,7 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
 
     // Let Vue paint the modal and its snapshot before waiting for the network.
     await nextTick();
-    if (!targetMessageId) scrollToBottom();
+    if (!targetMessageId) await startInitialBottomPin();
 
     await synchronization;
 
@@ -2225,7 +2241,7 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
       didFocusTarget = await focusInboxMessage(String(targetMessageId));
     }
 
-    if (!didFocusTarget) scrollToBottom();
+    if (!didFocusTarget) await startInitialBottomPin();
   } finally {
     if (generation === conversationOpenGeneration) {
       isPreparingConversation.value = false;
@@ -2739,6 +2755,7 @@ const loadSentMessagesFromDatabase = async (
 // Close conversation
 const closeConversation = () => {
   cacheCurrentConversationSnapshot();
+  releaseInitialBottomPin();
   conversationRequestController?.abort();
   conversationRequestController = null;
   const returnRoute = conversationReturnRoute.value;
@@ -2796,12 +2813,85 @@ const isConversationNearBottom = (threshold = 96) => {
   return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
 };
 
+const waitForAnimationFrame = () => new Promise(resolve => {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => resolve());
+  } else {
+    setTimeout(resolve, 0);
+  }
+});
+
+const disconnectConversationLayoutObserver = () => {
+  conversationLayoutObserver?.disconnect();
+  conversationLayoutObserver = null;
+};
+
+const releaseInitialBottomPin = () => {
+  isInitialBottomPinning.value = false;
+  bottomScrollGeneration++;
+  if (bottomPinReleaseTimer) clearTimeout(bottomPinReleaseTimer);
+  bottomPinReleaseTimer = null;
+  disconnectConversationLayoutObserver();
+};
+
+const observeInitialConversationLayout = () => {
+  disconnectConversationLayoutObserver();
+  if (typeof ResizeObserver !== 'function' || !chatMessagesContainer.value) return;
+
+  conversationLayoutObserver = new ResizeObserver(() => {
+    if (isInitialBottomPinning.value) void scrollToBottom({ force: true });
+  });
+  chatMessagesContainer.value
+    .querySelectorAll('.chat-bubble')
+    .forEach(element => conversationLayoutObserver.observe(element));
+};
+
+const scrollToBottom = async ({ force = true } = {}) => {
+  if (!force && !isConversationNearBottom(140)) return false;
+  const generation = ++bottomScrollGeneration;
+  await nextTick();
+  await waitForAnimationFrame();
+  if (generation !== bottomScrollGeneration) return false;
+
+  const container = chatMessagesContainer.value;
+  const anchor = chatBottomAnchor.value;
+  if (!container || !anchor) return false;
+  anchor.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
+
+  // One additional frame handles layout that settles after Vue inserts both
+  // incoming and outgoing bubbles in the same update.
+  await waitForAnimationFrame();
+  if (generation === bottomScrollGeneration && isInitialBottomPinning.value) {
+    anchor.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
+  }
+  return true;
+};
+
+const startInitialBottomPin = async () => {
+  isInitialBottomPinning.value = true;
+  if (bottomPinReleaseTimer) clearTimeout(bottomPinReleaseTimer);
+  await nextTick();
+  observeInitialConversationLayout();
+  await scrollToBottom({ force: true });
+  bottomPinReleaseTimer = setTimeout(() => {
+    releaseInitialBottomPin();
+  }, 1800);
+};
+
+const handleConversationMediaLoaded = () => {
+  if (isInitialBottomPinning.value || isConversationNearBottom(140)) {
+    void scrollToBottom({ force: true });
+  }
+};
+
 const loadOlderConversationMessages = async () => {
   if (
     loadingOlderMessages.value
     || !selectedConversation.value
     || !conversationHasMoreHistory.value
   ) return;
+
+  releaseInitialBottomPin();
 
   const conversationFrom = selectedConversation.value.from;
   const container = chatMessagesContainer.value;
@@ -2842,15 +2932,8 @@ const loadOlderConversationMessages = async () => {
 
 const handleConversationScroll = event => {
   closeMessagePopups();
-  if (event?.currentTarget?.scrollTop <= 80) {
+  if (!isInitialBottomPinning.value && event?.currentTarget?.scrollTop <= 80) {
     void loadOlderConversationMessages();
-  }
-};
-
-const scrollToBottom = () => {
-  const container = chatMessagesContainer.value;
-  if (container) {
-    container.scrollTop = container.scrollHeight;
   }
 };
 
@@ -3923,6 +4006,7 @@ watch(
 );
 
 onUnmounted(() => {
+  releaseInitialBottomPin();
   conversationRequestController?.abort();
   conversationRequestController = null;
   window.removeEventListener('keydown', handleImagePreviewKeydown);
@@ -5010,6 +5094,15 @@ const handleMediaError = (event, message) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-anchor: none;
+}
+
+.chat-bottom-anchor {
+  flex: 0 0 1px;
+  width: 100%;
+  height: 1px;
+  overflow-anchor: auto;
+  pointer-events: none;
 }
 
 .conversation-sync-indicator {
