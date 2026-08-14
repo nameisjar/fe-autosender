@@ -387,8 +387,20 @@
           <div
             class="chat-messages"
             ref="chatMessagesContainer"
-            @scroll.passive="closeMessagePopups"
+            @scroll.passive="handleConversationScroll"
           >
+            <div v-if="loadingOlderMessages" class="history-loading" role="status">
+              <span class="conversation-opening-spinner" aria-hidden="true"></span>
+              <span>Memuat pesan lama...</span>
+            </div>
+            <button
+              v-else-if="conversationHasMoreHistory"
+              type="button"
+              class="load-older-messages"
+              @click="loadOlderConversationMessages"
+            >
+              Muat pesan sebelumnya
+            </button>
             <!-- All messages (incoming + outgoing) sorted by timestamp -->
             <div
               v-for="msg in allMessages"
@@ -411,8 +423,8 @@
                 
                 <!-- Incoming WhatsApp sticker (static or animated WebP) -->
                 <img
-                  v-if="isStickerMessage(msg) && msg.mediaPath"
-                  :src="mediaUrl(msg.mediaPath)"
+                  v-if="isStickerMessage(msg) && msg.mediaPath && !hasMediaFailed(msg)"
+                  :src="mediaThumbnailUrl(msg.mediaPath)"
                   alt="Stiker"
                   class="sticker-message"
                   loading="lazy"
@@ -420,11 +432,12 @@
                 />
 
                 <img
-                  v-else-if="isImageMedia(msg)"
-                  :src="mediaUrl(msg.mediaPath)"
+                  v-else-if="isImageMedia(msg) && !hasMediaFailed(msg)"
+                  :src="mediaThumbnailUrl(msg.mediaPath)"
                   alt="Gambar WhatsApp"
                   class="chat-image"
                   loading="lazy"
+                  decoding="async"
                   role="button"
                   tabindex="0"
                   title="Klik untuk memperbesar gambar"
@@ -434,21 +447,35 @@
                   @error="handleMediaError($event, msg)"
                 />
 
-                <video
-                  v-else-if="isVideoMedia(msg)"
-                  :src="mediaUrl(msg.mediaPath)"
-                  class="chat-video"
-                  controls
-                  preload="metadata"
-                ></video>
+                <template v-else-if="isVideoMedia(msg)">
+                  <video
+                    v-if="isMediaActivated(msg) && !hasMediaFailed(msg)"
+                    :src="mediaUrl(msg.mediaPath)"
+                    class="chat-video"
+                    controls
+                    autoplay
+                    preload="metadata"
+                    @error="handleMediaError($event, msg)"
+                  ></video>
+                  <button v-else type="button" class="media-load-button" :disabled="hasMediaFailed(msg)" @click="activateMedia(msg)">
+                    {{ hasMediaFailed(msg) ? 'Video tidak tersedia' : 'Putar video' }}
+                  </button>
+                </template>
 
-                <audio
-                  v-else-if="isAudioMedia(msg)"
-                  :src="mediaUrl(msg.mediaPath)"
-                  class="chat-audio"
-                  controls
-                  preload="metadata"
-                ></audio>
+                <template v-else-if="isAudioMedia(msg)">
+                  <audio
+                    v-if="isMediaActivated(msg) && !hasMediaFailed(msg)"
+                    :src="mediaUrl(msg.mediaPath)"
+                    class="chat-audio"
+                    controls
+                    autoplay
+                    preload="metadata"
+                    @error="handleMediaError($event, msg)"
+                  ></audio>
+                  <button v-else type="button" class="media-load-button" :disabled="hasMediaFailed(msg)" @click="activateMedia(msg)">
+                    {{ hasMediaFailed(msg) ? 'Audio tidak tersedia' : 'Putar audio' }}
+                  </button>
+                </template>
 
                 <a
                   v-else-if="isDocumentMedia(msg)"
@@ -972,6 +999,11 @@ const messageActionMenuStyle = ref(hiddenMessageActionMenuStyle());
 const imagePreview = ref(null);
 const highlightedMessageId = ref('');
 const isPreparingConversation = ref(false);
+const loadingOlderMessages = ref(false);
+const conversationHasMoreIncoming = ref(false);
+const conversationHasMoreOutgoing = ref(false);
+const incomingHistoryCursor = ref('');
+const outgoingHistoryCursor = ref('');
 const conversationReturnRoute = ref('');
 const conversationOpenedFromNavigation = ref(false);
 
@@ -986,6 +1018,8 @@ const attachmentInput = ref(null);
 const selectedAttachment = ref(null);
 const attachmentPreviewUrl = ref('');
 const isDraggingAttachment = ref(false);
+const failedMediaIds = ref(new Set());
+const activatedMediaIds = ref(new Set());
 let attachmentDragDepth = 0;
 const conversationAvatarUrls = ref({});
 const failedAvatarKeys = ref(new Set());
@@ -1021,6 +1055,7 @@ const meta = ref({
   totalPages: 1,
   hasMore: false,
   conversationKeys: [],
+  todayIncomingCount: null,
 });
 
 let searchTimer;
@@ -1032,8 +1067,9 @@ let latestReactionsRequest = 0;
 let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
 let conversationOpenGeneration = 0;
+let conversationRequestController = null;
 const conversationSnapshotCache = new Map();
-const MAX_CONVERSATION_SNAPSHOTS = 30;
+const MAX_CONVERSATION_SNAPSHOTS = 10;
 const reactionProfileRetryCounts = new Map();
 const reactionProfileRetryTimers = new Map();
 
@@ -1057,8 +1093,13 @@ const getConversationSnapshot = conversationFrom => {
   );
   if (!snapshot) return null;
   return {
+    incomingMessages: cloneSnapshotItems(snapshot.incomingMessages),
     sentMessages: cloneSnapshotItems(snapshot.sentMessages),
     reactions: cloneSnapshotItems(snapshot.reactions),
+    incomingHistoryCursor: snapshot.incomingHistoryCursor || '',
+    outgoingHistoryCursor: snapshot.outgoingHistoryCursor || '',
+    hasMoreIncoming: Boolean(snapshot.hasMoreIncoming),
+    hasMoreOutgoing: Boolean(snapshot.hasMoreOutgoing),
   };
 };
 
@@ -1066,16 +1107,32 @@ const cacheConversationSnapshot = (conversationFrom, patch = {}) => {
   if (!conversationFrom || !selectedDeviceId.value) return;
   const key = getConversationSnapshotKey(conversationFrom);
   const previous = conversationSnapshotCache.get(key) || {
+    incomingMessages: [],
     sentMessages: [],
     reactions: [],
   };
   const next = {
+    incomingMessages: Object.prototype.hasOwnProperty.call(patch, 'incomingMessages')
+      ? cloneSnapshotItems(patch.incomingMessages).slice(-60)
+      : previous.incomingMessages,
     sentMessages: Object.prototype.hasOwnProperty.call(patch, 'sentMessages')
-      ? cloneSnapshotItems(patch.sentMessages)
+      ? cloneSnapshotItems(patch.sentMessages).slice(-60)
       : previous.sentMessages,
     reactions: Object.prototype.hasOwnProperty.call(patch, 'reactions')
       ? cloneSnapshotItems(patch.reactions)
       : previous.reactions,
+    incomingHistoryCursor: Object.prototype.hasOwnProperty.call(patch, 'incomingHistoryCursor')
+      ? patch.incomingHistoryCursor
+      : previous.incomingHistoryCursor,
+    outgoingHistoryCursor: Object.prototype.hasOwnProperty.call(patch, 'outgoingHistoryCursor')
+      ? patch.outgoingHistoryCursor
+      : previous.outgoingHistoryCursor,
+    hasMoreIncoming: Object.prototype.hasOwnProperty.call(patch, 'hasMoreIncoming')
+      ? Boolean(patch.hasMoreIncoming)
+      : Boolean(previous.hasMoreIncoming),
+    hasMoreOutgoing: Object.prototype.hasOwnProperty.call(patch, 'hasMoreOutgoing')
+      ? Boolean(patch.hasMoreOutgoing)
+      : Boolean(previous.hasMoreOutgoing),
   };
 
   // Refresh insertion order so the least recently used snapshot is evicted.
@@ -1094,13 +1151,28 @@ const cacheCurrentConversationSnapshot = () => {
     || !sameConversationJid(sentMessagesConversationJid.value, conversationFrom)
   ) return;
   cacheConversationSnapshot(conversationFrom, {
+    incomingMessages: selectedConversation.value.messages,
     sentMessages: sentMessages.value,
     reactions: conversationReactions.value,
+    incomingHistoryCursor: incomingHistoryCursor.value,
+    outgoingHistoryCursor: outgoingHistoryCursor.value,
+    hasMoreIncoming: conversationHasMoreIncoming.value,
+    hasMoreOutgoing: conversationHasMoreOutgoing.value,
   });
 };
 
+const conversationHasMoreHistory = computed(() =>
+  conversationHasMoreIncoming.value || conversationHasMoreOutgoing.value,
+);
+
 // Computed
 const todayCount = computed(() => {
+  if (
+    meta.value.todayIncomingCount != null
+    && Number.isFinite(Number(meta.value.todayIncomingCount))
+  ) {
+    return Number(meta.value.todayIncomingCount);
+  }
   const today = new Date().toDateString();
   return messages.value.filter(m => new Date(m.receivedAt).toDateString() === today).length;
 });
@@ -1144,8 +1216,19 @@ const allMessages = computed(() => {
   return merged;
 });
 
+const reactionGroupsByMessageKey = computed(() => {
+  const grouped = new Map();
+  allMessages.value.forEach(message => {
+    grouped.set(
+      getReactionMessageKey(message),
+      groupMessageReactions(message, conversationReactions.value),
+    );
+  });
+  return grouped;
+});
+
 const getReactionGroups = message =>
-  groupMessageReactions(message, conversationReactions.value);
+  reactionGroupsByMessageKey.value.get(getReactionMessageKey(message)) || [];
 
 const isDeletedForEveryone = message => Boolean(
   message?.deletedForEveryone ||
@@ -1527,16 +1610,28 @@ const conversations = computed(() => {
         isGroup: msg.isGroup || msg.from?.includes('@g.us'),
         messages: [],
         latestMessage: msg,
-        messageCount: 0,
-        unreadCount: 0, // Track unread messages
+        messageCount: Number(msg.conversationIncomingCount) || 0,
+        unreadCount: Number(msg.conversationUnreadCount) || 0,
       };
     }
     grouped[key].messages.push(msg);
-    grouped[key].messageCount++;
+    if (msg.conversationIncomingCount == null) {
+      grouped[key].messageCount++;
+    } else {
+      grouped[key].messageCount = Math.max(
+        grouped[key].messageCount,
+        Number(msg.conversationIncomingCount) || 0,
+      );
+    }
 
     // Count unread messages (messages not yet read by user)
-    if (!msg.isRead) {
+    if (msg.conversationUnreadCount == null && !msg.isRead) {
       grouped[key].unreadCount++;
+    } else if (msg.conversationUnreadCount != null) {
+      grouped[key].unreadCount = Math.max(
+        grouped[key].unreadCount,
+        Number(msg.conversationUnreadCount) || 0,
+      );
     }
     
     // Update pushName if newer message has it
@@ -1639,6 +1734,8 @@ const fetchDevices = async () => {
 
 const onDeviceChange = () => {
   cacheCurrentConversationSnapshot();
+  conversationRequestController?.abort();
+  conversationRequestController = null;
   latestSentMessagesRequest++;
   latestReactionsRequest++;
   selectedConversation.value = null;
@@ -1756,6 +1853,7 @@ const loadMessages = async () => {
       totalPages: data?.metadata?.totalPages ?? 1,
       hasMore: data?.metadata?.hasMore ?? false,
       conversationKeys,
+      todayIncomingCount: data?.metadata?.todayIncomingCount ?? null,
     };
     page.value = meta.value.currentPage;
   } catch (e) {
@@ -1770,6 +1868,7 @@ const loadMessages = async () => {
         totalPages: 1,
         hasMore: false,
         conversationKeys: [],
+        todayIncomingCount: null,
       };
     }
   } finally {
@@ -2048,6 +2147,8 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
 
   if (isDifferentConversation) {
     cacheCurrentConversationSnapshot();
+    conversationRequestController?.abort();
+    conversationRequestController = new AbortController();
 
     // Invalidate the previous outbox request before changing the selected
     // conversation. Otherwise its response can overwrite the new chat.
@@ -2056,6 +2157,12 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
     sentMessages.value = snapshot?.sentMessages || [];
     sentMessagesConversationJid.value = conversationFrom;
     conversationReactions.value = snapshot?.reactions || [];
+    incomingHistoryCursor.value = snapshot?.incomingHistoryCursor || '';
+    outgoingHistoryCursor.value = snapshot?.outgoingHistoryCursor || '';
+    conversationHasMoreIncoming.value = snapshot?.hasMoreIncoming ?? true;
+    conversationHasMoreOutgoing.value = snapshot?.hasMoreOutgoing ?? true;
+    failedMediaIds.value = new Set();
+    activatedMediaIds.value = new Set();
     replyText.value = '';
     clearAttachment();
     resetAttachmentDrag();
@@ -2063,7 +2170,13 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   }
 
   isPreparingConversation.value = true;
-  selectedConversation.value = conv;
+  const snapshot = getConversationSnapshot(conversationFrom);
+  selectedConversation.value = {
+    ...conv,
+    messages: snapshot?.incomingMessages?.length
+      ? snapshot.incomingMessages
+      : conv.messages,
+  };
   replyText.value = '';
 
   try {
@@ -2071,8 +2184,16 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
     // incoming-message snapshot and, when available, an in-memory outbox cache.
     const synchronization = Promise.allSettled([
       markConversationAsRead(conversationFrom),
-      loadSentMessagesFromDatabase(conversationFrom),
-      loadConversationReactions(conversationFrom),
+      loadIncomingMessagesFromDatabase(conversationFrom, {
+        signal: conversationRequestController?.signal,
+      }),
+      loadSentMessagesFromDatabase(conversationFrom, {
+        signal: conversationRequestController?.signal,
+      }),
+      loadConversationReactions(
+        conversationFrom,
+        conversationRequestController?.signal,
+      ),
     ]);
 
     // Let Vue paint the modal and its snapshot before waiting for the network.
@@ -2088,9 +2209,21 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
 
     await nextTick();
 
-    const didFocusTarget = targetMessageId
+    let didFocusTarget = targetMessageId
       ? await focusInboxMessage(String(targetMessageId))
       : false;
+
+    // Navigation from sent-history can point to an older message. Load a few
+    // cursor pages on demand instead of returning the entire conversation in
+    // the initial Inbox payload.
+    for (
+      let attempt = 0;
+      targetMessageId && !didFocusTarget && conversationHasMoreHistory.value && attempt < 8;
+      attempt += 1
+    ) {
+      await loadOlderConversationMessages();
+      didFocusTarget = await focusInboxMessage(String(targetMessageId));
+    }
 
     if (!didFocusTarget) scrollToBottom();
   } finally {
@@ -2350,7 +2483,67 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
   }
 };
 
-const loadConversationReactions = async conversationFrom => {
+const loadIncomingMessagesFromDatabase = async (
+  conversationFrom,
+  { before = '', appendOlder = false, signal } = {},
+) => {
+  const requestedDeviceId = selectedDeviceId.value;
+
+  try {
+    const { data } = await userApi.get(
+      `/devices/${selectedDeviceId.value}/inbox`,
+      {
+        params: {
+          conversationJid: conversationFrom,
+          limit: 30,
+          ...(before ? { before } : {}),
+          _t: Date.now(),
+        },
+        signal,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          Pragma: 'no-cache',
+        },
+      },
+    );
+
+    if (
+      requestedDeviceId !== selectedDeviceId.value
+      || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
+    ) return;
+
+    const pageMessages = Array.isArray(data?.data)
+      ? [...data.data].sort((left, right) =>
+          new Date(left.receivedAt) - new Date(right.receivedAt))
+      : [];
+    const currentMessages = appendOlder
+      ? selectedConversation.value.messages
+      : [];
+    const byId = new Map();
+    [...pageMessages, ...currentMessages].forEach(message => {
+      const key = message.id || message.pkId;
+      if (key && !byId.has(key)) byId.set(key, message);
+    });
+    selectedConversation.value.messages = [...byId.values()].sort(
+      (left, right) => new Date(left.receivedAt) - new Date(right.receivedAt),
+    );
+    incomingHistoryCursor.value = data?.metadata?.conversationNextCursor || '';
+    conversationHasMoreIncoming.value = Boolean(
+      data?.metadata?.conversationHasMore,
+    );
+    cacheConversationSnapshot(conversationFrom, {
+      incomingMessages: selectedConversation.value.messages,
+      incomingHistoryCursor: incomingHistoryCursor.value,
+      hasMoreIncoming: conversationHasMoreIncoming.value,
+    });
+
+  } catch (error) {
+    if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
+    throw error;
+  }
+};
+
+const loadConversationReactions = async (conversationFrom, signal) => {
   const requestId = ++latestReactionsRequest;
   const requestedDeviceId = selectedDeviceId.value;
   try {
@@ -2361,6 +2554,7 @@ const loadConversationReactions = async conversationFrom => {
           conversationJid: conversationFrom,
           _t: Date.now(),
         },
+        signal,
         headers: { 'Cache-Control': 'no-cache, no-store' },
       },
     );
@@ -2392,7 +2586,7 @@ const markConversationAsRead = async (from) => {
     // Update UI immediately (optimistic update)
     messages.value = messages.value.map(msg => {
       if (msg.from === from) {
-        return { ...msg, isRead: true };
+        return { ...msg, isRead: true, conversationUnreadCount: 0 };
       }
       return msg;
     });
@@ -2428,7 +2622,10 @@ const markConversationAsRead = async (from) => {
 };
 
 // Load sent messages from database (OutgoingMessage)
-const loadSentMessagesFromDatabase = async (conversationFrom) => {
+const loadSentMessagesFromDatabase = async (
+  conversationFrom,
+  { before = '', appendOlder = false, signal } = {},
+) => {
   const requestId = ++latestSentMessagesRequest;
   const requestedDeviceId = selectedDeviceId.value;
 
@@ -2452,7 +2649,8 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
     const { data } = await userApi.get(`/devices/${selectedDeviceId.value}/outbox`, {
       params: {
         to: conversationFrom,
-        limit: 50,
+        limit: 30,
+        ...(before ? { before } : {}),
         _t: timestamp, // ✅ Timestamp cache buster
         _r: random,    // ✅ Random cache buster
       },
@@ -2462,6 +2660,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
         'Expires': '-1',
         'X-Requested-With': 'XMLHttpRequest', // Some proxies respect this
       },
+      signal,
     });
 
     if (
@@ -2511,9 +2710,13 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
     sentMessages.value = mergeOutgoingSnapshotStatuses(
       sentMessages.value,
       snapshotMessages,
-    );
+    ).sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
+    outgoingHistoryCursor.value = snapshotMessages[0]?.timestamp || '';
+    conversationHasMoreOutgoing.value = snapshotMessages.length === 30;
     cacheConversationSnapshot(conversationFrom, {
       sentMessages: sentMessages.value,
+      outgoingHistoryCursor: outgoingHistoryCursor.value,
+      hasMoreOutgoing: conversationHasMoreOutgoing.value,
     });
 
     if (keepPinnedToBottom) {
@@ -2521,6 +2724,7 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
       scrollToBottom();
     }
   } catch (e) {
+    if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') return;
     if (
       requestId === latestSentMessagesRequest
       && requestedDeviceId === selectedDeviceId.value
@@ -2535,6 +2739,8 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 // Close conversation
 const closeConversation = () => {
   cacheCurrentConversationSnapshot();
+  conversationRequestController?.abort();
+  conversationRequestController = null;
   const returnRoute = conversationReturnRoute.value;
   const shouldRestoreInbox = conversationOpenedFromNavigation.value && !returnRoute;
   conversationReturnRoute.value = '';
@@ -2544,6 +2750,11 @@ const closeConversation = () => {
   latestReactionsRequest++;
   sentMessagesConversationJid.value = '';
   isPreparingConversation.value = false;
+  loadingOlderMessages.value = false;
+  conversationHasMoreIncoming.value = false;
+  conversationHasMoreOutgoing.value = false;
+  incomingHistoryCursor.value = '';
+  outgoingHistoryCursor.value = '';
   isConversationFullscreen.value = false;
   resetAttachmentDrag();
   closeImagePreview();
@@ -2583,6 +2794,57 @@ const isConversationNearBottom = (threshold = 96) => {
   const container = chatMessagesContainer.value;
   if (!container) return true;
   return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+};
+
+const loadOlderConversationMessages = async () => {
+  if (
+    loadingOlderMessages.value
+    || !selectedConversation.value
+    || !conversationHasMoreHistory.value
+  ) return;
+
+  const conversationFrom = selectedConversation.value.from;
+  const container = chatMessagesContainer.value;
+  const previousScrollHeight = container?.scrollHeight || 0;
+  const previousScrollTop = container?.scrollTop || 0;
+  loadingOlderMessages.value = true;
+
+  try {
+    await Promise.allSettled([
+      conversationHasMoreIncoming.value
+        ? loadIncomingMessagesFromDatabase(conversationFrom, {
+            before: incomingHistoryCursor.value,
+            appendOlder: true,
+            signal: conversationRequestController?.signal,
+          })
+        : Promise.resolve(),
+      conversationHasMoreOutgoing.value
+        ? loadSentMessagesFromDatabase(conversationFrom, {
+            before: outgoingHistoryCursor.value,
+            appendOlder: true,
+            signal: conversationRequestController?.signal,
+          })
+        : Promise.resolve(),
+    ]);
+
+    if (
+      container
+      && sameConversationJid(selectedConversation.value?.from, conversationFrom)
+    ) {
+      await nextTick();
+      container.scrollTop = previousScrollTop
+        + Math.max(0, container.scrollHeight - previousScrollHeight);
+    }
+  } finally {
+    loadingOlderMessages.value = false;
+  }
+};
+
+const handleConversationScroll = event => {
+  closeMessagePopups();
+  if (event?.currentTarget?.scrollTop <= 80) {
+    void loadOlderConversationMessages();
+  }
 };
 
 const scrollToBottom = () => {
@@ -3661,6 +3923,8 @@ watch(
 );
 
 onUnmounted(() => {
+  conversationRequestController?.abort();
+  conversationRequestController = null;
   window.removeEventListener('keydown', handleImagePreviewKeydown);
   window.removeEventListener('pointerdown', handleMessagePopupPointerDown);
   window.removeEventListener('resize', updateMessageActionMenuPosition);
@@ -3688,7 +3952,9 @@ const isStickerMessage = (message) => {
 
 const getMediaExtension = (message) => {
   const path = String(message?.mediaPath || '').split(/[?#]/)[0].toLowerCase();
-  return path.includes('.') ? path.substring(path.lastIndexOf('.') + 1) : '';
+  if (path.includes('.')) return path.substring(path.lastIndexOf('.') + 1);
+  const fileName = String(message?.fileName || '').toLowerCase();
+  return fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.') + 1) : '';
 };
 
 const isImageMedia = (message) =>
@@ -3703,6 +3969,25 @@ const isDocumentMedia = (message) =>
   !isImageMedia(message) &&
   !isVideoMedia(message) &&
   !isAudioMedia(message);
+
+const getStableMediaId = message => String(
+  message?.id || message?.waMessageId || message?.tempId || message?.pkId || message?.mediaPath || '',
+);
+
+const hasMediaFailed = message => failedMediaIds.value.has(getStableMediaId(message));
+const isMediaActivated = message => activatedMediaIds.value.has(getStableMediaId(message));
+const activateMedia = message => {
+  const id = getStableMediaId(message);
+  if (!id || activatedMediaIds.value.has(id)) return;
+  activatedMediaIds.value = new Set([...activatedMediaIds.value, id]);
+};
+
+const mediaThumbnailUrl = source => {
+  const url = mediaUrl(source);
+  if (!url) return '';
+  if (!url.includes('/inbox-media/')) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}thumbnail=1`;
+};
 
 const getMediaFileName = (message) => {
   if (message?.fileName) return message.fileName;
@@ -3729,8 +4014,7 @@ const getVisibleMessageText = (message) => {
 const openImagePreview = (message, event) => {
   if (!message?.mediaPath || message?.mediaLoadFailed) return;
 
-  const renderedImage = event?.currentTarget;
-  const src = renderedImage?.currentSrc || renderedImage?.src || mediaUrl(message.mediaPath);
+  const src = mediaUrl(message.mediaPath);
   if (!src) return;
 
   imagePreview.value = {
@@ -3795,25 +4079,13 @@ const getMessagePreview = (message) => {
 };
 
 const handleStickerError = (event, message) => {
-  const image = event.currentTarget;
-  const retryCount = Number(image.dataset.retryCount || 0);
-  if (retryCount < 3 && message.mediaPath) {
-    image.dataset.retryCount = String(retryCount + 1);
-    image.style.visibility = 'hidden';
-    setTimeout(() => {
-      image.style.visibility = '';
-      image.src = mediaUrl(message.mediaPath);
-    }, 750 * (retryCount + 1));
-    return;
-  }
-
-  image.style.display = 'none';
-  message.mediaLoadFailed = true;
+  handleMediaError(event, message);
 };
 
 const handleMediaError = (event, message) => {
   event.currentTarget.style.display = 'none';
-  message.mediaPath = '';
+  const id = getStableMediaId(message);
+  if (id) failedMediaIds.value = new Set([...failedMediaIds.value, id]);
 };
 </script>
 
@@ -4412,7 +4684,6 @@ const handleMediaError = (event, message) => {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4430,22 +4701,9 @@ const handleMediaError = (event, message) => {
   transition: opacity 180ms ease;
 }
 
-.inbox-modal-enter-active .conversation-modal,
-.inbox-modal-leave-active .conversation-modal {
-  transition:
-    opacity 180ms ease,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
 .inbox-modal-enter-from,
 .inbox-modal-leave-to {
   opacity: 0;
-}
-
-.inbox-modal-enter-from .conversation-modal,
-.inbox-modal-leave-to .conversation-modal {
-  opacity: 0;
-  transform: translateY(8px) scale(0.985);
 }
 
 .modal {
@@ -4800,12 +5058,29 @@ const handleMediaError = (event, message) => {
 .chat-bubble {
   max-width: 78%;
   position: relative;
-  animation: fadeIn 0.2s ease;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+.history-loading,
+.load-older-messages {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface);
+  color: var(--theme-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.load-older-messages {
+  cursor: pointer;
 }
 
 .chat-bubble.incoming {
@@ -5234,6 +5509,23 @@ const handleMediaError = (event, message) => {
   border-radius: 10px;
   object-fit: contain;
   background: rgba(15, 23, 42, 0.08);
+}
+
+.media-load-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 132px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.18);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .chat-bubble.message-target-highlight .bubble-content {
