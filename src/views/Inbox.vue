@@ -263,12 +263,13 @@
     </div>
 
     <!-- Message Detail Modal -->
-    <div
-      v-if="selectedConversation"
-      class="modal-overlay"
-      :class="{ 'modal-overlay--opening-navigation': isOpeningNavigationTarget }"
-      @click="closeConversation"
-    >
+    <Transition name="inbox-modal">
+      <div
+        v-if="selectedConversation"
+        class="modal-overlay"
+        :class="{ 'modal-overlay--opening-navigation': isOpeningNavigationTarget }"
+        @click="closeConversation"
+      >
       <div
         class="modal conversation-modal"
         :class="{ 'conversation-modal--fullscreen': isConversationFullscreen }"
@@ -376,16 +377,15 @@
         <div class="modal-body chat-body">
           <div
             v-if="isPreparingConversation"
-            class="conversation-opening-overlay"
+            class="conversation-sync-indicator"
             role="status"
             aria-live="polite"
           >
             <span class="conversation-opening-spinner" aria-hidden="true"></span>
-            <span>Menyiapkan percakapan...</span>
+            <span>Memperbarui...</span>
           </div>
           <div
             class="chat-messages"
-            :class="{ 'chat-messages--preparing': isPreparingConversation }"
             ref="chatMessagesContainer"
             @scroll.passive="closeMessagePopups"
           >
@@ -679,6 +679,7 @@
         </div>
       </div>
     </div>
+    </Transition>
 
     <!-- Add Contact Modal -->
     <div
@@ -1027,11 +1028,76 @@ let socketCleanup = null;
 let socketConnectionCleanup = null;
 let latestLoadRequest = 0;
 let latestSentMessagesRequest = 0;
+let latestReactionsRequest = 0;
 let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
 let conversationOpenGeneration = 0;
+const conversationSnapshotCache = new Map();
+const MAX_CONVERSATION_SNAPSHOTS = 30;
 const reactionProfileRetryCounts = new Map();
 const reactionProfileRetryTimers = new Map();
+
+const cloneSnapshotItems = items => (Array.isArray(items)
+  ? items.map(item => ({
+      ...item,
+      ...(Array.isArray(item?.readBy) ? { readBy: [...item.readBy] } : {}),
+      ...(Array.isArray(item?.members) ? { members: [...item.members] } : {}),
+    }))
+  : []);
+
+const getConversationSnapshotKey = (
+  conversationFrom,
+  deviceId = selectedDeviceId.value,
+) => `${String(deviceId || '')}:${String(conversationFrom || '').trim().toLowerCase()}`;
+
+const getConversationSnapshot = conversationFrom => {
+  if (!conversationFrom || !selectedDeviceId.value) return null;
+  const snapshot = conversationSnapshotCache.get(
+    getConversationSnapshotKey(conversationFrom),
+  );
+  if (!snapshot) return null;
+  return {
+    sentMessages: cloneSnapshotItems(snapshot.sentMessages),
+    reactions: cloneSnapshotItems(snapshot.reactions),
+  };
+};
+
+const cacheConversationSnapshot = (conversationFrom, patch = {}) => {
+  if (!conversationFrom || !selectedDeviceId.value) return;
+  const key = getConversationSnapshotKey(conversationFrom);
+  const previous = conversationSnapshotCache.get(key) || {
+    sentMessages: [],
+    reactions: [],
+  };
+  const next = {
+    sentMessages: Object.prototype.hasOwnProperty.call(patch, 'sentMessages')
+      ? cloneSnapshotItems(patch.sentMessages)
+      : previous.sentMessages,
+    reactions: Object.prototype.hasOwnProperty.call(patch, 'reactions')
+      ? cloneSnapshotItems(patch.reactions)
+      : previous.reactions,
+  };
+
+  // Refresh insertion order so the least recently used snapshot is evicted.
+  conversationSnapshotCache.delete(key);
+  conversationSnapshotCache.set(key, next);
+  while (conversationSnapshotCache.size > MAX_CONVERSATION_SNAPSHOTS) {
+    const oldestKey = conversationSnapshotCache.keys().next().value;
+    conversationSnapshotCache.delete(oldestKey);
+  }
+};
+
+const cacheCurrentConversationSnapshot = () => {
+  const conversationFrom = selectedConversation.value?.from;
+  if (
+    !conversationFrom
+    || !sameConversationJid(sentMessagesConversationJid.value, conversationFrom)
+  ) return;
+  cacheConversationSnapshot(conversationFrom, {
+    sentMessages: sentMessages.value,
+    reactions: conversationReactions.value,
+  });
+};
 
 // Computed
 const todayCount = computed(() => {
@@ -1572,7 +1638,9 @@ const fetchDevices = async () => {
 };
 
 const onDeviceChange = () => {
+  cacheCurrentConversationSnapshot();
   latestSentMessagesRequest++;
+  latestReactionsRequest++;
   selectedConversation.value = null;
   sentMessages.value = [];
   sentMessagesConversationJid.value = '';
@@ -1979,12 +2047,15 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   );
 
   if (isDifferentConversation) {
+    cacheCurrentConversationSnapshot();
+
     // Invalidate the previous outbox request before changing the selected
     // conversation. Otherwise its response can overwrite the new chat.
     latestSentMessagesRequest++;
-    sentMessages.value = [];
+    const snapshot = getConversationSnapshot(conversationFrom);
+    sentMessages.value = snapshot?.sentMessages || [];
     sentMessagesConversationJid.value = conversationFrom;
-    conversationReactions.value = [];
+    conversationReactions.value = snapshot?.reactions || [];
     replyText.value = '';
     clearAttachment();
     resetAttachmentDrag();
@@ -1993,26 +2064,28 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
 
   isPreparingConversation.value = true;
   selectedConversation.value = conv;
+  replyText.value = '';
 
   try {
-    // Mark all messages in this conversation as read before showing it.
-    await markConversationAsRead(conversationFrom);
+    // Start every synchronization task together. The modal already has an
+    // incoming-message snapshot and, when available, an in-memory outbox cache.
+    const synchronization = Promise.allSettled([
+      markConversationAsRead(conversationFrom),
+      loadSentMessagesFromDatabase(conversationFrom),
+      loadConversationReactions(conversationFrom),
+    ]);
 
-    // A different conversation may have been selected while the read-status
-    // request was still in flight. Do not start stale history requests.
+    // Let Vue paint the modal and its snapshot before waiting for the network.
+    await nextTick();
+    if (!targetMessageId) scrollToBottom();
+
+    await synchronization;
+
     if (
       generation !== conversationOpenGeneration
       || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
     ) return;
 
-    await Promise.all([
-      loadSentMessagesFromDatabase(conversationFrom),
-      loadConversationReactions(conversationFrom),
-    ]);
-
-    if (generation !== conversationOpenGeneration) return;
-
-    replyText.value = '';
     await nextTick();
 
     const didFocusTarget = targetMessageId
@@ -2278,6 +2351,8 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
 };
 
 const loadConversationReactions = async conversationFrom => {
+  const requestId = ++latestReactionsRequest;
+  const requestedDeviceId = selectedDeviceId.value;
   try {
     const { data } = await userApi.get(
       `/devices/${selectedDeviceId.value}/inbox/reactions`,
@@ -2290,17 +2365,21 @@ const loadConversationReactions = async conversationFrom => {
       },
     );
 
-    if (!sameConversationJid(selectedConversation.value?.from, conversationFrom)) return;
+    if (
+      requestId !== latestReactionsRequest
+      || requestedDeviceId !== selectedDeviceId.value
+      || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
+    ) return;
     conversationReactions.value = Array.isArray(data) ? data : [];
+    cacheConversationSnapshot(conversationFrom, {
+      reactions: conversationReactions.value,
+    });
     conversationReactions.value.forEach(reaction => {
       removeReactionPlaceholder(reaction.reactionMessageId);
     });
   } catch {
-    // Reaction is optional metadata. Never clear or block chat messages when
-    // this endpoint is unavailable during a staggered deployment.
-    if (sameConversationJid(selectedConversation.value?.from, conversationFrom)) {
-      conversationReactions.value = [];
-    }
+    // Reaction is optional metadata. Preserve the last in-memory snapshot when
+    // refresh fails so opening a conversation never flashes empty state.
   }
 };
 
@@ -2428,10 +2507,19 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
       };
     });
     
+    const keepPinnedToBottom = isConversationNearBottom();
     sentMessages.value = mergeOutgoingSnapshotStatuses(
       sentMessages.value,
       snapshotMessages,
     );
+    cacheConversationSnapshot(conversationFrom, {
+      sentMessages: sentMessages.value,
+    });
+
+    if (keepPinnedToBottom) {
+      await nextTick();
+      scrollToBottom();
+    }
   } catch (e) {
     if (
       requestId === latestSentMessagesRequest
@@ -2446,12 +2534,14 @@ const loadSentMessagesFromDatabase = async (conversationFrom) => {
 
 // Close conversation
 const closeConversation = () => {
+  cacheCurrentConversationSnapshot();
   const returnRoute = conversationReturnRoute.value;
   const shouldRestoreInbox = conversationOpenedFromNavigation.value && !returnRoute;
   conversationReturnRoute.value = '';
   conversationOpenedFromNavigation.value = false;
   conversationOpenGeneration++;
   latestSentMessagesRequest++;
+  latestReactionsRequest++;
   sentMessagesConversationJid.value = '';
   isPreparingConversation.value = false;
   isConversationFullscreen.value = false;
@@ -2489,6 +2579,12 @@ watch(replyText, () => {
 });
 
 // Scroll chat to bottom
+const isConversationNearBottom = (threshold = 96) => {
+  const container = chatMessagesContainer.value;
+  if (!container) return true;
+  return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+};
+
 const scrollToBottom = () => {
   const container = chatMessagesContainer.value;
   if (container) {
@@ -4329,6 +4425,29 @@ const handleMediaError = (event, message) => {
   pointer-events: none;
 }
 
+.inbox-modal-enter-active,
+.inbox-modal-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.inbox-modal-enter-active .conversation-modal,
+.inbox-modal-leave-active .conversation-modal {
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.inbox-modal-enter-from,
+.inbox-modal-leave-to {
+  opacity: 0;
+}
+
+.inbox-modal-enter-from .conversation-modal,
+.inbox-modal-leave-to .conversation-modal {
+  opacity: 0;
+  transform: translateY(8px) scale(0.985);
+}
+
 .modal {
   background: var(--theme-surface);
   border-radius: 20px;
@@ -4635,27 +4754,30 @@ const handleMediaError = (event, message) => {
   gap: 12px;
 }
 
-.chat-messages--preparing {
-  visibility: hidden;
-}
-
-.conversation-opening-overlay {
+.conversation-sync-indicator {
   position: absolute;
-  inset: 0;
+  top: 12px;
+  right: 16px;
   z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: var(--theme-surface-soft);
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface);
+  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(8px);
   color: var(--theme-text-muted);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
+  pointer-events: none;
 }
 
 .conversation-opening-spinner {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   border: 2px solid var(--theme-border-strong);
   border-top-color: var(--theme-accent);
   border-radius: 50%;
@@ -4664,6 +4786,15 @@ const handleMediaError = (event, message) => {
 
 @keyframes conversation-opening-spin {
   to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inbox-modal-enter-active,
+  .inbox-modal-leave-active,
+  .inbox-modal-enter-active .conversation-modal,
+  .inbox-modal-leave-active .conversation-modal {
+    transition-duration: 1ms;
+  }
 }
 
 .chat-bubble {
