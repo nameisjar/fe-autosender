@@ -1007,10 +1007,8 @@ const imagePreview = ref(null);
 const highlightedMessageId = ref('');
 const isPreparingConversation = ref(false);
 const loadingOlderMessages = ref(false);
-const conversationHasMoreIncoming = ref(false);
-const conversationHasMoreOutgoing = ref(false);
-const incomingHistoryCursor = ref('');
-const outgoingHistoryCursor = ref('');
+const conversationHasMoreTimeline = ref(false);
+const conversationTimelineCursor = ref('');
 const conversationReturnRoute = ref('');
 const conversationOpenedFromNavigation = ref(false);
 
@@ -1072,7 +1070,7 @@ let searchTimer;
 let socketCleanup = null;
 let socketConnectionCleanup = null;
 let latestLoadRequest = 0;
-let latestSentMessagesRequest = 0;
+let latestTimelineRequest = 0;
 let latestReactionsRequest = 0;
 let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
@@ -1107,10 +1105,8 @@ const getConversationSnapshot = conversationFrom => {
     incomingMessages: cloneSnapshotItems(snapshot.incomingMessages),
     sentMessages: cloneSnapshotItems(snapshot.sentMessages),
     reactions: cloneSnapshotItems(snapshot.reactions),
-    incomingHistoryCursor: snapshot.incomingHistoryCursor || '',
-    outgoingHistoryCursor: snapshot.outgoingHistoryCursor || '',
-    hasMoreIncoming: Boolean(snapshot.hasMoreIncoming),
-    hasMoreOutgoing: Boolean(snapshot.hasMoreOutgoing),
+    timelineCursor: snapshot.timelineCursor || '',
+    hasMoreTimeline: Boolean(snapshot.hasMoreTimeline),
   };
 };
 
@@ -1132,18 +1128,12 @@ const cacheConversationSnapshot = (conversationFrom, patch = {}) => {
     reactions: Object.prototype.hasOwnProperty.call(patch, 'reactions')
       ? cloneSnapshotItems(patch.reactions)
       : previous.reactions,
-    incomingHistoryCursor: Object.prototype.hasOwnProperty.call(patch, 'incomingHistoryCursor')
-      ? patch.incomingHistoryCursor
-      : previous.incomingHistoryCursor,
-    outgoingHistoryCursor: Object.prototype.hasOwnProperty.call(patch, 'outgoingHistoryCursor')
-      ? patch.outgoingHistoryCursor
-      : previous.outgoingHistoryCursor,
-    hasMoreIncoming: Object.prototype.hasOwnProperty.call(patch, 'hasMoreIncoming')
-      ? Boolean(patch.hasMoreIncoming)
-      : Boolean(previous.hasMoreIncoming),
-    hasMoreOutgoing: Object.prototype.hasOwnProperty.call(patch, 'hasMoreOutgoing')
-      ? Boolean(patch.hasMoreOutgoing)
-      : Boolean(previous.hasMoreOutgoing),
+    timelineCursor: Object.prototype.hasOwnProperty.call(patch, 'timelineCursor')
+      ? patch.timelineCursor
+      : previous.timelineCursor,
+    hasMoreTimeline: Object.prototype.hasOwnProperty.call(patch, 'hasMoreTimeline')
+      ? Boolean(patch.hasMoreTimeline)
+      : Boolean(previous.hasMoreTimeline),
   };
 
   // Refresh insertion order so the least recently used snapshot is evicted.
@@ -1165,16 +1155,12 @@ const cacheCurrentConversationSnapshot = () => {
     incomingMessages: selectedConversation.value.messages,
     sentMessages: sentMessages.value,
     reactions: conversationReactions.value,
-    incomingHistoryCursor: incomingHistoryCursor.value,
-    outgoingHistoryCursor: outgoingHistoryCursor.value,
-    hasMoreIncoming: conversationHasMoreIncoming.value,
-    hasMoreOutgoing: conversationHasMoreOutgoing.value,
+    timelineCursor: conversationTimelineCursor.value,
+    hasMoreTimeline: conversationHasMoreTimeline.value,
   });
 };
 
-const conversationHasMoreHistory = computed(() =>
-  conversationHasMoreIncoming.value || conversationHasMoreOutgoing.value,
-);
+const conversationHasMoreHistory = computed(() => conversationHasMoreTimeline.value);
 
 // Computed
 const todayCount = computed(() => {
@@ -1748,7 +1734,7 @@ const onDeviceChange = () => {
   releaseInitialBottomPin();
   conversationRequestController?.abort();
   conversationRequestController = null;
-  latestSentMessagesRequest++;
+  latestTimelineRequest++;
   latestReactionsRequest++;
   selectedConversation.value = null;
   sentMessages.value = [];
@@ -1998,7 +1984,13 @@ const setupSocketListener = () => {
       outgoingConversationSummaries.value.unshift(normalized);
 
       if (selectedConversation.value?.from === data.to) {
-        void loadSentMessagesFromDatabase(data.to);
+        const shouldFollowLatestMessage = isConversationNearBottom(140);
+        void loadConversationTimeline(data.to, {
+          mergeLatest: true,
+          signal: conversationRequestController?.signal,
+        }).then(() => {
+          if (shouldFollowLatestMessage) void scrollToBottom();
+        }).catch(() => {});
       }
       scrollConversationListToTop();
     };
@@ -2165,17 +2157,13 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
     conversationRequestController?.abort();
     conversationRequestController = new AbortController();
 
-    // Invalidate the previous outbox request before changing the selected
-    // conversation. Otherwise its response can overwrite the new chat.
-    latestSentMessagesRequest++;
+    latestTimelineRequest++;
     const snapshot = getConversationSnapshot(conversationFrom);
     sentMessages.value = snapshot?.sentMessages || [];
     sentMessagesConversationJid.value = conversationFrom;
     conversationReactions.value = snapshot?.reactions || [];
-    incomingHistoryCursor.value = snapshot?.incomingHistoryCursor || '';
-    outgoingHistoryCursor.value = snapshot?.outgoingHistoryCursor || '';
-    conversationHasMoreIncoming.value = snapshot?.hasMoreIncoming ?? true;
-    conversationHasMoreOutgoing.value = snapshot?.hasMoreOutgoing ?? true;
+    conversationTimelineCursor.value = snapshot?.timelineCursor || '';
+    conversationHasMoreTimeline.value = snapshot?.hasMoreTimeline ?? true;
     failedMediaIds.value = new Set();
     activatedMediaIds.value = new Set();
     replyText.value = '';
@@ -2197,27 +2185,23 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   replyText.value = '';
 
   try {
-    // Start every synchronization task together. The modal already has an
-    // incoming-message snapshot and, when available, an in-memory outbox cache.
-    const synchronization = Promise.allSettled([
+    // Fetch one combined timeline so incoming and outgoing messages share the
+    // same 30-message window and one stable cursor.
+    const backgroundSynchronization = Promise.allSettled([
       markConversationAsRead(conversationFrom),
-      loadIncomingMessagesFromDatabase(conversationFrom, {
-        signal: conversationRequestController?.signal,
-      }),
-      loadSentMessagesFromDatabase(conversationFrom, {
-        signal: conversationRequestController?.signal,
-      }),
       loadConversationReactions(
         conversationFrom,
         conversationRequestController?.signal,
       ),
     ]);
-
-    // Let Vue paint the modal and its snapshot before waiting for the network.
-    await nextTick();
-    if (!targetMessageId) await startInitialBottomPin();
-
-    await synchronization;
+    try {
+      await loadConversationTimeline(conversationFrom, {
+        signal: conversationRequestController?.signal,
+      });
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Gagal memuat percakapan');
+    }
+    void backgroundSynchronization;
 
     if (
       generation !== conversationOpenGeneration
@@ -2504,15 +2488,56 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
   }
 };
 
-const loadIncomingMessagesFromDatabase = async (
-  conversationFrom,
-  { before = '', appendOlder = false, signal } = {},
-) => {
-  const requestedDeviceId = selectedDeviceId.value;
+const mapTimelineIncomingMessage = row => ({
+  pkId: row.sourcePkId,
+  id: row.id,
+  message: row.message || '',
+  mediaPath: row.mediaPath || '',
+  fileName: row.fileName || '',
+  isRead: Boolean(row.isRead),
+  receivedAt: row.timestamp,
+  participant: row.participant || null,
+  pushName: row.pushName || null,
+  groupName: row.groupName || null,
+});
 
+const mapTimelineOutgoingMessage = row => {
+  const readBy = Array.isArray(row.readBy) ? row.readBy : [];
+  return {
+    tempId: row.id,
+    text: row.message || '',
+    mediaPath: row.mediaPath || '',
+    fileName: row.fileName || '',
+    timestamp: row.timestamp,
+    status: normalizeOutgoingUiStatus(String(row.status || '').toLowerCase()) || 'sending',
+    deletedForEveryone:
+      String(row.status || '').toLowerCase() === 'revoked'
+      || row.message === DELETED_MESSAGE_TEXT,
+    waMessageId: row.waMessageId || null,
+    isGroup: Boolean(row.isGroup),
+    readBy,
+    readCount: readBy.length,
+  };
+};
+
+const mergeTimelinePage = (current, page, getKey) => {
+  const byId = new Map();
+  [...page, ...current].forEach(message => {
+    const key = getKey(message);
+    if (key && !byId.has(key)) byId.set(key, message);
+  });
+  return [...byId.values()];
+};
+
+const loadConversationTimeline = async (
+  conversationFrom,
+  { before = '', appendOlder = false, mergeLatest = false, signal } = {},
+) => {
+  const requestId = ++latestTimelineRequest;
+  const requestedDeviceId = selectedDeviceId.value;
   try {
     const { data } = await userApi.get(
-      `/devices/${selectedDeviceId.value}/inbox`,
+      `/devices/${selectedDeviceId.value}/inbox/timeline`,
       {
         params: {
           conversationJid: conversationFrom,
@@ -2529,35 +2554,42 @@ const loadIncomingMessagesFromDatabase = async (
     );
 
     if (
-      requestedDeviceId !== selectedDeviceId.value
+      requestId !== latestTimelineRequest
+      || requestedDeviceId !== selectedDeviceId.value
       || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
     ) return;
 
-    const pageMessages = Array.isArray(data?.data)
-      ? [...data.data].sort((left, right) =>
-          new Date(left.receivedAt) - new Date(right.receivedAt))
-      : [];
-    const currentMessages = appendOlder
-      ? selectedConversation.value.messages
-      : [];
-    const byId = new Map();
-    [...pageMessages, ...currentMessages].forEach(message => {
-      const key = message.id || message.pkId;
-      if (key && !byId.has(key)) byId.set(key, message);
-    });
-    selectedConversation.value.messages = [...byId.values()].sort(
-      (left, right) => new Date(left.receivedAt) - new Date(right.receivedAt),
-    );
-    incomingHistoryCursor.value = data?.metadata?.conversationNextCursor || '';
-    conversationHasMoreIncoming.value = Boolean(
-      data?.metadata?.conversationHasMore,
-    );
+    const rows = Array.isArray(data?.data) ? data.data : [];
+    const incomingPage = rows
+      .filter(row => row.direction === 'incoming')
+      .map(mapTimelineIncomingMessage);
+    const outgoingPage = rows
+      .filter(row => row.direction === 'outgoing')
+      .map(mapTimelineOutgoingMessage);
+    const shouldMerge = appendOlder || mergeLatest;
+
+    selectedConversation.value.messages = mergeTimelinePage(
+      shouldMerge ? selectedConversation.value.messages : [],
+      incomingPage,
+      message => message.id || message.pkId,
+    ).sort((left, right) => new Date(left.receivedAt) - new Date(right.receivedAt));
+    sentMessages.value = mergeTimelinePage(
+      shouldMerge ? sentMessages.value : [],
+      outgoingPage,
+      message => message.waMessageId || message.tempId,
+    ).sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
+    sentMessagesConversationJid.value = conversationFrom;
+
+    if (!mergeLatest) {
+      conversationTimelineCursor.value = data?.metadata?.nextCursor || '';
+      conversationHasMoreTimeline.value = Boolean(data?.metadata?.hasMore);
+    }
     cacheConversationSnapshot(conversationFrom, {
       incomingMessages: selectedConversation.value.messages,
-      incomingHistoryCursor: incomingHistoryCursor.value,
-      hasMoreIncoming: conversationHasMoreIncoming.value,
+      sentMessages: sentMessages.value,
+      timelineCursor: conversationTimelineCursor.value,
+      hasMoreTimeline: conversationHasMoreTimeline.value,
     });
-
   } catch (error) {
     if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
     throw error;
@@ -2643,120 +2675,6 @@ const markConversationAsRead = async (from) => {
 };
 
 // Load sent messages from database (OutgoingMessage)
-const loadSentMessagesFromDatabase = async (
-  conversationFrom,
-  { before = '', appendOlder = false, signal } = {},
-) => {
-  const requestId = ++latestSentMessagesRequest;
-  const requestedDeviceId = selectedDeviceId.value;
-
-  if (!sameConversationJid(sentMessagesConversationJid.value, conversationFrom)) {
-    sentMessages.value = [];
-    sentMessagesConversationJid.value = conversationFrom;
-  }
-
-  try {
-    const device = devices.value.find(d => d.id === selectedDeviceId.value);
-    if (!device) {
-      sentMessages.value = [];
-      return;
-    }
-
-    // ✅ CRITICAL: Add timestamp + random to FORCE bypass ALL caches
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(7);
-    
-    // Fetch outgoing messages for this conversation from database
-    const { data } = await userApi.get(`/devices/${selectedDeviceId.value}/outbox`, {
-      params: {
-        to: conversationFrom,
-        limit: 30,
-        ...(before ? { before } : {}),
-        _t: timestamp, // ✅ Timestamp cache buster
-        _r: random,    // ✅ Random cache buster
-      },
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Pragma': 'no-cache',
-        'Expires': '-1',
-        'X-Requested-With': 'XMLHttpRequest', // Some proxies respect this
-      },
-      signal,
-    });
-
-    if (
-      requestId !== latestSentMessagesRequest
-      || requestedDeviceId !== selectedDeviceId.value
-      || !sameConversationJid(selectedConversation.value?.from, conversationFrom)
-      || !sameConversationJid(sentMessagesConversationJid.value, conversationFrom)
-    ) return;
-    
-    // ✅ CRITICAL: Handle different response formats
-    let messages = [];
-    if (Array.isArray(data)) {
-      messages = data;
-    } else if (data && Array.isArray(data.data)) {
-      messages = data.data;
-    } else if (data && data.results && Array.isArray(data.results)) {
-      messages = data.results;
-    }
-    
-    // ✅ CRITICAL: Reverse karena backend query DESC (newest first)
-    // Kita perlu oldest first untuk chat UI
-    messages = messages.reverse();
-    
-    // Transform the database snapshot before merging it with newer local events.
-    const snapshotMessages = messages.map(msg => {
-      const dbStatus = msg.status?.toLowerCase() || '';
-      
-      const uiStatus = normalizeOutgoingUiStatus(dbStatus) || 'sending';
-      
-      return {
-        tempId: msg.id,
-        text: msg.message || '',
-        mediaPath: msg.mediaPath || '',
-        fileName: msg.fileName || '',
-        timestamp: msg.createdAt,
-        status: uiStatus,
-        deletedForEveryone:
-          dbStatus === 'revoked' || msg.message === DELETED_MESSAGE_TEXT,
-        waMessageId: msg.waMessageId,
-        isGroup: msg.isGroup || false,
-        readBy: Array.isArray(msg.readBy) ? msg.readBy : [],
-        readCount: Array.isArray(msg.readBy) ? msg.readBy.length : 0,
-      };
-    });
-    
-    const keepPinnedToBottom = isConversationNearBottom();
-    sentMessages.value = mergeOutgoingSnapshotStatuses(
-      sentMessages.value,
-      snapshotMessages,
-    ).sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
-    outgoingHistoryCursor.value = snapshotMessages[0]?.timestamp || '';
-    conversationHasMoreOutgoing.value = snapshotMessages.length === 30;
-    cacheConversationSnapshot(conversationFrom, {
-      sentMessages: sentMessages.value,
-      outgoingHistoryCursor: outgoingHistoryCursor.value,
-      hasMoreOutgoing: conversationHasMoreOutgoing.value,
-    });
-
-    if (keepPinnedToBottom) {
-      await nextTick();
-      scrollToBottom();
-    }
-  } catch (e) {
-    if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') return;
-    if (
-      requestId === latestSentMessagesRequest
-      && requestedDeviceId === selectedDeviceId.value
-      && sameConversationJid(selectedConversation.value?.from, conversationFrom)
-      && sameConversationJid(sentMessagesConversationJid.value, conversationFrom)
-    ) {
-      toast.error(e?.response?.data?.message || 'Gagal memuat riwayat pesan terkirim');
-    }
-  }
-};
-
 // Close conversation
 const closeConversation = () => {
   cacheCurrentConversationSnapshot();
@@ -2768,15 +2686,13 @@ const closeConversation = () => {
   conversationReturnRoute.value = '';
   conversationOpenedFromNavigation.value = false;
   conversationOpenGeneration++;
-  latestSentMessagesRequest++;
+  latestTimelineRequest++;
   latestReactionsRequest++;
   sentMessagesConversationJid.value = '';
   isPreparingConversation.value = false;
   loadingOlderMessages.value = false;
-  conversationHasMoreIncoming.value = false;
-  conversationHasMoreOutgoing.value = false;
-  incomingHistoryCursor.value = '';
-  outgoingHistoryCursor.value = '';
+  conversationTimelineCursor.value = '';
+  conversationHasMoreTimeline.value = false;
   isConversationFullscreen.value = false;
   resetAttachmentDrag();
   closeImagePreview();
@@ -2874,22 +2790,11 @@ const loadOlderConversationMessages = async () => {
   loadingOlderMessages.value = true;
 
   try {
-    await Promise.allSettled([
-      conversationHasMoreIncoming.value
-        ? loadIncomingMessagesFromDatabase(conversationFrom, {
-            before: incomingHistoryCursor.value,
-            appendOlder: true,
-            signal: conversationRequestController?.signal,
-          })
-        : Promise.resolve(),
-      conversationHasMoreOutgoing.value
-        ? loadSentMessagesFromDatabase(conversationFrom, {
-            before: outgoingHistoryCursor.value,
-            appendOlder: true,
-            signal: conversationRequestController?.signal,
-          })
-        : Promise.resolve(),
-    ]);
+    await loadConversationTimeline(conversationFrom, {
+      before: conversationTimelineCursor.value,
+      appendOlder: true,
+      signal: conversationRequestController?.signal,
+    });
 
     if (
       container
@@ -5124,8 +5029,6 @@ const handleMediaError = (event, message) => {
 .chat-bubble {
   max-width: 78%;
   position: relative;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 72px;
 }
 
 .history-loading,
