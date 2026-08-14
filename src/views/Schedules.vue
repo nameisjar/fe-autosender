@@ -792,6 +792,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { deviceApi, userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import { mediaUrl } from "../utils/mediaUrl.js";
+import { MEDIA_ACCEPT, MEDIA_MAX_SIZE } from "../utils/mediaUpload.js";
 import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 import MediaUpload from "../components/MediaUpload.vue";
 
@@ -1877,9 +1878,8 @@ const saveEditedMessage = async () => {
   }
 };
 
-const scheduledMediaAccept =
-  ".jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.webm,.mp3,.ogg,.wav,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp,.rtf,.json,.zip,.rar,.7z";
-const scheduledMediaMaxSize = 25 * 1024 * 1024;
+const scheduledMediaAccept = MEDIA_ACCEPT;
+const scheduledMediaMaxSize = MEDIA_MAX_SIZE;
 const isEditingMedia = ref(false);
 const savingMedia = ref(false);
 const mediaDraft = ref(null);

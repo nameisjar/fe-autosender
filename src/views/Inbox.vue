@@ -637,7 +637,7 @@
                 ref="attachmentInput"
                 type="file"
                 class="attachment-input"
-                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/ogg,audio/wav,audio/webm,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp,.rtf,.json,.zip,.rar,.7z"
+                :accept="MEDIA_ACCEPT"
                 @change="handleAttachmentChange"
               />
               <button
@@ -908,6 +908,11 @@ import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
 import { getDeviceStatusLabel } from '../utils/deviceStatus.js';
+import {
+  MEDIA_ACCEPT,
+  MEDIA_MAX_SIZE,
+  isSupportedMediaFile,
+} from '../utils/mediaUpload.js';
 import ReactionPicker from '../components/ReactionPicker.vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
@@ -2513,48 +2518,7 @@ const formatFileSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
-const SUPPORTED_ATTACHMENT_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'video/mp4',
-  'video/quicktime',
-  'video/webm',
-  'audio/mpeg',
-  'audio/ogg',
-  'audio/wav',
-  'audio/webm',
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.oasis.opendocument.text',
-  'application/vnd.oasis.opendocument.spreadsheet',
-  'application/vnd.oasis.opendocument.presentation',
-  'application/rtf',
-  'text/rtf',
-  'application/json',
-  'application/zip',
-  'application/x-zip-compressed',
-  'application/vnd.rar',
-  'application/x-rar-compressed',
-  'application/x-7z-compressed',
-  'text/csv',
-  'text/plain',
-]);
-const SUPPORTED_ATTACHMENT_EXTENSIONS = new Set([
-  'jpg', 'jpeg', 'png', 'gif', 'webp',
-  'mp4', 'mov', 'webm',
-  'mp3', 'ogg', 'wav',
-  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt',
-  'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf', 'json',
-  'zip', 'rar', '7z',
-]);
+const MAX_ATTACHMENT_SIZE = MEDIA_MAX_SIZE;
 const SUPPORTED_PASTED_IMAGE_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -2576,16 +2540,7 @@ const selectAttachment = (file) => {
   return true;
 };
 
-const getAttachmentExtension = (file) => {
-  const fileName = String(file?.name || '').toLowerCase();
-  const dotIndex = fileName.lastIndexOf('.');
-  return dotIndex >= 0 ? fileName.slice(dotIndex + 1) : '';
-};
-
-const isSupportedAttachment = (file) => (
-  SUPPORTED_ATTACHMENT_TYPES.has(String(file?.type || '').toLowerCase())
-  && SUPPORTED_ATTACHMENT_EXTENSIONS.has(getAttachmentExtension(file))
-);
+const isSupportedAttachment = isSupportedMediaFile;
 
 const clearAttachment = () => {
   if (attachmentPreviewUrl.value) URL.revokeObjectURL(attachmentPreviewUrl.value);

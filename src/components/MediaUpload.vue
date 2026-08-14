@@ -15,7 +15,7 @@
       <div class="header-right">
         <div
           class="info-badge"
-          title="PNG, JPG, JPEG, WebP, GIF, MP4, MP3, WAV, PDF, DOC, DOCX, XLS, XLSX, TXT"
+          title="Gambar, video, audio, dokumen, presentasi, dan arsip yang didukung"
         >
           <svg
             viewBox="0 0 24 24"
@@ -221,6 +221,11 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useToast } from "../composables/useToast.js";
+import {
+  MEDIA_ACCEPT,
+  MEDIA_MAX_SIZE,
+  isSupportedMediaFile,
+} from "../utils/mediaUpload.js";
 
 const props = defineProps({
   modelValue: {
@@ -229,11 +234,11 @@ const props = defineProps({
   },
   maxSize: {
     type: Number,
-    default: 25 * 1024 * 1024,
+    default: MEDIA_MAX_SIZE,
   },
   acceptTypes: {
     type: String,
-    default: ".png,.jpg,.jpeg,.webp,.gif,.mp4,.mp3,.wav,.pdf,.doc,.docx,.xls,.xlsx,.txt",
+    default: MEDIA_ACCEPT,
   },
   existingUrl: {
     type: String,
@@ -365,6 +370,8 @@ function restoreExisting() {
 }
 
 function isAcceptedFile(file) {
+  if (props.acceptTypes === MEDIA_ACCEPT) return isSupportedMediaFile(file);
+
   const accepted = props.acceptTypes
     .split(",")
     .map((item) => item.trim().toLowerCase())
