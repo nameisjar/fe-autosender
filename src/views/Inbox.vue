@@ -173,9 +173,26 @@
           <div class="message-content">
             <div class="message-header">
               <div class="sender-identity">
-                <span class="sender-name">
-                  {{ getSenderName(conv) }}
-                </span>
+                <div class="sender-name-row">
+                  <span class="sender-name">
+                    {{ getSenderName(conv) }}
+                  </span>
+                  <div v-if="getConversationLabels(conv).length" class="conversation-labels compact-labels">
+                    <span
+                      class="conversation-label-chip"
+                      :title="getConversationLabels(conv)[0]"
+                    >
+                      {{ getConversationLabels(conv)[0] }}
+                    </span>
+                    <span
+                      v-if="getConversationLabels(conv).length > 1"
+                      class="conversation-label-chip label-overflow"
+                      :title="getConversationLabels(conv).slice(1).join(', ')"
+                    >
+                      +{{ getConversationLabels(conv).length - 1 }}
+                    </span>
+                  </div>
+                </div>
                 <span v-if="getConversationPhone(conv)" class="sender-phone">
                   {{ getConversationPhone(conv) }}
                 </span>
@@ -191,27 +208,10 @@
             <div class="message-preview">
               {{ getMessagePreview(conv.latestMessage) }}
             </div>
-            <div class="message-meta">
-              <span v-if="conv.messageCount > 1" class="message-count">
+            <div v-if="conv.messageCount > 1" class="message-meta">
+              <span class="message-count">
                 {{ conv.messageCount }} pesan
               </span>
-              <div v-if="getConversationLabels(conv).length" class="conversation-labels compact-labels">
-                <span
-                  v-for="label in getConversationLabels(conv).slice(0, 2)"
-                  :key="label"
-                  class="conversation-label-chip"
-                  :title="label"
-                >
-                  {{ label }}
-                </span>
-                <span
-                  v-if="getConversationLabels(conv).length > 2"
-                  class="conversation-label-chip label-overflow"
-                  :title="getConversationLabels(conv).slice(2).join(', ')"
-                >
-                  +{{ getConversationLabels(conv).length - 2 }}
-                </span>
-              </div>
             </div>
           </div>
           <button
@@ -339,24 +339,33 @@
               </svg>
             </div>
             <div class="modal-identity">
-              <h3>{{ getSenderName(selectedConversation) }}</h3>
+              <div class="modal-name-row">
+                <h3>{{ getSenderName(selectedConversation) }}</h3>
+                <div
+                  v-if="getConversationLabels(selectedConversation).length"
+                  class="conversation-labels modal-labels"
+                >
+                  <span
+                    v-for="label in getConversationLabels(selectedConversation).slice(0, 2)"
+                    :key="label"
+                    class="conversation-label-chip"
+                    :title="label"
+                  >
+                    {{ label }}
+                  </span>
+                  <span
+                    v-if="getConversationLabels(selectedConversation).length > 2"
+                    class="conversation-label-chip label-overflow"
+                    :title="getConversationLabels(selectedConversation).slice(2).join(', ')"
+                  >
+                    +{{ getConversationLabels(selectedConversation).length - 2 }}
+                  </span>
+                </div>
+              </div>
               <span v-if="getConversationPhone(selectedConversation)" class="modal-phone">
                 {{ getConversationPhone(selectedConversation) }}
               </span>
               <span class="modal-subtitle">{{ selectedConversation.messageCount }} pesan</span>
-              <div
-                v-if="getConversationLabels(selectedConversation).length"
-                class="conversation-labels modal-labels"
-              >
-                <span
-                  v-for="label in getConversationLabels(selectedConversation)"
-                  :key="label"
-                  class="conversation-label-chip"
-                  :title="label"
-                >
-                  {{ label }}
-                </span>
-              </div>
             </div>
           </div>
           <div class="modal-header-actions">
@@ -4543,9 +4552,24 @@ const handleMediaError = (event, message) => {
   font-size: 15px;
 }
 
+.sender-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sender-name-row .sender-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sender-identity {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
 }
 
@@ -4564,6 +4588,7 @@ const handleMediaError = (event, message) => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .unread-badge {
@@ -4636,6 +4661,12 @@ const handleMediaError = (event, message) => {
 
 .compact-labels {
   margin: 0;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.compact-labels .conversation-label-chip {
+  max-width: 90px;
 }
 
 /* Loading State - Konsisten dengan Schedules */
@@ -4948,7 +4979,9 @@ const handleMediaError = (event, message) => {
 .modal-header-info {
   display: flex;
   align-items: center;
+  flex: 1;
   gap: 12px;
+  min-width: 0;
 }
 
 .modal-header-info .avatar-circle {
@@ -4982,12 +5015,29 @@ const handleMediaError = (event, message) => {
 }
 
 .modal-identity {
+  flex: 1;
   min-width: 0;
 }
 
+.modal-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modal-name-row h3 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .modal-labels {
-  max-width: min(460px, 50vw);
-  margin-top: 5px;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  max-width: min(280px, 30vw);
+  overflow: hidden;
 }
 
 .add-contact-overlay {
