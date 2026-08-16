@@ -2233,8 +2233,11 @@ const setupSocketListener = () => {
   }
 };
 
-const focusReplyInput = async ({ force = false } = {}) => {
+const focusReplyInput = async ({ force = false, afterPaint = false } = {}) => {
   await nextTick();
+  if (afterPaint && typeof window.requestAnimationFrame === 'function') {
+    await new Promise(resolve => window.requestAnimationFrame(resolve));
+  }
   const textarea = replyTextarea.value;
   if (!textarea || !selectedConversation.value) return false;
 
@@ -2244,7 +2247,11 @@ const focusReplyInput = async ({ force = false } = {}) => {
     && activeElement !== textarea;
   if (!force && hasUserFocusElsewhere) return false;
 
-  textarea.focus({ preventScroll: true });
+  try {
+    textarea.focus({ preventScroll: true });
+  } catch {
+    textarea.focus();
+  }
   return document.activeElement === textarea;
 };
 
@@ -2587,10 +2594,10 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     if (generation !== inboxNavigationGeneration) return;
 
     await clearInboxNavigationQuery();
-    await focusReplyInput();
   } finally {
     if (generation === inboxNavigationGeneration) {
       isOpeningNavigationTarget.value = false;
+      await focusReplyInput({ force: true, afterPaint: true });
     }
   }
 };
