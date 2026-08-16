@@ -2233,6 +2233,21 @@ const setupSocketListener = () => {
   }
 };
 
+const focusReplyInput = async ({ force = false } = {}) => {
+  await nextTick();
+  const textarea = replyTextarea.value;
+  if (!textarea || !selectedConversation.value) return false;
+
+  const activeElement = document.activeElement;
+  const hasUserFocusElsewhere = activeElement
+    && activeElement !== document.body
+    && activeElement !== textarea;
+  if (!force && hasUserFocusElsewhere) return false;
+
+  textarea.focus({ preventScroll: true });
+  return document.activeElement === textarea;
+};
+
 const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   const generation = ++conversationOpenGeneration;
   const conversationFrom = conv.from;
@@ -2274,8 +2289,7 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   replyText.value = '';
 
   try {
-    await nextTick();
-    replyTextarea.value?.focus({ preventScroll: true });
+    await focusReplyInput({ force: true });
 
     // Fetch one combined timeline so incoming and outgoing messages share the
     // same 30-message window and one stable cursor.
@@ -2573,6 +2587,7 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     if (generation !== inboxNavigationGeneration) return;
 
     await clearInboxNavigationQuery();
+    await focusReplyInput();
   } finally {
     if (generation === inboxNavigationGeneration) {
       isOpeningNavigationTarget.value = false;
