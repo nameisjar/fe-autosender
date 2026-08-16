@@ -734,6 +734,7 @@
                 v-model="replyText"
                 :placeholder="selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan atau tempel gambar...'"
                 class="reply-textarea"
+                autofocus
                 @keydown.enter.exact="handleEnterKey"
                 @paste="handleReplyPaste"
                 rows="1"
@@ -2273,6 +2274,9 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   replyText.value = '';
 
   try {
+    await nextTick();
+    replyTextarea.value?.focus({ preventScroll: true });
+
     // Fetch one combined timeline so incoming and outgoing messages share the
     // same 30-message window and one stable cursor.
     const backgroundSynchronization = Promise.allSettled([
