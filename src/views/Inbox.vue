@@ -989,6 +989,10 @@ import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
 import { getInboxMediaType } from '../utils/inboxMedia.js';
+import {
+  insertComposerCharacter,
+  shouldRedirectInboxTyping,
+} from '../utils/inboxComposer.js';
 import { getDeviceStatusLabel } from '../utils/deviceStatus.js';
 import { getContactLabelNames } from '../utils/contactLabels.js';
 import {
@@ -2253,6 +2257,36 @@ const focusReplyInput = async ({ force = false, afterPaint = false } = {}) => {
     textarea.focus();
   }
   return document.activeElement === textarea;
+};
+
+const handleInboxComposerTyping = async (event) => {
+  const targetIsExternal = !event.target?.closest?.('.conversation-modal');
+  const blocked = Boolean(
+    addContactModal.value.show
+    || deleteModal.value.show
+    || imagePreview.value
+    || reactionDetails.value,
+  );
+  if (!shouldRedirectInboxTyping(event, {
+    conversationOpen: Boolean(selectedConversation.value),
+    blocked,
+    targetIsExternal,
+  })) return;
+
+  const textarea = replyTextarea.value;
+  const hasComposerFocus = document.activeElement === textarea;
+  const { value, caret } = insertComposerCharacter(
+    replyText.value,
+    event.key,
+    hasComposerFocus ? textarea?.selectionStart : undefined,
+    hasComposerFocus ? textarea?.selectionEnd : undefined,
+  );
+
+  event.preventDefault();
+  replyText.value = value;
+  await focusReplyInput({ force: true });
+  await nextTick();
+  replyTextarea.value?.setSelectionRange?.(caret, caret);
 };
 
 const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
@@ -3951,9 +3985,19 @@ watch(q, () => {
   searchTimer = setTimeout(() => loadMessages(), 300);
 });
 
+watch(
+  () => [selectedConversation.value?.from || '', isOpeningNavigationTarget.value],
+  ([conversationFrom, openingNavigation]) => {
+    if (!conversationFrom || openingNavigation) return;
+    void focusReplyInput({ force: true, afterPaint: true });
+  },
+  { flush: 'post' },
+);
+
 // Lifecycle
 onMounted(async () => {
   window.addEventListener('keydown', handleImagePreviewKeydown);
+  window.addEventListener('keydown', handleInboxComposerTyping, true);
   window.addEventListener('pointerdown', handleMessagePopupPointerDown);
   window.addEventListener('resize', updateMessageActionMenuPosition);
 
@@ -4020,6 +4064,7 @@ onUnmounted(() => {
   conversationRequestController?.abort();
   conversationRequestController = null;
   window.removeEventListener('keydown', handleImagePreviewKeydown);
+  window.removeEventListener('keydown', handleInboxComposerTyping, true);
   window.removeEventListener('pointerdown', handleMessagePopupPointerDown);
   window.removeEventListener('resize', updateMessageActionMenuPosition);
   if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
