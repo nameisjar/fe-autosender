@@ -520,6 +520,12 @@
                     <svg v-if="msg.status === 'sending'" class="status-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10" />
                     </svg>
+
+                    <!-- Local handoff succeeded; waiting for WhatsApp server ACK -->
+                    <svg v-else-if="msg.status === 'submitted'" class="status-icon checkmark-submitted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-label="Diserahkan ke WhatsApp, menunggu konfirmasi server">
+                      <title>Diserahkan ke WhatsApp, menunggu konfirmasi server</title>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
                     
                     <!-- Single checkmark for server_ack (terkirim ke server) -->
                     <svg v-else-if="msg.status === 'server_ack'" class="status-icon checkmark-single" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -2109,6 +2115,7 @@ const setupSocketListener = () => {
         const currentStatus = sentMessages.value[msgIndex].status;
         const newStatus = resolveOutgoingUiStatus(data.status, {
           readCount: data.readCount,
+          isGroup: Boolean(sentMessages.value[msgIndex].isGroup),
         });
         
         const normalizedCurrentStatus = normalizeOutgoingUiStatus(currentStatus) || 'sending';
@@ -2548,7 +2555,10 @@ const mapTimelineOutgoingMessage = row => {
     mediaPath: row.mediaPath || '',
     fileName: row.fileName || '',
     timestamp: row.timestamp,
-    status: resolveOutgoingUiStatus(row.status, { readCount: readBy.length }),
+    status: resolveOutgoingUiStatus(row.status, {
+      readCount: readBy.length,
+      isGroup: Boolean(row.isGroup),
+    }),
     deletedForEveryone:
       String(row.status || '').toLowerCase() === 'revoked'
       || row.message === DELETED_MESSAGE_TEXT,
@@ -5760,6 +5770,10 @@ const handleMediaError = (event, message) => {
 /* Checkmark styles */
 .status-icon.checkmark-single {
   color: rgba(255, 255, 255, 0.8);
+}
+
+.status-icon.checkmark-submitted {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .status-icon.checkmark-double {

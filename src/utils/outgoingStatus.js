@@ -2,16 +2,18 @@ export const OUTGOING_STATUS_HIERARCHY = {
   error: 0,
   pending: 1,
   sending: 1,
-  server_ack: 2,
-  delivery_ack: 3,
-  read: 4,
-  played: 5,
+  submitted: 2,
+  server_ack: 3,
+  delivery_ack: 4,
+  read: 5,
+  played: 6,
 };
 
 export const normalizeOutgoingUiStatus = status => {
   const normalized = String(status || '').trim().toLowerCase();
 
   if (normalized === 'pending' || normalized === 'sending') return 'sending';
+  if (normalized === 'submitted') return 'submitted';
   if (normalized === 'server_ack') return 'server_ack';
   if (normalized === 'delivery_ack') return 'delivery_ack';
   if (normalized === 'read' || normalized === 'played') return 'read';
@@ -20,9 +22,18 @@ export const normalizeOutgoingUiStatus = status => {
   return null;
 };
 
-export const resolveOutgoingUiStatus = (status, { readCount = 0 } = {}) => {
-  if (Number(readCount) > 0) return 'read';
-  return normalizeOutgoingUiStatus(status) || 'sending';
+export const resolveOutgoingUiStatus = (status, { readCount = 0, isGroup = false } = {}) => {
+  const normalized = normalizeOutgoingUiStatus(status);
+
+  // A participant read does not prove the entire group has read the message.
+  // It does prove delivery, so it may repair a stale pending/error state while
+  // the per-member read count remains visible separately.
+  if (Number(readCount) > 0) {
+    if (!isGroup) return 'read';
+    if (normalized === 'read' || normalized === 'revoked') return normalized;
+    return 'delivery_ack';
+  }
+  return normalized || 'sending';
 };
 
 // Merge status updates monotonically across Socket.IO, HTTP, and database
@@ -38,7 +49,7 @@ export const mergeOutgoingStatus = (currentStatus, incomingStatus) => {
   }
   if (!incoming) return current;
 
-  // A rejection can replace an optimistic/server ACK state, but cannot undo
+  // A rejection can replace an optimistic/submitted/server ACK state, but cannot undo
   // evidence that the message was already delivered or read.
   if (incoming === 'error') {
     return ['delivery_ack', 'read'].includes(current) ? current : 'error';

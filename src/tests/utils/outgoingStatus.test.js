@@ -11,11 +11,18 @@ import {
 } from '../../utils/outgoingStatus.js';
 
 describe('outgoing message status helpers', () => {
-  it('treats pending and sending as the same optimistic UI state', () => {
+  it('distinguishes local handoff from the pending spinner and server ACK', () => {
     expect(normalizeOutgoingUiStatus('pending')).toBe('sending');
     expect(normalizeOutgoingUiStatus('sending')).toBe('sending');
+    expect(normalizeOutgoingUiStatus('submitted')).toBe('submitted');
     expect(OUTGOING_STATUS_HIERARCHY.pending).toBe(
       OUTGOING_STATUS_HIERARCHY.sending,
+    );
+    expect(OUTGOING_STATUS_HIERARCHY.submitted).toBeGreaterThan(
+      OUTGOING_STATUS_HIERARCHY.sending,
+    );
+    expect(OUTGOING_STATUS_HIERARCHY.server_ack).toBeGreaterThan(
+      OUTGOING_STATUS_HIERARCHY.submitted,
     );
   });
 
@@ -23,6 +30,11 @@ describe('outgoing message status helpers', () => {
     expect(mergeOutgoingResponseStatus('sending', undefined)).toBe('sending');
     expect(mergeOutgoingResponseStatus('pending', null)).toBe('sending');
     expect(mergeOutgoingResponseStatus('sending', 'pending')).toBe('sending');
+  });
+
+  it('shows submitted after a successful local handoff without claiming server ACK', () => {
+    expect(mergeOutgoingResponseStatus('sending', 'submitted')).toBe('submitted');
+    expect(mergeOutgoingResponseStatus('submitted', 'server_ack')).toBe('server_ack');
   });
 
   it('distinguishes confirmed send failures from an uncertain HTTP result', () => {
@@ -50,7 +62,7 @@ describe('outgoing message status helpers', () => {
   });
 
   it('keeps an error terminal until delivery evidence arrives', () => {
-    for (const laterStatus of ['pending', 'sending', 'server_ack']) {
+    for (const laterStatus of ['pending', 'sending', 'submitted', 'server_ack']) {
       expect(mergeOutgoingStatus('error', laterStatus)).toBe('error');
       expect(mergeOutgoingStatus('failed', laterStatus)).toBe('error');
     }
@@ -62,6 +74,18 @@ describe('outgoing message status helpers', () => {
 
   it('uses group read receipts to repair contradictory stored errors', () => {
     expect(resolveOutgoingUiStatus('error', { readCount: 7 })).toBe('read');
+    expect(resolveOutgoingUiStatus('delivery_ack', {
+      readCount: 1,
+      isGroup: true,
+    })).toBe('delivery_ack');
+    expect(resolveOutgoingUiStatus('error', {
+      readCount: 1,
+      isGroup: true,
+    })).toBe('delivery_ack');
+    expect(resolveOutgoingUiStatus('read', {
+      readCount: 1,
+      isGroup: true,
+    })).toBe('read');
     expect(resolveOutgoingUiStatus('error', { readCount: 0 })).toBe('error');
   });
 

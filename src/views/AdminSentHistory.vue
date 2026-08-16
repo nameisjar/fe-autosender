@@ -931,7 +931,7 @@ const badgeClass = (status) => {
   const s = String(status || "").toLowerCase();
   if (s.includes("fail") || s.includes("error")) return "warn";
   if (s === "read" || s === "played" || s === "delivery_ack") return "ok";
-  if (s === "server_ack") return "info";
+  if (s === "server_ack" || s === "submitted") return "info";
   if (s === "pending") return "info";
   return "info";
 };
@@ -941,6 +941,8 @@ const statusLabel = (status) => {
   switch (s) {
     case "pending":
       return "🕐"; // jam
+    case "submitted":
+      return "Diserahkan";
     case "server_ack":
       return "✔️"; // centang satu
     case "delivery_ack":
