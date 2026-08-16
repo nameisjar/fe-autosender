@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { userApi, clearDeviceAccessTokenCache } from '../api/http.js';
 import { refreshSocketAuth, resetSocket } from '../api/socket.js';
+import { clearProfileImageCache } from '../utils/profileImageCache.js';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({ me: null }),
@@ -38,6 +39,7 @@ export const useAuthStore = defineStore('auth', {
             
             // 🔐 Clear device access token cache from memory
             clearDeviceAccessTokenCache();
+            clearProfileImageCache();
             
             // 🔌 Reset socket connection
             resetSocket();

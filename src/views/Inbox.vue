@@ -134,16 +134,14 @@
         >
           <div class="message-avatar">
             <!-- Personal chat with profile picture -->
-            <img
+            <CachedProfileImage
               v-if="getConversationAvatar(conv)"
               :src="getConversationAvatar(conv)"
+              :status="conv.latestMessage?.profilePictureStatus"
               class="avatar-image"
-              referrerpolicy="no-referrer"
-              @error="(e) => handleAvatarError(conv, e)"
             />
             <!-- Fallback avatar circle -->
             <div
-              v-else
               class="avatar-circle"
               :style="{ backgroundColor: conv.contact?.colorCode || getRandomColor(conv.from) }"
             >
@@ -310,33 +308,31 @@
 
         <div class="modal-header">
           <div class="modal-header-info">
-            <!-- Personal chat with profile picture -->
-            <img
-              v-if="getConversationAvatar(selectedConversation)"
-              :src="getConversationAvatar(selectedConversation)"
-              class="avatar-image modal-avatar"
-              referrerpolicy="no-referrer"
-              @error="(e) => handleAvatarError(selectedConversation, e)"
-            />
-            <!-- Fallback avatar circle -->
-            <div
-              v-else
-              class="avatar-circle"
-              :style="{ backgroundColor: selectedConversation.contact?.colorCode || getRandomColor(selectedConversation.from) }"
-            >
-              <span v-if="selectedConversation.contact">
-                {{ getInitials(selectedConversation.contact.firstName, selectedConversation.contact.lastName) }}
-              </span>
-              <span v-else-if="selectedConversation.isGroup && selectedConversation.groupName">
-                {{ getInitials(selectedConversation.groupName) }}
-              </span>
-              <span v-else-if="selectedConversation.pushName">
-                {{ getInitials(selectedConversation.pushName) }}
-              </span>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+            <div class="modal-avatar-shell">
+              <CachedProfileImage
+                v-if="getConversationAvatar(selectedConversation)"
+                :src="getConversationAvatar(selectedConversation)"
+                :status="selectedConversation.latestMessage?.profilePictureStatus"
+                class="avatar-image modal-avatar"
+              />
+              <div
+                class="avatar-circle"
+                :style="{ backgroundColor: selectedConversation.contact?.colorCode || getRandomColor(selectedConversation.from) }"
+              >
+                <span v-if="selectedConversation.contact">
+                  {{ getInitials(selectedConversation.contact.firstName, selectedConversation.contact.lastName) }}
+                </span>
+                <span v-else-if="selectedConversation.isGroup && selectedConversation.groupName">
+                  {{ getInitials(selectedConversation.groupName) }}
+                </span>
+                <span v-else-if="selectedConversation.pushName">
+                  {{ getInitials(selectedConversation.pushName) }}
+                </span>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
             </div>
             <div class="modal-identity">
               <div class="modal-name-row">
@@ -997,6 +993,7 @@ import {
   shouldRedirectInboxTyping,
 } from '../utils/inboxComposer.js';
 import { getDeviceStatusLabel } from '../utils/deviceStatus.js';
+import CachedProfileImage from '../components/CachedProfileImage.vue';
 import { getContactLabelNames } from '../utils/contactLabels.js';
 import {
   MEDIA_ACCEPT,
@@ -1091,13 +1088,6 @@ const isInitialBottomPinning = ref(false);
 const isConversationViewportReady = ref(false);
 const conversationUserTookScrollControl = ref(false);
 let attachmentDragDepth = 0;
-const conversationAvatarUrls = ref({});
-const failedAvatarKeys = ref(new Set());
-const loadingAvatarKeys = new Set();
-const avatarRecoveryAttempts = new Map();
-const avatarRetryAt = new Map();
-const AVATAR_NEGATIVE_CACHE_MS = 15 * 60 * 1000;
-const AVATAR_TRANSIENT_RETRY_MS = 5 * 60 * 1000;
 
 const attachmentKind = computed(() => {
   const type = selectedAttachment.value?.type || '';
@@ -1825,7 +1815,6 @@ const onDeviceChange = () => {
   sentMessages.value = [];
   sentMessagesConversationJid.value = '';
   conversationReactions.value = [];
-  clearConversationAvatars();
   selectDevice(selectedDeviceId.value);
   window.dispatchEvent(new Event('deviceChanged'));
   page.value = 1;
@@ -1949,20 +1938,6 @@ const loadMessages = async () => {
       ...realtimeOutgoing,
       ...outgoingList.filter(message => !realtimeOutgoingIds.has(message.id)),
     ];
-    void loadConversationAvatars([
-      ...messages.value.map(message => ({
-        from: message.from,
-        isGroup: message.isGroup || message.from?.includes('@g.us'),
-        profilePicUrl: message.profilePicUrl,
-        groupPicUrl: message.groupPicUrl,
-      })),
-      ...outgoingConversationSummaries.value.map(message => ({
-        from: message.to,
-        isGroup: message.isGroup || message.to?.includes('@g.us'),
-        profilePicUrl: message.profilePicUrl,
-        groupPicUrl: message.groupPicUrl,
-      })),
-    ]);
     meta.value = {
       totalMessages: data?.metadata?.totalMessages ?? data?.total ?? list.length,
       totalConversations: data?.metadata?.totalConversations ?? conversations.value.length,
@@ -2154,12 +2129,6 @@ const setupSocketListener = () => {
         }
       }
 
-      void loadConversationAvatar({
-        from: data.from,
-        isGroup: data.isGroup || data.from?.includes('@g.us'),
-        profilePicUrl: data.profilePicUrl,
-        groupPicUrl: data.groupPicUrl,
-      }, true);
     };
 
     const handleMediaUpdate = (data) => {
@@ -3924,160 +3893,9 @@ const getMessageSenderPhone = (message) => {
   return formatWhatsAppIdentity(message?.participant);
 };
 
-const getAvatarKey = (conversation) =>
-  `${selectedDeviceId.value}:${conversation?.from || conversation?.to || ''}`;
-
-const isWhatsAppProfileCdnUrl = (source) => {
-  try {
-    const hostname = new URL(String(source || '')).hostname.toLowerCase();
-    return hostname === 'pps.whatsapp.net' || hostname.endsWith('.pps.whatsapp.net');
-  } catch {
-    return false;
-  }
-};
-
 const getConversationAvatar = (conversation) => {
   if (!conversation) return '';
-  const key = getAvatarKey(conversation);
-  if (failedAvatarKeys.value.has(key)) return '';
-
-  const loadedSource = conversationAvatarUrls.value[key] || '';
-  if (loadedSource) return mediaUrl(loadedSource);
-
-  const source = (conversation.isGroup ? conversation.groupPicUrl : conversation.profilePicUrl) || '';
-  // A signed profile endpoint can legitimately return 204 when WhatsApp has no
-  // accessible photo. Probe it as XHR first so an empty response is never
-  // mounted as an <img> and does not create browser console errors.
-  if (String(source).includes('/inbox-profile/')) return '';
-  if (isWhatsAppProfileCdnUrl(source)) return '';
-  return source ? mediaUrl(source) : '';
-};
-
-const handleAvatarError = (conversation, event) => {
-  const key = getAvatarKey(conversation);
-  const objectUrl = conversationAvatarUrls.value[key];
-  if (objectUrl?.startsWith('blob:')) URL.revokeObjectURL(objectUrl);
-
-  const nextUrls = { ...conversationAvatarUrls.value };
-  delete nextUrls[key];
-  conversationAvatarUrls.value = nextUrls;
-  failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
-  avatarRetryAt.set(key, Date.now() + AVATAR_TRANSIENT_RETRY_MS);
-
-  if (event?.target) event.target.removeAttribute('src');
-  const directUrl = conversation?.isGroup
-    ? conversation?.groupPicUrl
-    : conversation?.profilePicUrl;
-  // Signed Inbox profile URLs already perform cache + WhatsApp fallback on the
-  // server. Do not retry them through the legacy device endpoint after a 204.
-  if (String(directUrl || '').includes('/inbox-profile/')) return;
-  const recoveryAttempts = avatarRecoveryAttempts.get(key) || 0;
-  if (recoveryAttempts < 2) {
-    avatarRecoveryAttempts.set(key, recoveryAttempts + 1);
-    void loadConversationAvatar(conversation, true);
-  }
-};
-
-const loadConversationAvatar = async (conversation, force = false) => {
-  const recipient = conversation?.from || conversation?.to;
-  if (!recipient || !selectedDeviceId.value || recipient.includes('@lid')) return;
-
-  const key = getAvatarKey(conversation);
-  const directUrl = conversation.isGroup
-    ? conversation.groupPicUrl
-    : conversation.profilePicUrl;
-  if (isWhatsAppProfileCdnUrl(directUrl)) return;
-  const isSignedProfileUrl = String(directUrl || '').includes('/inbox-profile/');
-  const retryAt = avatarRetryAt.get(key) || 0;
-  if (!force && retryAt > Date.now()) return;
-  if (directUrl && failedAvatarKeys.value.has(key) && retryAt <= Date.now()) {
-    const nextFailed = new Set(failedAvatarKeys.value);
-    nextFailed.delete(key);
-    failedAvatarKeys.value = nextFailed;
-    avatarRecoveryAttempts.delete(key);
-    avatarRetryAt.delete(key);
-  }
-  if (directUrl && !isSignedProfileUrl) return;
-  if (!directUrl) return;
-  if ((!force && conversationAvatarUrls.value[key]) || loadingAvatarKeys.has(key)) return;
-  loadingAvatarKeys.add(key);
-
-  try {
-    // Signed image URLs authorize themselves. Avoid the global Authorization
-    // header here so cross-origin image requests remain simple GET requests.
-    const response = await fetch(mediaUrl(directUrl), {
-      method: 'GET',
-      credentials: 'omit',
-      headers: { Accept: 'image/*' },
-    });
-    if (!response.ok || response.status === 204) {
-      const retryAfter = Number(response.headers.get('Retry-After'));
-      const retryDelay = Number.isFinite(retryAfter) && retryAfter > 0
-        ? retryAfter * 1000
-        : AVATAR_NEGATIVE_CACHE_MS;
-      failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
-      avatarRetryAt.set(key, Date.now() + retryDelay);
-      return;
-    }
-    const data = await response.blob();
-    if (!(data instanceof Blob) || data.size === 0 || !data.type.startsWith('image/')) {
-      failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
-      avatarRetryAt.set(key, Date.now() + AVATAR_NEGATIVE_CACHE_MS);
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(data);
-    const previousUrl = conversationAvatarUrls.value[key];
-    if (previousUrl?.startsWith('blob:')) URL.revokeObjectURL(previousUrl);
-    conversationAvatarUrls.value = {
-      ...conversationAvatarUrls.value,
-      [key]: objectUrl,
-    };
-    avatarRecoveryAttempts.delete(key);
-    avatarRetryAt.delete(key);
-
-    if (failedAvatarKeys.value.has(key)) {
-      const nextFailed = new Set(failedAvatarKeys.value);
-      nextFailed.delete(key);
-      failedAvatarKeys.value = nextFailed;
-    }
-  } catch {
-    // Missing/private WhatsApp pictures keep the initial avatar.
-    failedAvatarKeys.value = new Set([...failedAvatarKeys.value, key]);
-    avatarRetryAt.set(key, Date.now() + AVATAR_TRANSIENT_RETRY_MS);
-  } finally {
-    loadingAvatarKeys.delete(key);
-  }
-};
-
-const loadConversationAvatars = async (items) => {
-  const unique = new Map();
-  for (const item of items || []) {
-    const recipient = item?.from || item?.to;
-    if (recipient && !unique.has(recipient)) unique.set(recipient, item);
-  }
-  // Avoid flooding WhatsApp with profile-picture queries. Production accounts
-  // can rate-limit a burst even though the same calls appear safe locally.
-  const queue = [...unique.values()];
-  const worker = async () => {
-    while (queue.length > 0) {
-      const item = queue.shift();
-      await loadConversationAvatar(item);
-      await new Promise(resolve => setTimeout(resolve, 150));
-    }
-  };
-  await Promise.allSettled([worker(), worker(), worker()]);
-};
-
-const clearConversationAvatars = () => {
-  Object.values(conversationAvatarUrls.value).forEach((url) => {
-    if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url);
-  });
-  conversationAvatarUrls.value = {};
-  failedAvatarKeys.value = new Set();
-  loadingAvatarKeys.clear();
-  avatarRecoveryAttempts.clear();
-  avatarRetryAt.clear();
+  return (conversation.isGroup ? conversation.groupPicUrl : conversation.profilePicUrl) || '';
 };
 
 // Watchers
@@ -4187,7 +4005,6 @@ onUnmounted(() => {
   closeReactionDetails();
   closeImagePreview();
   clearAttachment();
-  clearConversationAvatars();
   if (socketCleanup) {
     socketCleanup();
     socketCleanup = null;
@@ -4646,7 +4463,9 @@ const handleMediaError = (event, message) => {
 
 .message-avatar {
   position: relative;
-  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
 }
 
 .avatar-circle {
@@ -4662,10 +4481,19 @@ const handleMediaError = (event, message) => {
 }
 
 .avatar-image {
+  display: block;
+  flex-shrink: 0;
   width: 48px;
   height: 48px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.message-avatar .avatar-image,
+.modal-avatar-shell .avatar-image {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
 }
 
 .avatar-image.modal-avatar {
@@ -4687,6 +4515,7 @@ const handleMediaError = (event, message) => {
 
 .group-badge {
   position: absolute;
+  z-index: 3;
   bottom: -2px;
   right: -2px;
   width: 20px;
@@ -5153,6 +4982,13 @@ const handleMediaError = (event, message) => {
   flex: 1;
   gap: 12px;
   min-width: 0;
+}
+
+.modal-avatar-shell {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
 }
 
 .modal-header-info .avatar-circle {

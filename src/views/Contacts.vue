@@ -1926,6 +1926,15 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.contact-avatar-small img {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .contact-avatar-small svg {
   width: 20px;
   height: 20px;

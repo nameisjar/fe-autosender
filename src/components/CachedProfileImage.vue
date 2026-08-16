@@ -1,19 +1,23 @@
 <template>
   <img
-    v-if="visible && resolvedSource"
-    :key="`${resolvedSource}:${retryVersion}`"
-    :src="versionedSource"
+    v-if="resolvedSource && displaySource"
+    :src="displaySource"
     :alt="alt"
     loading="lazy"
     referrerpolicy="no-referrer"
-    @load="handleLoad"
     @error="handleError"
   />
 </template>
 
 <script setup>
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { mediaUrl } from "../utils/mediaUrl.js";
+import {
+  ensureProfileImageSocketInvalidation,
+  loadProfileImage,
+  peekProfileImage,
+  profileImageCacheRevision,
+} from "../utils/profileImageCache.js";
 
 const props = defineProps({
   src: { type: String, default: "" },
@@ -21,56 +25,36 @@ const props = defineProps({
   alt: { type: String, default: "Foto profil" },
 });
 
-const retryVersion = ref(0);
-const visible = ref(Boolean(props.src));
-const retryDelays = [2000, 4000, 8000, 12000];
-let retryTimer = null;
-
 const resolvedSource = computed(() => mediaUrl(props.src));
-const versionedSource = computed(() => {
-  if (!resolvedSource.value) return "";
-  const separator = resolvedSource.value.includes("?") ? "&" : "?";
-  return `${resolvedSource.value}${separator}profileRetry=${retryVersion.value}`;
-});
+const displaySource = ref(peekProfileImage(props.src));
+let latestRequest = 0;
 
-const clearRetry = () => {
-  if (retryTimer) clearTimeout(retryTimer);
-  retryTimer = null;
+ensureProfileImageSocketInvalidation();
+
+const resolveImage = async () => {
+  const requestId = ++latestRequest;
+  const source = props.src;
+  const cached = peekProfileImage(source);
+  if (cached) displaySource.value = cached;
+  const loaded = await loadProfileImage(source, { status: props.status });
+  if (requestId === latestRequest && source === props.src) displaySource.value = loaded;
 };
 
-const handleLoad = () => clearRetry();
-
 const handleError = () => {
-  visible.value = false;
-  if (props.status === "unavailable" || retryVersion.value >= retryDelays.length) return;
-
-  clearRetry();
-  retryTimer = setTimeout(() => {
-    retryTimer = null;
-    retryVersion.value += 1;
-    visible.value = true;
-  }, retryDelays[retryVersion.value]);
+  displaySource.value = "";
 };
 
 watch(
-  () => props.src,
-  source => {
-    clearRetry();
-    retryVersion.value = 0;
-    visible.value = Boolean(source);
+  [() => props.src, () => props.status],
+  () => {
+    displaySource.value = peekProfileImage(props.src);
+    void resolveImage();
   },
+  { immediate: true },
 );
 
-onUnmounted(clearRetry);
+watch(profileImageCacheRevision, () => {
+  if (!props.src) return;
+  void resolveImage();
+});
 </script>
-
-<style scoped>
-img {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-</style>
