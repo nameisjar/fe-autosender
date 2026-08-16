@@ -12,22 +12,84 @@
       <div class="panel-heading">
         <div>
           <h2>Pengaturan Default</h2>
-          <p>Nama tutor dan link referral otomatis dipakai saat siswa ditambahkan.</p>
+          <p>Isi nilai default, lalu pilih kelompok pengaturan yang ingin diterapkan.</p>
         </div>
-        <button class="btn btn-secondary" type="button" :disabled="students.length === 0" @click="applyDefaults">
-          Terapkan ke {{ selectedIds.length ? `${selectedIds.length} siswa` : "semua siswa" }}
-        </button>
       </div>
 
-      <div class="defaults-grid">
-        <label>
-          <span>Laporan dibuat oleh <b>*</b></span>
-          <input v-model.trim="defaults.reportBy" placeholder="Nama tutor" />
-        </label>
-        <label>
-          <span>Link Referral <b>*</b></span>
-          <input v-model.trim="defaults.referralLink" type="url" placeholder="https://algonova.id/invite?..." />
-        </label>
+      <div class="defaults-sections">
+        <section class="defaults-group">
+          <div class="defaults-group-heading">
+            <div>
+              <strong>Default Feedback</strong>
+              <span>Course, bulan, dan video proyek siswa.</span>
+            </div>
+            <button
+              class="btn btn-secondary apply-feedback-defaults"
+              type="button"
+              :disabled="students.length === 0"
+              @click="applyFeedbackDefaults"
+            >
+              Terapkan Feedback ke {{ selectedIds.length ? `${selectedIds.length} siswa` : "semua siswa" }}
+            </button>
+          </div>
+          <div class="defaults-grid feedback-defaults-grid">
+            <label>
+              <span>Course <b>*</b></span>
+              <select
+                v-model="defaults.courseName"
+                class="default-course"
+                :disabled="templatesLoading"
+                @focus="ensureCoursesLoaded"
+                @change="normalizeDefaultMonth"
+              >
+                <option value="">Pilih course...</option>
+                <option v-if="templatesLoading" value="" disabled>Memuat course...</option>
+                <option v-else-if="courses.length === 0" value="" disabled>Course tidak ditemukan</option>
+                <option v-for="course in courses" :key="course" :value="course">{{ course }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Bulan <b>*</b></span>
+              <select v-model.number="defaults.month" class="default-month" :disabled="!defaults.courseName">
+                <option :value="null">Pilih bulan...</option>
+                <option v-for="month in monthsForCourse(defaults.courseName)" :key="month" :value="month">
+                  {{ month }}
+                </option>
+              </select>
+            </label>
+            <label>
+              <span>Link YouTube <b>*</b></span>
+              <input v-model.trim="defaults.youtubeLink" class="default-youtube" type="url" placeholder="https://youtu.be/..." />
+            </label>
+          </div>
+        </section>
+
+        <section class="defaults-group identity-defaults-group">
+          <div class="defaults-group-heading">
+            <div>
+              <strong>Identitas Laporan & Referral</strong>
+              <span>Nama pembuat laporan dan tautan referral tutor.</span>
+            </div>
+            <button
+              class="btn btn-secondary apply-identity-defaults"
+              type="button"
+              :disabled="students.length === 0"
+              @click="applyIdentityDefaults"
+            >
+              Terapkan Identitas ke {{ selectedIds.length ? `${selectedIds.length} siswa` : "semua siswa" }}
+            </button>
+          </div>
+          <div class="defaults-grid identity-defaults-grid">
+            <label>
+              <span>Laporan dibuat oleh <b>*</b></span>
+              <input v-model.trim="defaults.reportBy" class="default-report-by" placeholder="Nama tutor" />
+            </label>
+            <label>
+              <span>Link Referral <b>*</b></span>
+              <input v-model.trim="defaults.referralLink" class="default-referral" type="url" placeholder="https://algonova.id/invite?..." />
+            </label>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -62,7 +124,7 @@
       <div class="panel-heading table-heading">
         <div>
           <h2>Data Feedback Siswa</h2>
-          <p>Pilihan 1–5 adalah nomor komentar, bukan skor. Isi komentar lengkap muncul di dropdown.</p>
+          <p>Komentar bersifat opsional. Pilihan 1–5 adalah nomor komentar, bukan skor.</p>
         </div>
         <div class="validation-summary" :class="{ valid: students.length && invalidCount === 0 }">
           <button
@@ -101,8 +163,8 @@
               <th>Kehadiran</th>
               <th>Keterlibatan</th>
               <th>Penyelesaian Tugas</th>
+              <th>Komentar Custom</th>
               <th>Link YouTube</th>
-              <th>Custom</th>
               <th>Status</th>
               <th>Aksi</th>
             </tr>
@@ -146,8 +208,8 @@
               <td><CommentSelect v-model="student.attendance" :options="commentCategories.kehadiran" :student-name="student.studentName" /></td>
               <td><CommentSelect v-model="student.engagement" :options="commentCategories.keterlibatan" :student-name="student.studentName" /></td>
               <td><CommentSelect v-model="student.completion" :options="commentCategories.penyelesaian" :student-name="student.studentName" /></td>
-              <td><input v-model.trim="student.youtubeLink" class="cell-input link-input" type="url" placeholder="https://youtu.be/..." /></td>
               <td><textarea v-model.trim="student.customComment" class="cell-textarea" rows="2" placeholder="Opsional"></textarea></td>
+              <td><input v-model.trim="student.youtubeLink" class="cell-input link-input" type="url" placeholder="https://youtu.be/..." /></td>
               <td class="status-cell" @click.stop>
                 <span v-if="rowErrors(student).length === 0" class="status-pill ready">Siap</span>
                 <template v-else>
@@ -175,7 +237,7 @@
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
-                  <button class="icon-btn" type="button" title="Salin baris" @click="duplicateStudent(student)">
+                  <button class="icon-btn" type="button" title="Salin caption" @click="copyCaption(student)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
@@ -237,6 +299,7 @@ import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } 
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
+import { buildMonthlyFeedbackCaption } from "../utils/monthlyFeedbackCaption.js";
 
 const toast = useToast();
 let rowSequence = 0;
@@ -286,11 +349,11 @@ const CommentSelect = defineComponent({
           value: props.modelValue ?? "",
           title: props.modelValue
             ? commentForStudent(props.options[props.modelValue - 1])
-            : "Pilih komentar",
+            : "Tidak ada komentar",
           onChange: (event) => emit("update:modelValue", Number(event.target.value) || null),
         },
         [
-          h("option", { value: "" }, "Pilih komentar..."),
+          h("option", { value: "" }, "Tidak ada komentar (opsional)"),
           ...props.options.map((comment, index) =>
             h("option", { value: index + 1 }, `${index + 1} — ${commentForStudent(comment)}`),
           ),
@@ -310,6 +373,9 @@ const templatesLoading = ref(false);
 const templatesError = ref("");
 const expandedStatusId = ref(null);
 const defaults = ref({
+  courseName: "",
+  month: null,
+  youtubeLink: "",
   referralLink: "",
   reportBy: "",
 });
@@ -329,6 +395,21 @@ const normalizeStudentMonth = (student) => {
   if (!monthsForCourse(student.courseName).includes(Number(student.month))) student.month = null;
 };
 
+const normalizeDefaultMonth = () => {
+  if (!monthsForCourse(defaults.value.courseName).includes(Number(defaults.value.month))) {
+    defaults.value.month = null;
+  }
+};
+
+const normalizeLoadedDefaults = () => {
+  if (defaults.value.courseName && !courses.value.includes(defaults.value.courseName)) {
+    defaults.value.courseName = "";
+    defaults.value.month = null;
+    return;
+  }
+  if (defaults.value.courseName) normalizeDefaultMonth();
+};
+
 const isHttpUrl = (value) => {
   try {
     const parsed = new URL(value);
@@ -343,9 +424,6 @@ const rowErrors = (student) => {
   if (!student.studentName?.trim()) errors.push("Nama belum diisi");
   if (!student.courseName) errors.push("Course belum dipilih");
   if (!student.month) errors.push("Bulan belum dipilih");
-  if (!student.attendance) errors.push("Komentar kehadiran belum dipilih");
-  if (!student.engagement) errors.push("Komentar keterlibatan belum dipilih");
-  if (!student.completion) errors.push("Komentar penyelesaian tugas belum dipilih");
   if (!isHttpUrl(student.youtubeLink)) errors.push("Link YouTube belum valid");
   if (!isHttpUrl(student.referralLink)) errors.push("Link referral belum valid");
   if (!student.reportBy?.trim()) errors.push("Nama tutor belum diisi");
@@ -360,12 +438,12 @@ const allSelected = computed(() => students.value.length > 0 && selectedIds.valu
 const newStudent = (studentName) => ({
   id: `custom-feedback-${Date.now()}-${++rowSequence}`,
   studentName: studentName.trim(),
-  courseName: "",
-  month: null,
+  courseName: defaults.value.courseName,
+  month: defaults.value.month,
   attendance: null,
   engagement: null,
   completion: null,
-  youtubeLink: "",
+  youtubeLink: defaults.value.youtubeLink,
   referralLink: defaults.value.referralLink,
   reportBy: defaults.value.reportBy,
   rating: 5,
@@ -404,14 +482,31 @@ const handlePaste = () => {
   }, 0);
 };
 
-const applyDefaults = () => {
+const defaultTargets = () => {
   const targetIds = selectedIds.value.length ? new Set(selectedIds.value) : null;
-  students.value.forEach((student) => {
-    if (targetIds && !targetIds.has(student.id)) return;
+  const targets = targetIds
+    ? students.value.filter((student) => targetIds.has(student.id))
+    : students.value;
+  return { targets, count: targets.length };
+};
+
+const applyFeedbackDefaults = () => {
+  const { targets, count } = defaultTargets();
+  targets.forEach((student) => {
+    student.courseName = defaults.value.courseName;
+    student.month = defaults.value.month;
+    student.youtubeLink = defaults.value.youtubeLink;
+  });
+  toast.success(`Default feedback diterapkan ke ${count} siswa`);
+};
+
+const applyIdentityDefaults = () => {
+  const { targets, count } = defaultTargets();
+  targets.forEach((student) => {
     student.referralLink = defaults.value.referralLink;
     student.reportBy = defaults.value.reportBy;
   });
-  toast.success(`Pengaturan diterapkan ke ${targetIds ? targetIds.size : students.value.length} siswa`);
+  toast.success(`Identitas laporan diterapkan ke ${count} siswa`);
 };
 
 const toggleAll = (event) => {
@@ -442,8 +537,39 @@ const removeSelected = () => {
   selectedIds.value = [];
 };
 
-const duplicateStudent = (student) => {
-  students.value.push({ ...student, id: `custom-feedback-${Date.now()}-${++rowSequence}` });
+const writeClipboard = async (text) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("Clipboard tidak tersedia");
+};
+
+const copyCaption = async (student) => {
+  if (!student.studentName?.trim()) {
+    toast.warning("Isi nama siswa sebelum menyalin caption");
+    return;
+  }
+  if (!student.reportBy?.trim()) {
+    toast.warning("Isi nama tutor sebelum menyalin caption");
+    return;
+  }
+
+  try {
+    await writeClipboard(buildMonthlyFeedbackCaption(student));
+    toast.success(`Caption ${student.studentName} berhasil disalin`);
+  } catch {
+    toast.error("Caption gagal disalin");
+  }
 };
 
 const selectedTemplate = (student) =>
@@ -593,6 +719,8 @@ const loadTemplates = async () => {
       }))
       .filter((template) => template.courseName && Number.isFinite(template.month));
 
+    normalizeLoadedDefaults();
+
     if (templates.value.length === 0) {
       templatesError.value = "Template course belum tersedia";
       toast.warning(templatesError.value);
@@ -619,6 +747,9 @@ onMounted(() => {
     const saved = JSON.parse(localStorage.getItem("monthlyFeedbackCustom_defaults") || "null");
     if (saved) {
       defaults.value = {
+        courseName: String(saved.courseName || ""),
+        month: Number(saved.month) || null,
+        youtubeLink: String(saved.youtubeLink || ""),
         reportBy: String(saved.reportBy || ""),
         referralLink: String(saved.referralLink || ""),
       };
@@ -645,7 +776,15 @@ onBeforeUnmount(() => {
 .panel { margin-bottom: 22px; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #dbe2ee); border-radius: 18px; overflow: hidden; }
 .panel-heading { padding: 20px 22px; border-bottom: 1px solid var(--border-color, #dbe2ee); }
 .panel-heading h2 { margin: 0 0 5px; font-size: 20px; }
-.defaults-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 16px; padding: 22px; }
+.defaults-sections { display: grid; gap: 18px; padding: 22px; }
+.defaults-group { overflow: hidden; background: var(--input-bg, #f7f9fc); border: 1px solid var(--border-color, #dbe2ee); border-radius: 14px; }
+.defaults-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--border-color, #dbe2ee); }
+.defaults-group-heading > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.defaults-group-heading .btn { flex-shrink: 0; min-height: 36px; padding: 0 12px; font-size: 12px; }
+.defaults-group-heading strong { font-size: 14px; color: var(--text-primary, #182033); }
+.defaults-group-heading span { color: var(--text-secondary, #6b7890); font-size: 12px; }
+.defaults-grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 16px; padding: 16px; }
+.identity-defaults-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
 .defaults-grid label { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .defaults-grid label span { font-weight: 700; font-size: 13px; }
 .defaults-grid b { color: #ef4444; }
@@ -723,6 +862,8 @@ html.dark .custom-feedback-page, html[data-theme="dark"] .custom-feedback-page, 
   .page-header, .panel-heading, .table-footer { align-items: stretch; flex-direction: column; }
   .header-badge { align-self: flex-start; }
   .defaults-grid { grid-template-columns: 1fr; }
+  .defaults-group-heading { align-items: stretch; flex-direction: column; }
+  .defaults-group-heading .btn { width: 100%; }
   .paste-layout { grid-template-columns: 1fr; }
   .download-actions { display: grid; grid-template-columns: 1fr; }
   .table-footer .btn { width: 100%; }
