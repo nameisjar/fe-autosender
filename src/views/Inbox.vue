@@ -1005,6 +1005,7 @@ import {
 } from '../utils/messageReactions.js';
 import {
   createOutgoingMessageId,
+  getOutgoingFailureMessage,
   isConfirmedOutgoingFailure,
   mergeOutgoingResponseStatus,
   mergeOutgoingSnapshotStatuses,
@@ -3179,12 +3180,7 @@ const sendMediaReply = async () => {
       sentMessages.value[msgIndex].status = failureConfirmed ? 'error' : 'sending';
       sentMessages.value = [...sentMessages.value];
     }
-    const errorMessage =
-      error?.response?.data?.message ||
-      error?.response?.data?.errors?.[0]?.error ||
-      error?.response?.data?.error ||
-      error?.message ||
-      'Gagal mengirim media';
+    const errorMessage = getOutgoingFailureMessage(error, 'Gagal mengirim media');
     if (failureConfirmed) {
       toast.error(errorMessage);
     } else {
@@ -3354,11 +3350,7 @@ const sendReply = async () => {
       sentMessages.value = [...sentMessages.value];
     }
     
-    const errorMsg =
-      e?.response?.data?.message ||
-      e?.response?.data?.errors?.[0]?.error ||
-      e?.response?.data?.error ||
-      e?.message;
+    const errorMsg = getOutgoingFailureMessage(e);
     
     if (errorMsg?.includes('Session not found') || errorMsg?.includes('unauthorized') || e?.response?.status === 401) {
       toast.error('Session WhatsApp tidak ditemukan. Device perlu di-pairing ulang atau pilih device lain yang aktif.');

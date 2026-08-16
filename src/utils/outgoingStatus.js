@@ -79,6 +79,37 @@ export const isConfirmedOutgoingFailure = error => {
     && ![408, 409, 425, 429].includes(httpStatus);
 };
 
+export const getOutgoingFailureMessage = (
+  error,
+  fallback = 'Gagal mengirim pesan. Pastikan WhatsApp sudah terhubung.',
+) => {
+  const responseData = error?.response?.data || {};
+  const firstError = Array.isArray(responseData.errors) ? responseData.errors[0] : null;
+  const message =
+    responseData.message ||
+    firstError?.error ||
+    responseData.error ||
+    error?.message ||
+    fallback;
+  const retryAt = responseData.retryAt || firstError?.retryAt;
+  if (!retryAt) return message;
+
+  const retryDate = new Date(retryAt);
+  if (Number.isNaN(retryDate.getTime()) || retryDate.getTime() <= Date.now()) return message;
+
+  const formattedRetryAt = retryDate.toLocaleString('id-ID', {
+    timeZone: 'Asia/Jayapura',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+  });
+  return `${message} Coba lagi setelah ${formattedRetryAt}.`;
+};
+
 const outgoingMessageIds = message =>
   [message?.waMessageId, message?.id, message?.tempId].filter(Boolean);
 

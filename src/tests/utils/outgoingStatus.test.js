@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createOutgoingMessageId,
+  getOutgoingFailureMessage,
   isConfirmedOutgoingFailure,
   mergeOutgoingResponseStatus,
   mergeOutgoingSnapshotStatuses,
@@ -45,6 +46,28 @@ describe('outgoing message status helpers', () => {
     expect(isConfirmedOutgoingFailure({ response: { status: 429 } })).toBe(false);
     expect(isConfirmedOutgoingFailure({ response: { status: 500 } })).toBe(false);
     expect(isConfirmedOutgoingFailure({ code: 'ECONNABORTED' })).toBe(false);
+  });
+
+  it('adds a WIT retry time to controlled WhatsApp restrictions', () => {
+    const retryAt = new Date(Date.now() + 60_000).toISOString();
+    const message = getOutgoingFailureMessage({
+      response: {
+        data: {
+          message: 'Kontak sedang dibatasi.',
+          retryAt,
+        },
+      },
+    });
+
+    expect(message).toContain('Kontak sedang dibatasi.');
+    expect(message).toContain('Coba lagi setelah');
+    expect(message).toMatch(/WIT/i);
+  });
+
+  it('keeps the base error when no retry time is supplied', () => {
+    expect(getOutgoingFailureMessage({
+      response: { data: { message: 'Pembatasan perangkat tertaut.' } },
+    })).toBe('Pembatasan perangkat tertaut.');
   });
 
   it.each(['error', 'delivery_ack', 'read'])(
