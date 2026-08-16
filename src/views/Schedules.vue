@@ -788,9 +788,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { deviceApi, userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import { useDevices } from "../composables/useDevices.js";
+import { cache } from "../utils/cache.js";
 import { mediaUrl } from "../utils/mediaUrl.js";
 import { MEDIA_ACCEPT, MEDIA_MAX_SIZE } from "../utils/mediaUpload.js";
 import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
@@ -806,6 +808,8 @@ const sortDir = ref("asc");
 
 // ✅ groups = sumber utama untuk tabel (1 baris per nama)
 const groups = ref([]);
+let latestScheduleRequest = 0;
+let scheduleRevalidationTimer;
 
 // Perubahan: items sekarang berisi list group dari server (/broadcasts/groups)
 const items = ref([]);
@@ -842,6 +846,9 @@ const loadGroupNames = async () => {
       setGroupsMap({});
       return;
     }
+    const cacheKey = `schedule-group-names:${deviceId}`;
+    const cachedMap = cache.get(cacheKey);
+    if (cachedMap) setGroupsMap(cachedMap);
 
     // Primary: Load seluruh halaman dari database. Ambil juga grup inactive agar
     // nama grup untuk jadwal lama tetap tersedia saat WhatsApp sedang offline.
@@ -879,6 +886,7 @@ const loadGroupNames = async () => {
 
       if (Object.keys(map).length > 0) {
         setGroupsMap(map);
+        cache.set(cacheKey, map, 60);
         return; // Success, exit early
       }
     } catch {
@@ -904,6 +912,7 @@ const loadGroupNames = async () => {
       }
       if (Object.keys(map).length > 0) {
         setGroupsMap(map);
+        cache.set(cacheKey, map, 60);
         return; // Success, exit early
       }
     } catch {
@@ -928,19 +937,30 @@ const loadGroupNames = async () => {
         }
       }
     }
-    setGroupsMap(map);
+    if (!cachedMap) setGroupsMap(map);
   } catch {
     // All methods failed, use empty map
-    setGroupsMap({});
+    if (Object.keys(groupsMap.value).length === 0) setGroupsMap({});
   }
 };
 
 const contacts = ref([]);
 const loadingContacts = ref(false);
+let latestContactsRequest = 0;
 const loadContacts = async () => {
+  const deviceId = selectedDeviceId.value || localStorage.getItem("device_selected_id") || "";
+  if (!deviceId) {
+    contacts.value = [];
+    return;
+  }
+
+  const requestId = ++latestContactsRequest;
+  const cacheKey = `schedule-contacts:${deviceId}`;
+  const cachedContacts = cache.get(cacheKey);
+  if (cachedContacts) contacts.value = cachedContacts;
+
   try {
-    loadingContacts.value = true;
-    const deviceId = localStorage.getItem("device_selected_id") || "";
+    loadingContacts.value = !cachedContacts;
     const allContacts = [];
     let page = 1;
     let hasMore = true;
@@ -967,11 +987,13 @@ const loadContacts = async () => {
       if (page > 50) break;
     }
 
+    if (requestId !== latestContactsRequest) return;
     contacts.value = allContacts;
+    cache.set(cacheKey, allContacts, 60);
   } catch (_) {
-    contacts.value = [];
+    if (!cachedContacts) contacts.value = [];
   } finally {
-    loadingContacts.value = false;
+    if (requestId === latestContactsRequest) loadingContacts.value = false;
   }
 };
 
@@ -1335,9 +1357,11 @@ watch([statusFilter, typeFilter, sortBy, sortDir, pageSize], async () => {
   await load();
 });
 
-const load = async () => {
-  loading.value = true;
+const load = async ({ silent = false } = {}) => {
+  const requestId = ++latestScheduleRequest;
+  loading.value = !silent;
   err.value = "";
+  let cached = null;
 
   try {
     const deviceId = localStorage.getItem("device_selected_id") || "";
@@ -1368,7 +1392,28 @@ const load = async () => {
       sortDir: sortDir.value,
     };
 
+    const cacheKey = [
+      'schedule-groups',
+      deviceId,
+      params.page,
+      params.pageSize,
+      params.q,
+      params.status,
+      params.type,
+      params.sortBy,
+      params.sortDir,
+    ].join(':');
+    cached = cache.get(cacheKey);
+    if (cached) {
+      groups.value = cached.groups;
+      items.value = cached.items;
+      serverMeta.value = cached.serverMeta;
+      loading.value = false;
+    }
+
     const { data } = await userApi.get("/broadcasts/groups", { params });
+
+    if (requestId !== latestScheduleRequest) return;
 
     const list = Array.isArray(data?.data) ? data.data : [];
     serverMeta.value = data?.meta || null;
@@ -1403,17 +1448,24 @@ const load = async () => {
     });
 
     items.value = list;
+    cache.set(
+      cacheKey,
+      { groups: groups.value, items: items.value, serverMeta: serverMeta.value },
+      45,
+    );
 
-    await loadGroupNames();
-    await loadSummary();
+    // Lookup nama penerima dan kartu ringkasan tidak boleh menahan tabel utama.
+    void Promise.allSettled([loadGroupNames(), loadSummary()]);
   } catch (e) {
     const errorMsg = e?.response?.data?.message || e?.message || "Gagal memuat jadwal";
     toast.error(errorMsg);
-    items.value = [];
-    groups.value = [];
-    serverMeta.value = null;
+    if (!cached) {
+      items.value = [];
+      groups.value = [];
+      serverMeta.value = null;
+    }
   } finally {
-    loading.value = false;
+    if (requestId === latestScheduleRequest) loading.value = false;
   }
 };
 
@@ -1536,17 +1588,12 @@ const phoneRecipients = (b) => {
 
 const normalizeNumber = (num) => normalizeRecipientPhone(num) || String(num || "").trim();
 
-const devices = ref([]);
-const selectedDeviceId = ref(localStorage.getItem("device_selected_id") || "");
-
-const fetchDevices = async () => {
-  try {
-    const { data } = await userApi.get("/devices");
-    devices.value = Array.isArray(data) ? data : [];
-  } catch {
-    devices.value = [];
-  }
-};
+const {
+  availableDevices: devices,
+  selectedDeviceId,
+  loadDevices: fetchDevices,
+  selectDevice,
+} = useDevices();
 
 const ensureDeviceKeyValid = () => {
   const selId = localStorage.getItem("device_selected_id");
@@ -1573,8 +1620,7 @@ const pickDefaultDevice = () => {
 const onDeviceChange = () => {
   const dev = devices.value.find((d) => d.id === selectedDeviceId.value);
   if (dev) {
-    localStorage.setItem("device_selected_id", dev.id);
-    localStorage.setItem("device_selected_name", dev.name || "");
+    selectDevice(dev.id);
 
     // Dispatch custom event untuk Dashboard.vue
     window.dispatchEvent(new Event("deviceChanged"));
@@ -2084,10 +2130,26 @@ const modalPhoneRecipients = computed(() => {
   return phones.slice(0, maxPhoneChips);
 });
 
+const revalidateSchedules = () => {
+  if (document.visibilityState !== 'visible' || !selectedDeviceId.value) return;
+  void load({ silent: true });
+  void loadContacts();
+};
+
 onMounted(async () => {
   await fetchDevices();
   if (!ensureDeviceKeyValid()) pickDefaultDevice();
   await Promise.allSettled([load(), loadContacts()]);
+  window.addEventListener('focus', revalidateSchedules);
+  document.addEventListener('visibilitychange', revalidateSchedules);
+  scheduleRevalidationTimer = window.setInterval(revalidateSchedules, 60_000);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('focus', revalidateSchedules);
+  document.removeEventListener('visibilitychange', revalidateSchedules);
+  if (scheduleRevalidationTimer) window.clearInterval(scheduleRevalidationTimer);
+  if (qTimer) clearTimeout(qTimer);
 });
 </script>
 

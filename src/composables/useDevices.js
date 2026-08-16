@@ -26,9 +26,12 @@ let loadPromise = null;
 let latestLoadDevices = null;
 let lifecycleListenersReady = false;
 let lastResyncAt = 0;
+let lastLoadedAt = 0;
+let lastLoadedToken = '';
 
 const RESYNC_THROTTLE_MS = 5000;
 const FALLBACK_POLL_MS = 60000;
+const DEVICES_CACHE_TTL_MS = 30000;
 
 function isTransientStatus(status) {
   return status === 'connecting' || status === 'reconnecting';
@@ -39,7 +42,7 @@ function scheduleDeviceResync(force = false) {
   const now = Date.now();
   if (!force && now - lastResyncAt < RESYNC_THROTTLE_MS) return;
   lastResyncAt = now;
-  void latestLoadDevices();
+  void latestLoadDevices({ force: true });
 }
 
 function ensureLifecycleResync() {
@@ -55,9 +58,25 @@ function ensureLifecycleResync() {
   }, FALLBACK_POLL_MS);
 }
 
+export function invalidateDevicesCache({ clearState = false } = {}) {
+  lastLoadedAt = 0;
+  lastLoadedToken = '';
+  if (clearState) {
+    devices.value = [];
+    selectedDeviceId.value = '';
+  }
+}
+
 export function useDevices() {
-  const loadDevices = async () => {
+  const loadDevices = async ({ force = false } = {}) => {
     if (loadPromise) return loadPromise;
+
+    const currentToken = localStorage.getItem('token') || '';
+    const hasFreshSnapshot =
+      lastLoadedAt > 0
+      && lastLoadedToken === currentToken
+      && Date.now() - lastLoadedAt < DEVICES_CACHE_TTL_MS;
+    if (!force && hasFreshSnapshot) return devices.value;
 
     loadPromise = (async () => {
       try {
@@ -69,6 +88,8 @@ export function useDevices() {
               status: normalizeDeviceStatus(device.status) || 'close',
             }))
           : [];
+        lastLoadedAt = Date.now();
+        lastLoadedToken = currentToken;
 
         // 1) If there is a saved selection and it still exists, keep it as-is.
         //    Do NOT auto-switch to an 'open' device; user may want to operate on another device.

@@ -19,7 +19,7 @@ vi.mock('../../api/socket.js', () => ({
   disconnectSocket: vi.fn(),
 }));
 
-import { useDevices } from '../../composables/useDevices.js';
+import { invalidateDevicesCache, useDevices } from '../../composables/useDevices.js';
 import { userApi } from '../../api/http.js';
 import { listenToDeviceStatus } from '../../api/socket.js';
 
@@ -27,6 +27,7 @@ describe('useDevices Composable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.getItem.mockReturnValue(null);
+    invalidateDevicesCache({ clearState: true });
   });
 
   describe('loadDevices', () => {
@@ -44,6 +45,21 @@ describe('useDevices Composable', () => {
       expect(userApi.get).toHaveBeenCalledWith('/devices');
       expect(devices.value).toEqual(mockDevices);
       expect(selectedDeviceId.value).toBe('device-1');
+    });
+
+    it('should reuse a fresh device snapshot and still support forced refresh', async () => {
+      userApi.get.mockResolvedValue({
+        data: [{ id: 'device-1', name: 'Device 1', status: 'open' }],
+      });
+
+      const { loadDevices } = useDevices();
+      await loadDevices();
+      await loadDevices();
+
+      expect(userApi.get).toHaveBeenCalledTimes(1);
+
+      await loadDevices({ force: true });
+      expect(userApi.get).toHaveBeenCalledTimes(2);
     });
 
     it('should keep existing selection if device exists', async () => {

@@ -5,7 +5,6 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref } from "vue";
-import { useGroups } from "./composables/useGroups.js";
 import { useDevices } from "./composables/useDevices.js";
 import { useGlobalNotifications } from "./composables/useGlobalNotifications.js";
 import { clearDeviceAccessTokenCache, userApi } from "./api/http.js";
@@ -13,7 +12,6 @@ import { refreshSocketAuth } from "./api/socket.js";
 import ToastContainer from "./components/ToastContainer.vue";
 import { setToastInstance } from "./composables/useToast.js";
 
-const { loadGroups } = useGroups();
 const { loadDevices } = useDevices();
 const toastContainer = ref(null);
 
@@ -28,7 +26,7 @@ function handleDeviceSessionClosed(event) {
   clearDeviceAccessTokenCache();
 
   // Reload devices untuk update status
-  loadDevices().catch(() => {});
+  loadDevices({ force: true }).catch(() => {});
 }
 
 // 🔔 Handle device changed event
@@ -43,9 +41,6 @@ function handleDeviceChanged(event) {
 async function handleUserLoggedIn() {
   // Load devices dan auto-select setelah login
   await loadDevices().catch(() => {});
-  
-  // Load groups
-  loadGroups().catch(() => {});
   
   // Emit event untuk memberitahu Sidebar bahwa devices sudah ter-load
   setTimeout(() => {
@@ -94,8 +89,6 @@ onMounted(async () => {
   // 🆕 Load devices untuk auto-select
   await loadDevices().catch(() => {});
 
-  // Load groups
-  loadGroups().catch(() => {});
 });
 
 onUnmounted(() => {

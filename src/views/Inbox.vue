@@ -987,6 +987,8 @@
 import { ref, onMounted, computed, watch, onUnmounted, nextTick } from 'vue';
 import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
+import { useDevices } from '../composables/useDevices.js';
+import { cache } from '../utils/cache.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
 import { getInboxMediaType } from '../utils/inboxMedia.js';
@@ -1029,8 +1031,12 @@ const DELETED_MESSAGE_TEXT = 'Pesan ini telah dihapus';
 
 const messages = ref([]);
 const outgoingConversationSummaries = ref([]);
-const devices = ref([]);
-const selectedDeviceId = ref(localStorage.getItem('device_selected_id') || '');
+const {
+  availableDevices: devices,
+  selectedDeviceId,
+  loadDevices: fetchDevices,
+  selectDevice,
+} = useDevices();
 const loading = ref(false);
 const err = ref('');
 const selectedConversation = ref(null);
@@ -1698,7 +1704,10 @@ const conversations = computed(() => {
         isGroup: msg.isGroup || msg.from?.includes('@g.us'),
         messages: [],
         latestMessage: msg,
-        messageCount: Number(msg.conversationIncomingCount) || 0,
+        messageCount:
+          Number(msg.conversationMessageCount)
+          || Number(msg.conversationIncomingCount)
+          || 0,
         unreadCount: Number(msg.conversationUnreadCount) || 0,
       };
     }
@@ -1805,21 +1814,6 @@ const conversations = computed(() => {
 });
 
 // Methods
-const fetchDevices = async () => {
-  try {
-    const { data } = await userApi.get('/devices');
-    const rawDevices = Array.isArray(data) ? data : [];
-    
-    // Add isConnected property based on status
-    devices.value = rawDevices.map(d => ({
-      ...d,
-      isConnected: d.status === 'open',
-    }));
-  } catch {
-    devices.value = [];
-  }
-};
-
 const onDeviceChange = () => {
   cacheCurrentConversationSnapshot();
   releaseInitialBottomPin();
@@ -1832,11 +1826,32 @@ const onDeviceChange = () => {
   sentMessagesConversationJid.value = '';
   conversationReactions.value = [];
   clearConversationAvatars();
-  localStorage.setItem('device_selected_id', selectedDeviceId.value);
+  selectDevice(selectedDeviceId.value);
   window.dispatchEvent(new Event('deviceChanged'));
   page.value = 1;
   loadMessages();
   setupSocketListener();
+};
+
+const getInboxListCacheKey = () => [
+  'inbox-list',
+  selectedDeviceId.value,
+  page.value,
+  pageSize.value,
+  q.value.trim().toLocaleLowerCase(),
+].join(':');
+
+const cacheCurrentInboxList = () => {
+  if (!selectedDeviceId.value) return;
+  cache.set(
+    getInboxListCacheKey(),
+    {
+      messages: messages.value,
+      outgoing: outgoingConversationSummaries.value,
+      meta: meta.value,
+    },
+    45,
+  );
 };
 
 const loadMessages = async () => {
@@ -1844,12 +1859,21 @@ const loadMessages = async () => {
 
   const requestId = ++latestLoadRequest;
   const requestedDeviceId = selectedDeviceId.value;
+  const cacheKey = getInboxListCacheKey();
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    messages.value = cached.messages || [];
+    outgoingConversationSummaries.value = cached.outgoing || [];
+    meta.value = cached.meta || meta.value;
+  }
+  // Cache is the request baseline. Only socket events arriving after this point
+  // should survive when the fresh HTTP response replaces the snapshot.
   const messageIdsBeforeRequest = new Set(messages.value.map(message => message.id));
   const outgoingIdsBeforeRequest = new Set(
     outgoingConversationSummaries.value.map(message => message.id),
   );
 
-  loading.value = true;
+  loading.value = !cached;
   err.value = '';
 
   try {
@@ -1858,6 +1882,7 @@ const loadMessages = async () => {
     const inboxRequest = userApi.get(`/devices/${selectedDeviceId.value}/inbox`, {
       params: {
         ...(q.value ? { message: q.value } : {}),
+        ...(!q.value ? { summary: true } : {}),
         page: page.value,
         pageSize: pageSize.value,
         _t: Date.now(),
@@ -1874,22 +1899,25 @@ const loadMessages = async () => {
     const conversationKeys = Array.isArray(data?.metadata?.conversationKeys)
       ? data.metadata.conversationKeys
       : [];
-    const { data: outgoingData } = await userApi
-      .get(`/devices/${selectedDeviceId.value}/outbox/conversations`, {
-        params: {
-          ...(q.value
-            ? { search: q.value }
-            : conversationKeys.length > 0
-              ? { recipients: conversationKeys.join(',') }
-              : {}),
-          _t: Date.now(),
-        },
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-          Pragma: 'no-cache',
-        },
-      })
-      .catch(() => ({ data: [] }));
+    const summaryBacked = data?.metadata?.summaryBacked === true;
+    const { data: outgoingData } = summaryBacked
+      ? { data: [] }
+      : await userApi
+          .get(`/devices/${selectedDeviceId.value}/outbox/conversations`, {
+            params: {
+              ...(q.value
+                ? { search: q.value }
+                : conversationKeys.length > 0
+                  ? { recipients: conversationKeys.join(',') }
+                  : {}),
+              _t: Date.now(),
+            },
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+              Pragma: 'no-cache',
+            },
+          })
+          .catch(() => ({ data: [] }));
 
     // Ignore responses from a device/search request that is no longer current.
     if (requestId !== latestLoadRequest || requestedDeviceId !== selectedDeviceId.value) return;
@@ -1945,20 +1973,31 @@ const loadMessages = async () => {
       todayIncomingCount: data?.metadata?.todayIncomingCount ?? null,
     };
     page.value = meta.value.currentPage;
+    cache.set(
+      cacheKey,
+      {
+        messages: messages.value,
+        outgoing: outgoingConversationSummaries.value,
+        meta: meta.value,
+      },
+      45,
+    );
   } catch (e) {
     if (requestId === latestLoadRequest) {
       err.value = e?.response?.data?.message || 'Gagal memuat pesan masuk';
-      messages.value = [];
-      outgoingConversationSummaries.value = [];
-      meta.value = {
-        totalMessages: 0,
-        totalConversations: 0,
-        currentPage: 1,
-        totalPages: 1,
-        hasMore: false,
-        conversationKeys: [],
-        todayIncomingCount: null,
-      };
+      if (!cached) {
+        messages.value = [];
+        outgoingConversationSummaries.value = [];
+        meta.value = {
+          totalMessages: 0,
+          totalConversations: 0,
+          currentPage: 1,
+          totalPages: 1,
+          hasMore: false,
+          conversationKeys: [],
+          todayIncomingCount: null,
+        };
+      }
     }
   } finally {
     if (requestId === latestLoadRequest) {
@@ -4132,6 +4171,7 @@ watch(
 );
 
 onUnmounted(() => {
+  cacheCurrentInboxList();
   clearScheduledReplyFocus();
   releaseInitialBottomPin();
   clearStatusReconciliationTimers();

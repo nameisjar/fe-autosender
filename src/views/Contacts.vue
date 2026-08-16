@@ -813,10 +813,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import { useDevices } from "../composables/useDevices.js";
+import { cache } from "../utils/cache.js";
 import CachedProfileImage from "../components/CachedProfileImage.vue";
 import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 
@@ -824,9 +826,15 @@ const toast = useToast();
 const router = useRouter();
 
 const contacts = ref([]);
-const devices = ref([]);
-const selectedDeviceId = ref(localStorage.getItem("device_selected_id") || "");
+const {
+  availableDevices: devices,
+  selectedDeviceId,
+  loadDevices: fetchDevices,
+  selectDevice,
+} = useDevices();
 const loading = ref(false);
+let latestContactsRequest = 0;
+let contactsRevalidationTimer;
 const saving = ref(false);
 const showAddForm = ref(false);
 const editingContact = ref(null);
@@ -890,6 +898,17 @@ const fetchAllLabels = async (forceRefresh = false) => {
 
   // Check if cache is still valid
   const now = Date.now();
+  const sharedCacheKey = `contact-labels:${selectedDeviceId.value}`;
+  const sharedLabels = forceRefresh ? null : cache.get(sharedCacheKey);
+  if (sharedLabels) {
+    allLabels.value = sharedLabels;
+    labelsCache.value = {
+      data: sharedLabels,
+      timestamp: now,
+      deviceId: selectedDeviceId.value,
+    };
+    return;
+  }
   if (
     !forceRefresh &&
     labelsCache.value.deviceId === selectedDeviceId.value &&
@@ -915,6 +934,7 @@ const fetchAllLabels = async (forceRefresh = false) => {
       timestamp: now,
       deviceId: selectedDeviceId.value,
     };
+    cache.set(sharedCacheKey, labels, LABELS_CACHE_DURATION / 1000);
     
     allLabels.value = labels;
   } catch {
@@ -924,6 +944,7 @@ const fetchAllLabels = async (forceRefresh = false) => {
 
 // Invalidate labels cache (call after adding new labels)
 const invalidateLabelsCache = () => {
+  if (selectedDeviceId.value) cache.invalidate(`contact-labels:${selectedDeviceId.value}`);
   labelsCache.value = { data: [], timestamp: 0, deviceId: null };
 };
 
@@ -932,17 +953,8 @@ const availableLabels = computed(() => {
   return allLabels.value.sort();
 });
 
-const fetchDevices = async () => {
-  try {
-    const { data } = await userApi.get("/devices");
-    devices.value = Array.isArray(data) ? data : [];
-  } catch {
-    devices.value = [];
-  }
-};
-
 const onDeviceChange = () => {
-  localStorage.setItem("device_selected_id", selectedDeviceId.value);
+  selectDevice(selectedDeviceId.value);
 
   // Dispatch custom event untuk same-tab communication
   window.dispatchEvent(new Event("deviceChanged"));
@@ -954,10 +966,28 @@ const onDeviceChange = () => {
 
 const loadContacts = async () => {
   if (!selectedDeviceId.value) {
+    contacts.value = [];
     return;
   }
 
-  loading.value = true;
+  const requestId = ++latestContactsRequest;
+  const cacheKey = [
+    'contacts-page',
+    selectedDeviceId.value,
+    page.value,
+    pageSize.value,
+    q.value.trim().toLocaleLowerCase(),
+    selectedLabelFilter.value,
+    sortBy.value,
+    sortDir.value,
+  ].join(':');
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    contacts.value = cached.contacts;
+    meta.value = cached.meta;
+  }
+
+  loading.value = !cached;
   err.value = "";
 
   try {
@@ -973,6 +1003,8 @@ const loadContacts = async () => {
       },
     });
 
+    if (requestId !== latestContactsRequest) return;
+
     const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
     contacts.value = list;
     meta.value = Array.isArray(data)
@@ -983,14 +1015,17 @@ const loadContacts = async () => {
           hasMore: false,
         }
       : data?.metadata || meta.value;
+    cache.set(cacheKey, { contacts: contacts.value, meta: meta.value }, 45);
   } catch (e) {
     // console.error('❌ Error loading contacts:', e);
     // console.error('❌ Error response:', e?.response);
     err.value = e?.response?.data?.message || "Gagal memuat kontak";
-    contacts.value = []; // Reset contacts on error
-    meta.value = { totalContacts: 0, currentPage: 1, totalPages: 1, hasMore: false };
+    if (!cached) {
+      contacts.value = []; // Reset contacts on error
+      meta.value = { totalContacts: 0, currentPage: 1, totalPages: 1, hasMore: false };
+    }
   } finally {
-    loading.value = false;
+    if (requestId === latestContactsRequest) loading.value = false;
   }
 };
 
@@ -1394,12 +1429,27 @@ const goNext = () => {
   }
 };
 
+const revalidateContacts = () => {
+  if (document.visibilityState !== 'visible' || !selectedDeviceId.value) return;
+  void loadContacts();
+  void fetchAllLabels();
+};
+
 onMounted(async () => {
   await fetchDevices();
   if (selectedDeviceId.value) {
-    await loadContacts();
-    await fetchAllLabels(); // Fetch all available labels
+    await Promise.allSettled([loadContacts(), fetchAllLabels()]);
   }
+  window.addEventListener('focus', revalidateContacts);
+  document.addEventListener('visibilitychange', revalidateContacts);
+  contactsRevalidationTimer = window.setInterval(revalidateContacts, 60_000);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('focus', revalidateContacts);
+  document.removeEventListener('visibilitychange', revalidateContacts);
+  if (contactsRevalidationTimer) window.clearInterval(contactsRevalidationTimer);
+  if (searchTimer) clearTimeout(searchTimer);
 });
 </script>
 

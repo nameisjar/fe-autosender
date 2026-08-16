@@ -58,7 +58,7 @@
           </svg>
 
           <div>
-            <div class="stat-value">{{ groups.length }}</div>
+            <div class="stat-value">{{ groupsMeta.totalGroups }}</div>
             <div class="stat-label">Total Grup</div>
           </div>
         </div>
@@ -210,7 +210,7 @@
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
 
-          Daftar Grup ({{ groups.length }})
+          Daftar Grup ({{ groupsMeta.totalGroups }})
         </h3>
       </div>
 
@@ -450,7 +450,7 @@
         <div class="pagination-info">
           Menampilkan <strong>{{ startIndex + 1 }}</strong> -
           <strong>{{ endIndex }}</strong> dari
-          <strong>{{ filteredGroups.length }}</strong> grup
+          <strong>{{ groupsMeta.totalGroups }}</strong> grup
         </div>
         <div class="pagination-controls">
           <button class="btn-page" :disabled="currentPage <= 1" @click="prevPage">
@@ -659,10 +659,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast";
+import { useDevices } from "../composables/useDevices.js";
+import { listenToGroupLeft, listenToGroupUpdates, listenToNewGroup } from "../api/socket.js";
+import { cache } from "../utils/cache.js";
 import CachedProfileImage from "../components/CachedProfileImage.vue";
 import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 
@@ -671,9 +674,13 @@ const { success: showSuccess, error: showError } = useToast();
 const router = useRouter();
 
 // State
-const devices = ref([]);
 const groups = ref([]);
-const selectedDeviceId = ref(localStorage.getItem("device_selected_id") || "");
+const {
+  availableDevices: devices,
+  selectedDeviceId,
+  loadDevices: fetchDevices,
+  selectDevice,
+} = useDevices();
 const loadingGroups = ref(false);
 const errGroups = ref("");
 const searchQuery = ref("");
@@ -687,79 +694,131 @@ const selectedGroup = ref(null);
 // Pagination
 const currentPage = ref(1);
 const pageSize = ref(25);
+const groupsMeta = ref({
+  totalGroups: 0,
+  totalMembers: 0,
+  currentPage: 1,
+  totalPages: 1,
+  hasMore: false,
+});
+let latestGroupsRequest = 0;
+let groupSearchTimer;
+let groupRefreshTimer;
+let groupSocketCleanups = [];
 
 // Computed
-const filteredGroups = computed(() => {
-  if (!searchQuery.value) return groups.value;
-
-  const query = searchQuery.value.toLowerCase();
-  return groups.value.filter(
-    (group) =>
-      group.label.toLowerCase().includes(query) ||
-      group.value.toLowerCase().includes(query)
-  );
-});
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredGroups.value.length / pageSize.value);
-});
+const filteredGroups = computed(() => groups.value);
+const totalPages = computed(() => Math.max(1, Number(groupsMeta.value.totalPages || 1)));
 
 const startIndex = computed(() => {
   return (currentPage.value - 1) * pageSize.value;
 });
 
 const endIndex = computed(() => {
-  return Math.min(startIndex.value + pageSize.value, filteredGroups.value.length);
+  return Math.min(
+    startIndex.value + groups.value.length,
+    Number(groupsMeta.value.totalGroups || groups.value.length),
+  );
 });
 
 const paginatedGroups = computed(() => {
-  return filteredGroups.value.slice(startIndex.value, endIndex.value);
+  return filteredGroups.value;
 });
 
 const totalMembers = computed(() => {
-  return groups.value.reduce((sum, group) => sum + (group.meta?.participants || 0), 0);
+  return Number(groupsMeta.value.totalMembers || 0);
 });
 
-// Watch for search query and page size changes - reset to page 1
-watch([searchQuery, pageSize], () => {
+watch(searchQuery, () => {
   currentPage.value = 1;
+  if (groupSearchTimer) clearTimeout(groupSearchTimer);
+  groupSearchTimer = setTimeout(() => loadGroups(), 250);
+});
+
+watch(pageSize, () => {
+  currentPage.value = 1;
+  void loadGroups();
 });
 
 // Methods
-const fetchDevices = async () => {
-  try {
-    const { data } = await userApi.get("/devices");
-    devices.value = Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.error("Error fetching devices:", error);
-    devices.value = [];
-  }
-};
-
 const onDeviceChange = () => {
-  localStorage.setItem("device_selected_id", selectedDeviceId.value);
+  selectDevice(selectedDeviceId.value);
   currentPage.value = 1;
   
   // ✅ Dispatch custom event untuk Dashboard.vue
   window.dispatchEvent(new Event('deviceChanged'));
   
+  setupGroupRealtime(selectedDeviceId.value);
   loadGroups();
 };
 
-const loadGroups = async ({ force = false } = {}) => {
+const cleanupGroupRealtime = () => {
+  groupSocketCleanups.forEach((cleanup) => cleanup?.());
+  groupSocketCleanups = [];
+};
+
+const setupGroupRealtime = (deviceId) => {
+  cleanupGroupRealtime();
+  if (!deviceId) return;
+
+  const scheduleRefresh = () => {
+    if (groupRefreshTimer) clearTimeout(groupRefreshTimer);
+    groupRefreshTimer = setTimeout(
+      () => loadGroups({ force: true, silent: true }),
+      200,
+    );
+  };
+
+  groupSocketCleanups = [
+    listenToGroupUpdates(deviceId, scheduleRefresh),
+    listenToNewGroup(deviceId, scheduleRefresh),
+    listenToGroupLeft(deviceId, scheduleRefresh),
+  ];
+};
+
+const loadGroups = async ({ force = false, silent = false } = {}) => {
   if (!selectedDeviceId.value) {
     groups.value = [];
+    groupsMeta.value = {
+      totalGroups: 0,
+      totalMembers: 0,
+      currentPage: 1,
+      totalPages: 1,
+      hasMore: false,
+    };
     return;
   }
 
-  loadingGroups.value = true;
+  const requestId = ++latestGroupsRequest;
+  const cacheKey = [
+    'groups-page',
+    selectedDeviceId.value,
+    currentPage.value,
+    pageSize.value,
+    searchQuery.value.trim().toLocaleLowerCase(),
+  ].join(':');
+  const cached = force ? null : cache.get(cacheKey);
+  if (cached) {
+    groups.value = cached.groups;
+    groupsMeta.value = cached.metadata;
+  }
+
+  loadingGroups.value = !cached && !silent;
   errGroups.value = "";
 
   try {
-    // Load all groups by setting a high pageSize
     const { data } = await userApi.get(
-      `/whatsapp-groups/device/${selectedDeviceId.value}/active?pageSize=9999`
+      `/whatsapp-groups/device/${selectedDeviceId.value}/active`,
+      {
+        params: {
+          page: currentPage.value,
+          pageSize: pageSize.value,
+          ...(searchQuery.value.trim() ? { q: searchQuery.value.trim() } : {}),
+        },
+      },
     );
+
+    if (requestId !== latestGroupsRequest) return;
 
     // console.log('Raw API Response:', data); // Debug log
 
@@ -816,18 +875,27 @@ const loadGroups = async ({ force = false } = {}) => {
         };
       });
 
+      groupsMeta.value = {
+        totalGroups: Number(data.metadata?.totalGroups || groups.value.length),
+        totalMembers: Number(data.metadata?.totalMembers || 0),
+        currentPage: Number(data.metadata?.currentPage || currentPage.value),
+        totalPages: Math.max(1, Number(data.metadata?.totalPages || 1)),
+        hasMore: Boolean(data.metadata?.hasMore),
+      };
+      cache.set(cacheKey, { groups: groups.value, metadata: groupsMeta.value }, 60);
+
       // console.log("Transformed groups:", groups.value); // Debug log
       // console.log("First group sample:", groups.value[0]); // Debug first group
     } else {
       // console.log("Invalid data structure:", data);
-      groups.value = [];
+      if (!cached) groups.value = [];
     }
   } catch (error) {
     console.error("Error loading groups:", error);
     errGroups.value = error?.response?.data?.message || "Gagal memuat grup";
-    groups.value = [];
+    if (!cached) groups.value = [];
   } finally {
-    loadingGroups.value = false;
+    if (requestId === latestGroupsRequest) loadingGroups.value = false;
   }
 };
 
@@ -1030,12 +1098,14 @@ const handleLeaveGroup = async () => {
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
+    void loadGroups();
   }
 };
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
+    void loadGroups();
   }
 };
 
@@ -1043,8 +1113,15 @@ const nextPage = () => {
 onMounted(async () => {
   await fetchDevices();
   if (selectedDeviceId.value) {
+    setupGroupRealtime(selectedDeviceId.value);
     await loadGroups();
   }
+});
+
+onUnmounted(() => {
+  cleanupGroupRealtime();
+  if (groupSearchTimer) clearTimeout(groupSearchTimer);
+  if (groupRefreshTimer) clearTimeout(groupRefreshTimer);
 });
 
 </script>
