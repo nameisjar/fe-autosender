@@ -195,6 +195,23 @@
               <span v-if="conv.messageCount > 1" class="message-count">
                 {{ conv.messageCount }} pesan
               </span>
+              <div v-if="getConversationLabels(conv).length" class="conversation-labels compact-labels">
+                <span
+                  v-for="label in getConversationLabels(conv).slice(0, 2)"
+                  :key="label"
+                  class="conversation-label-chip"
+                  :title="label"
+                >
+                  {{ label }}
+                </span>
+                <span
+                  v-if="getConversationLabels(conv).length > 2"
+                  class="conversation-label-chip label-overflow"
+                  :title="getConversationLabels(conv).slice(2).join(', ')"
+                >
+                  +{{ getConversationLabels(conv).length - 2 }}
+                </span>
+              </div>
             </div>
           </div>
           <button
@@ -321,12 +338,25 @@
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <div>
+            <div class="modal-identity">
               <h3>{{ getSenderName(selectedConversation) }}</h3>
               <span v-if="getConversationPhone(selectedConversation)" class="modal-phone">
                 {{ getConversationPhone(selectedConversation) }}
               </span>
               <span class="modal-subtitle">{{ selectedConversation.messageCount }} pesan</span>
+              <div
+                v-if="getConversationLabels(selectedConversation).length"
+                class="conversation-labels modal-labels"
+              >
+                <span
+                  v-for="label in getConversationLabels(selectedConversation)"
+                  :key="label"
+                  class="conversation-label-chip"
+                  :title="label"
+                >
+                  {{ label }}
+                </span>
+              </div>
             </div>
           </div>
           <div class="modal-header-actions">
@@ -949,6 +979,7 @@ import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
 import { getDeviceStatusLabel } from '../utils/deviceStatus.js';
+import { getContactLabelNames } from '../utils/contactLabels.js';
 import {
   MEDIA_ACCEPT,
   MEDIA_MAX_SIZE,
@@ -3575,6 +3606,8 @@ const getConversationPhone = (conversation) => {
   return formatWhatsAppIdentity(conversation.from);
 };
 
+const getConversationLabels = (conversation) => getContactLabelNames(conversation?.contact);
+
 const normalizeInboxContactPhone = (conversation) => {
   if (!conversation || conversation.isGroup) return '';
 
@@ -4567,6 +4600,42 @@ const handleMediaError = (event, message) => {
 
 .message-meta {
   margin-top: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.conversation-labels {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.conversation-label-chip {
+  display: inline-block;
+  max-width: 160px;
+  padding: 2px 7px;
+  overflow: hidden;
+  color: var(--theme-info-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--theme-info-soft);
+  border: 1px solid var(--theme-info-border);
+  border-radius: 999px;
+}
+
+.label-overflow {
+  flex-shrink: 0;
+}
+
+.compact-labels {
+  margin: 0;
 }
 
 /* Loading State - Konsisten dengan Schedules */
@@ -4910,6 +4979,15 @@ const handleMediaError = (event, message) => {
 
 .modal-phone + .modal-subtitle::before {
   content: ' · ';
+}
+
+.modal-identity {
+  min-width: 0;
+}
+
+.modal-labels {
+  max-width: min(460px, 50vw);
+  margin-top: 5px;
 }
 
 .add-contact-overlay {
