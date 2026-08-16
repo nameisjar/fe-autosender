@@ -130,7 +130,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">
+            <div id="reminder-message-label" class="form-label">
               Pesan <span class="required">*</span>
               <button
                 type="button"
@@ -168,9 +168,10 @@
                 </svg>
                 H-3
               </button>
-            </label>
+            </div>
             <textarea
               v-model.trim="form.message"
+              aria-labelledby="reminder-message-label"
               rows="4"
               placeholder="Tulis pesan reminder yang akan dikirim...&#10;&#10;💡 Gunakan {{siswa}} untuk nama depan penerima (hanya berlaku untuk kontak)"
               required

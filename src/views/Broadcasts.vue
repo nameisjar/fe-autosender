@@ -86,7 +86,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">
+            <div id="broadcast-message-label" class="form-label">
               Pesan <span class="required">*</span>
               <button
                 type="button"
@@ -160,9 +160,10 @@
                 </svg>
                 Invit Grad
               </button>
-            </label>
+            </div>
             <textarea
               v-model.trim="form.message"
+              aria-labelledby="broadcast-message-label"
               rows="4"
               placeholder="Tulis pesan yang akan dikirim ke semua penerima...&#10;&#10;💡 Gunakan {{siswa}} untuk nama depan penerima (hanya berlaku untuk kontak)"
               required
