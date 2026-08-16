@@ -987,6 +987,7 @@ import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
+import { getInboxMediaType } from '../utils/inboxMedia.js';
 import { getDeviceStatusLabel } from '../utils/deviceStatus.js';
 import { getContactLabelNames } from '../utils/contactLabels.js';
 import {
@@ -2581,6 +2582,7 @@ const mapTimelineIncomingMessage = row => ({
   message: row.message || '',
   mediaPath: row.mediaPath || '',
   fileName: row.fileName || '',
+  mediaType: row.mediaType || '',
   isRead: Boolean(row.isRead),
   receivedAt: row.timestamp,
   participant: row.participant || null,
@@ -2595,6 +2597,7 @@ const mapTimelineOutgoingMessage = row => {
     text: row.message || '',
     mediaPath: row.mediaPath || '',
     fileName: row.fileName || '',
+    mediaType: row.mediaType || '',
     timestamp: row.timestamp,
     status: resolveOutgoingUiStatus(row.status, {
       readCount: readBy.length,
@@ -4015,25 +4018,16 @@ const isStickerMessage = (message) => {
   return text === '[Stiker]';
 };
 
-const getMediaExtension = (message) => {
-  const path = String(message?.mediaPath || '').split(/[?#]/)[0].toLowerCase();
-  if (path.includes('.')) return path.substring(path.lastIndexOf('.') + 1);
-  const fileName = String(message?.fileName || '').toLowerCase();
-  return fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.') + 1) : '';
-};
-
 const isImageMedia = (message) =>
-  Boolean(message?.mediaPath) && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(getMediaExtension(message));
+  getInboxMediaType(message) === 'image';
 const isVideoMedia = (message) =>
-  Boolean(message?.mediaPath) && ['mp4', 'mov', 'webm', 'mkv'].includes(getMediaExtension(message));
+  getInboxMediaType(message) === 'video';
 const isAudioMedia = (message) =>
-  Boolean(message?.mediaPath) && ['mp3', 'ogg', 'wav', 'm4a', 'aac', 'opus'].includes(getMediaExtension(message));
+  getInboxMediaType(message) === 'audio';
 const isDocumentMedia = (message) =>
   Boolean(message?.mediaPath) &&
   !isStickerMessage(message) &&
-  !isImageMedia(message) &&
-  !isVideoMedia(message) &&
-  !isAudioMedia(message);
+  getInboxMediaType(message) === 'document';
 
 const getStableMediaId = message => String(
   message?.id || message?.waMessageId || message?.tempId || message?.pkId || message?.mediaPath || '',
