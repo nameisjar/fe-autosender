@@ -1746,6 +1746,7 @@ onUnmounted(() => {
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 2;
 }
 
 .group-avatar-small svg {
