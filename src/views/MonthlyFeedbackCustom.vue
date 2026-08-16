@@ -1,5 +1,5 @@
 <template>
-  <div class="custom-feedback-page">
+  <div class="wrapper custom-feedback-page">
     <header class="page-header">
       <div>
         <h1>Feedback Bulanan (Algo Custom)</h1>
@@ -636,10 +636,10 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.custom-feedback-page { padding: 32px; color: var(--text-primary, #182033); }
+.custom-feedback-page { width: 100%; max-width: none; min-width: 0; margin: 0; padding: 0; box-sizing: border-box; color: var(--text-primary, #182033); }
 .page-header, .panel-heading, .table-footer, .preview-modal > header, .preview-modal > footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .page-header { margin-bottom: 24px; }
-.page-header h1 { margin: 0 0 8px; font-size: clamp(26px, 3vw, 38px); }
+.page-header h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.25; }
 .page-header p, .panel-heading p { margin: 0; color: var(--text-secondary, #6b7890); }
 .header-badge { padding: 8px 13px; color: #0c8f61; background: rgba(16, 185, 129, .12); border: 1px solid rgba(16, 185, 129, .35); border-radius: 999px; font-weight: 700; white-space: nowrap; }
 .panel { margin-bottom: 22px; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #dbe2ee); border-radius: 18px; overflow: hidden; }
@@ -719,7 +719,7 @@ html.dark .custom-feedback-page, html[data-theme="dark"] .custom-feedback-page, 
   .defaults-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
-  .custom-feedback-page { padding: 18px 13px; }
+  .custom-feedback-page { padding: 0; }
   .page-header, .panel-heading, .table-footer { align-items: stretch; flex-direction: column; }
   .header-badge { align-self: flex-start; }
   .defaults-grid { grid-template-columns: 1fr; }
