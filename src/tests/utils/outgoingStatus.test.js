@@ -7,6 +7,7 @@ import {
   mergeOutgoingStatus,
   normalizeOutgoingUiStatus,
   OUTGOING_STATUS_HIERARCHY,
+  resolveOutgoingUiStatus,
 } from '../../utils/outgoingStatus.js';
 
 describe('outgoing message status helpers', () => {
@@ -48,18 +49,20 @@ describe('outgoing message status helpers', () => {
     expect(mergeOutgoingResponseStatus('sending', 'error')).toBe('error');
   });
 
-  it('keeps an error terminal against every later status event', () => {
-    for (const laterStatus of [
-      'pending',
-      'sending',
-      'server_ack',
-      'delivery_ack',
-      'read',
-      'played',
-    ]) {
+  it('keeps an error terminal until delivery evidence arrives', () => {
+    for (const laterStatus of ['pending', 'sending', 'server_ack']) {
       expect(mergeOutgoingStatus('error', laterStatus)).toBe('error');
       expect(mergeOutgoingStatus('failed', laterStatus)).toBe('error');
     }
+
+    expect(mergeOutgoingStatus('error', 'delivery_ack')).toBe('delivery_ack');
+    expect(mergeOutgoingStatus('failed', 'read')).toBe('read');
+    expect(mergeOutgoingStatus('error', 'played')).toBe('read');
+  });
+
+  it('uses group read receipts to repair contradictory stored errors', () => {
+    expect(resolveOutgoingUiStatus('error', { readCount: 7 })).toBe('read');
+    expect(resolveOutgoingUiStatus('error', { readCount: 0 })).toBe('error');
   });
 
   it('merges stale database snapshots by all supported message IDs', () => {

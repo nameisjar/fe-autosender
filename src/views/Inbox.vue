@@ -964,6 +964,7 @@ import {
   mergeOutgoingSnapshotStatuses,
   mergeOutgoingStatus,
   normalizeOutgoingUiStatus,
+  resolveOutgoingUiStatus,
 } from '../utils/outgoingStatus.js';
 
 const toast = useToast();
@@ -2106,7 +2107,9 @@ const setupSocketListener = () => {
       
       if (msgIndex !== -1) {
         const currentStatus = sentMessages.value[msgIndex].status;
-        const newStatus = data.status;
+        const newStatus = resolveOutgoingUiStatus(data.status, {
+          readCount: data.readCount,
+        });
         
         const normalizedCurrentStatus = normalizeOutgoingUiStatus(currentStatus) || 'sending';
         const mergedStatus = mergeOutgoingStatus(currentStatus, newStatus);
@@ -2545,7 +2548,7 @@ const mapTimelineOutgoingMessage = row => {
     mediaPath: row.mediaPath || '',
     fileName: row.fileName || '',
     timestamp: row.timestamp,
-    status: normalizeOutgoingUiStatus(String(row.status || '').toLowerCase()) || 'sending',
+    status: resolveOutgoingUiStatus(row.status, { readCount: readBy.length }),
     deletedForEveryone:
       String(row.status || '').toLowerCase() === 'revoked'
       || row.message === DELETED_MESSAGE_TEXT,

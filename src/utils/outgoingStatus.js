@@ -20,14 +20,22 @@ export const normalizeOutgoingUiStatus = status => {
   return null;
 };
 
+export const resolveOutgoingUiStatus = (status, { readCount = 0 } = {}) => {
+  if (Number(readCount) > 0) return 'read';
+  return normalizeOutgoingUiStatus(status) || 'sending';
+};
+
 // Merge status updates monotonically across Socket.IO, HTTP, and database
-// snapshots. A WhatsApp rejection is terminal: a later queued/server ACK event
-// can be stale and must not turn the red error back into a sent checkmark.
+// snapshots. A queued/server ACK cannot revive a rejection, but delivery/read
+// receipts are authoritative evidence that the message was successfully sent.
 export const mergeOutgoingStatus = (currentStatus, incomingStatus) => {
   const current = normalizeOutgoingUiStatus(currentStatus) || 'sending';
   const incoming = normalizeOutgoingUiStatus(incomingStatus);
 
-  if (current === 'error' || current === 'revoked') return current;
+  if (current === 'revoked') return current;
+  if (current === 'error') {
+    return ['delivery_ack', 'read'].includes(incoming) ? incoming : current;
+  }
   if (!incoming) return current;
 
   // A rejection can replace an optimistic/server ACK state, but cannot undo
@@ -88,19 +96,9 @@ export const mergeOutgoingSnapshotStatuses = (
 
     if (!current) return snapshot;
     matchedCurrent.add(current);
-    const currentStatus = normalizeOutgoingUiStatus(current.status);
-    const snapshotStatus = normalizeOutgoingUiStatus(snapshot.status);
-    // Delivery/read persisted by the backend is stronger evidence than a
-    // browser-local error (for example an HTTP timeout after WhatsApp already
-    // accepted the message). A pending/server ACK is not strong enough to
-    // revive a confirmed WhatsApp rejection.
-    const mergedStatus = currentStatus === 'error'
-      && ['delivery_ack', 'read'].includes(snapshotStatus)
-      ? snapshotStatus
-      : mergeOutgoingStatus(current.status, snapshot.status);
     return {
       ...snapshot,
-      status: mergedStatus,
+      status: mergeOutgoingStatus(current.status, snapshot.status),
     };
   });
 
