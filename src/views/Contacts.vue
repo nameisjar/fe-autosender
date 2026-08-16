@@ -1027,6 +1027,7 @@ const openContactChat = (contact) => {
     query: {
       device: selectedDeviceId.value,
       conversation: conversationJid,
+      contactId: contact.id,
       displayName,
       isGroup: "false",
       profilePicUrl: contact.profilePicUrl || "",

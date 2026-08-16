@@ -2431,6 +2431,7 @@ const getMessageDomId = message => String(
 const getInboxNavigationTarget = () => {
   const deviceId = String(route.query.device || '');
   const conversationJid = String(route.query.conversation || '');
+  const contactId = String(route.query.contactId || '');
   const messageId = String(route.query.message || '');
   const displayName = String(route.query.displayName || '');
   const isGroup = String(route.query.isGroup || '') === 'true';
@@ -2443,6 +2444,7 @@ const getInboxNavigationTarget = () => {
   return {
     deviceId,
     conversationJid,
+    contactId,
     messageId,
     displayName,
     isGroup,
@@ -2455,6 +2457,7 @@ const clearInboxNavigationQuery = () => {
   const query = { ...route.query };
   delete query.device;
   delete query.conversation;
+  delete query.contactId;
   delete query.message;
   delete query.displayName;
   delete query.isGroup;
@@ -2490,7 +2493,7 @@ const createEmptyConversation = target => {
   };
 };
 
-const mergeNavigationMetadata = (conversation, target) => {
+const mergeNavigationMetadata = (conversation, target, navigationContact = null) => {
   const isGroup = Boolean(
     target.isGroup
     || conversation?.isGroup
@@ -2511,13 +2514,30 @@ const mergeNavigationMetadata = (conversation, target) => {
     profilePicUrl: !isGroup
       ? (conversation?.profilePicUrl || target.profilePicUrl || null)
       : conversation?.profilePicUrl || null,
-    contact: !isGroup && !conversation?.contact && displayName
-      ? { firstName: displayName, lastName: '', phone, colorCode: null }
-      : conversation?.contact || null,
+    contact: !isGroup
+      ? navigationContact
+        || conversation?.contact
+        || (displayName ? { firstName: displayName, lastName: '', phone, colorCode: null } : null)
+      : null,
     pushName: !isGroup
       ? (conversation?.pushName || displayName || null)
       : conversation?.pushName || null,
   };
+};
+
+const fetchNavigationContact = async target => {
+  if (!target.contactId || target.isGroup) return null;
+
+  try {
+    const { data } = await userApi.get(`/contacts/${target.contactId}`, {
+      headers: { 'Cache-Control': 'no-cache, no-store' },
+    });
+    return data?.contact || null;
+  } catch {
+    // Detail kontak hanya memperkaya header modal. Jika gagal, pertahankan
+    // metadata percakapan lama agar membuka chat tidak ikut terblokir.
+    return null;
+  }
 };
 
 const fetchNavigationConversation = async target => {
@@ -2651,6 +2671,8 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     q.value = '';
     page.value = 1;
 
+    const navigationContactPromise = fetchNavigationContact(target);
+
     if (reload) await loadMessages();
     if (generation !== inboxNavigationGeneration) return;
     if (deviceChanged) setupSocketListener();
@@ -2660,7 +2682,9 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     );
     if (!conversation) conversation = await fetchNavigationConversation(target);
     if (generation !== inboxNavigationGeneration) return;
-    conversation = mergeNavigationMetadata(conversation, target);
+    const navigationContact = await navigationContactPromise;
+    if (generation !== inboxNavigationGeneration) return;
+    conversation = mergeNavigationMetadata(conversation, target, navigationContact);
     conversationReturnRoute.value = target.returnTo;
     conversationOpenedFromNavigation.value = true;
     await viewConversation(conversation, { targetMessageId: target.messageId });
@@ -4093,7 +4117,13 @@ onMounted(async () => {
 });
 
 watch(
-  () => [route.query.device, route.query.conversation, route.query.message, route.query.returnTo],
+  () => [
+    route.query.device,
+    route.query.conversation,
+    route.query.contactId,
+    route.query.message,
+    route.query.returnTo,
+  ],
   ([deviceId, conversationJid]) => {
     if (route.name === 'inbox' && deviceId && conversationJid) {
       void openInboxNavigationTarget();
