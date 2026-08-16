@@ -8,6 +8,7 @@ import ReminderAlgo from '../views/ReminderAlgo.vue';
 import Templates from '../views/Templates.vue';
 import MonthlyTemplates from '../views/MonthlyTemplates.vue';
 import MonthlyFeedback from '../views/MonthlyFeedback.vue';
+import MonthlyFeedbackCustom from '../views/MonthlyFeedbackCustom.vue';
 import AdminTutors from '../views/AdminTutors.vue';
 import AdminSentHistory from '../views/AdminSentHistory.vue';
 import AdminMonitoring from '../views/AdminMonitoring.vue';
@@ -45,6 +46,11 @@ const routes = [
                 path: 'monthly-feedback',
                 name: 'monthly-feedback',
                 component: MonthlyFeedback,
+            },
+            {
+                path: 'monthly-feedback-custom',
+                name: 'monthly-feedback-custom',
+                component: MonthlyFeedbackCustom,
             },
             // Code Snippets - Accessible by Admin & Tutor
             {

@@ -184,6 +184,22 @@
           </svg>
           <span>Feedback Bulanan (Algo)</span>
         </router-link>
+        <router-link to="/monthly-feedback-custom" @click="$emit('close')">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 4h16v16H4z" />
+            <path d="M4 9h16M9 4v16" />
+            <path d="M13 14h4M15 12v4" />
+          </svg>
+          <span>Feedback Bulanan (Custom)</span>
+        </router-link>
         <router-link to="/schedules" @click="$emit('close')">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
             <rect
