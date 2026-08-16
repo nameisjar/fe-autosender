@@ -959,6 +959,7 @@ import {
 } from '../utils/messageReactions.js';
 import {
   createOutgoingMessageId,
+  isConfirmedOutgoingFailure,
   mergeOutgoingResponseStatus,
   mergeOutgoingSnapshotStatuses,
   mergeOutgoingStatus,
@@ -1081,6 +1082,41 @@ const conversationSnapshotCache = new Map();
 const MAX_CONVERSATION_SNAPSHOTS = 10;
 const reactionProfileRetryCounts = new Map();
 const reactionProfileRetryTimers = new Map();
+const statusReconciliationTimers = new Map();
+
+const confirmedOutgoingError = message => {
+  const error = new Error(message);
+  error.outgoingFailureConfirmed = true;
+  return error;
+};
+
+const clearStatusReconciliationTimers = () => {
+  statusReconciliationTimers.forEach(timer => clearTimeout(timer));
+  statusReconciliationTimers.clear();
+};
+
+const scheduleConversationStatusReconciliation = conversationFrom => {
+  if (!conversationFrom) return;
+
+  [1200, 4500].forEach(delay => {
+    const timerKey = `${getConversationSnapshotKey(conversationFrom)}:${delay}`;
+    const previousTimer = statusReconciliationTimers.get(timerKey);
+    if (previousTimer) clearTimeout(previousTimer);
+    const timer = setTimeout(() => {
+      statusReconciliationTimers.delete(timerKey);
+      if (
+        !selectedConversation.value
+        || !sameConversationJid(selectedConversation.value.from, conversationFrom)
+      ) return;
+
+      void loadConversationTimeline(conversationFrom, {
+        mergeLatest: true,
+        signal: conversationRequestController?.signal,
+      }).catch(() => undefined);
+    }, delay);
+    statusReconciliationTimers.set(timerKey, timer);
+  });
+};
 
 const cloneSnapshotItems = items => (Array.isArray(items)
   ? items.map(item => ({
@@ -2573,10 +2609,13 @@ const loadConversationTimeline = async (
       incomingPage,
       message => message.id || message.pkId,
     ).sort((left, right) => new Date(left.receivedAt) - new Date(right.receivedAt));
-    sentMessages.value = mergeTimelinePage(
-      shouldMerge ? sentMessages.value : [],
+    // A timeline response can have been queried just before a Socket.IO ACK.
+    // Merge its statuses monotonically so a stale pending row cannot replace
+    // server_ack, delivery_ack, or read already visible in the browser.
+    sentMessages.value = mergeOutgoingSnapshotStatuses(
+      sentMessages.value,
       outgoingPage,
-      message => message.waMessageId || message.tempId,
+      { keepUnmatchedCurrent: shouldMerge },
     ).sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
     sentMessagesConversationJid.value = conversationFrom;
 
@@ -3078,20 +3117,27 @@ const sendMediaReply = async () => {
     // Status pengiriman sudah ditampilkan oleh ikon pada bubble chat.
     // Toast hanya digunakan untuk kegagalan agar respons awal server tidak
     // disalahartikan sebagai konfirmasi bahwa media telah sampai ke penerima.
+    scheduleConversationStatusReconciliation(recipient);
     setTimeout(() => scrollToBottom(), 50);
   } catch (error) {
+    const failureConfirmed = isConfirmedOutgoingFailure(error);
     const msgIndex = sentMessages.value.findIndex(message => message.tempId === tempId);
     if (msgIndex >= 0) {
-      sentMessages.value[msgIndex].status = 'error';
+      sentMessages.value[msgIndex].status = failureConfirmed ? 'error' : 'sending';
       sentMessages.value = [...sentMessages.value];
     }
-    toast.error(
+    const errorMessage =
       error?.response?.data?.message ||
       error?.response?.data?.errors?.[0]?.error ||
       error?.response?.data?.error ||
       error?.message ||
-      'Gagal mengirim media',
-    );
+      'Gagal mengirim media';
+    if (failureConfirmed) {
+      toast.error(errorMessage);
+    } else {
+      toast.warning('Status pengiriman media belum terkonfirmasi. Sistem akan memeriksanya kembali.');
+      scheduleConversationStatusReconciliation(recipient);
+    }
   } finally {
     sendingReply.value = false;
   }
@@ -3132,11 +3178,11 @@ const sendReply = async () => {
   try {
     const device = devices.value.find(d => d.id === selectedDeviceId.value);
     if (!device) {
-      throw new Error('Device tidak ditemukan');
+      throw confirmedOutgoingError('Device tidak ditemukan');
     }
 
     if (!device.isConnected) {
-      throw new Error('Device tidak terhubung. Silakan pilih device lain atau hubungkan kembali WhatsApp.');
+      throw confirmedOutgoingError('Device tidak terhubung. Silakan pilih device lain atau hubungkan kembali WhatsApp.');
     }
 
     const recipient = selectedConversation.value.from;
@@ -3155,7 +3201,7 @@ const sendReply = async () => {
 
     const errors = response?.data?.errors || [];
     if (errors.length > 0) {
-      throw new Error(errors[0]?.error || 'Gagal mengirim pesan');
+      throw confirmedOutgoingError(errors[0]?.error || 'Gagal mengirim pesan');
     }
 
     const results = response?.data?.results || [];
@@ -3245,12 +3291,14 @@ const sendReply = async () => {
       outgoingConversationSummaries.value.splice(existingSummaryIndex, 1);
     }
     outgoingConversationSummaries.value.unshift(summary);
+    scheduleConversationStatusReconciliation(recipient);
     setTimeout(() => scrollToBottom(), 50);
   } catch (e) {
-    // Update message status to error
+    const failureConfirmed = isConfirmedOutgoingFailure(e);
     const msgIndex = sentMessages.value.findIndex(m => m.tempId === tempId);
     if (msgIndex !== -1) {
-      sentMessages.value[msgIndex].status = 'error';
+      sentMessages.value[msgIndex].status = failureConfirmed ? 'error' : 'sending';
+      sentMessages.value = [...sentMessages.value];
     }
     
     const errorMsg =
@@ -3261,6 +3309,9 @@ const sendReply = async () => {
     
     if (errorMsg?.includes('Session not found') || errorMsg?.includes('unauthorized') || e?.response?.status === 401) {
       toast.error('Session WhatsApp tidak ditemukan. Device perlu di-pairing ulang atau pilih device lain yang aktif.');
+    } else if (!failureConfirmed) {
+      toast.warning('Status pengiriman belum terkonfirmasi. Sistem akan memeriksanya kembali.');
+      scheduleConversationStatusReconciliation(selectedConversation.value?.from);
     } else {
       toast.error(errorMsg || 'Gagal mengirim pesan. Pastikan WhatsApp sudah terhubung.');
     }
@@ -3836,6 +3887,9 @@ onMounted(async () => {
   const handleSocketConnect = () => {
     if (selectedDeviceId.value) {
       setupSocketListener();
+      if (selectedConversation.value?.from) {
+        scheduleConversationStatusReconciliation(selectedConversation.value.from);
+      }
     }
   };
   const handleSocketDisconnect = (reason) => {
@@ -3886,6 +3940,7 @@ watch(
 
 onUnmounted(() => {
   releaseInitialBottomPin();
+  clearStatusReconciliationTimers();
   conversationRequestController?.abort();
   conversationRequestController = null;
   window.removeEventListener('keydown', handleImagePreviewKeydown);

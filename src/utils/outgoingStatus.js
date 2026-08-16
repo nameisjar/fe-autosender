@@ -46,13 +46,31 @@ export const mergeOutgoingStatus = (currentStatus, incomingStatus) => {
 export const mergeOutgoingResponseStatus = (currentStatus, databaseStatus) =>
   mergeOutgoingStatus(currentStatus, databaseStatus);
 
+// A missing/late HTTP response does not prove that WhatsApp rejected the
+// message. Only explicit application failures or client errors that happen
+// before the send can safely produce the red error state in the Inbox.
+export const isConfirmedOutgoingFailure = error => {
+  if (error?.outgoingFailureConfirmed === true) return true;
+
+  const httpStatus = Number(error?.response?.status);
+  if (!Number.isInteger(httpStatus)) return false;
+
+  return httpStatus >= 400
+    && httpStatus < 500
+    && ![408, 409, 425, 429].includes(httpStatus);
+};
+
 const outgoingMessageIds = message =>
   [message?.waMessageId, message?.id, message?.tempId].filter(Boolean);
 
 // Database requests are snapshots: by the time one resolves, Socket.IO may
 // already have applied a newer ACK/NACK locally. Merge matching rows by every
 // supported ID instead of replacing their status with the stale snapshot.
-export const mergeOutgoingSnapshotStatuses = (currentMessages, snapshotMessages) => {
+export const mergeOutgoingSnapshotStatuses = (
+  currentMessages,
+  snapshotMessages,
+  { keepUnmatchedCurrent = true } = {},
+) => {
   const currentById = new Map();
   const matchedCurrent = new Set();
   const currentList = Array.isArray(currentMessages) ? currentMessages : [];
@@ -70,9 +88,19 @@ export const mergeOutgoingSnapshotStatuses = (currentMessages, snapshotMessages)
 
     if (!current) return snapshot;
     matchedCurrent.add(current);
+    const currentStatus = normalizeOutgoingUiStatus(current.status);
+    const snapshotStatus = normalizeOutgoingUiStatus(snapshot.status);
+    // Delivery/read persisted by the backend is stronger evidence than a
+    // browser-local error (for example an HTTP timeout after WhatsApp already
+    // accepted the message). A pending/server ACK is not strong enough to
+    // revive a confirmed WhatsApp rejection.
+    const mergedStatus = currentStatus === 'error'
+      && ['delivery_ack', 'read'].includes(snapshotStatus)
+      ? snapshotStatus
+      : mergeOutgoingStatus(current.status, snapshot.status);
     return {
       ...snapshot,
-      status: mergeOutgoingStatus(current.status, snapshot.status),
+      status: mergedStatus,
     };
   });
 
@@ -80,7 +108,9 @@ export const mergeOutgoingSnapshotStatuses = (currentMessages, snapshotMessages)
   // or before its pending row committed. Keep those unmatched local bubbles.
   return [
     ...mergedSnapshot,
-    ...currentList.filter(message => !matchedCurrent.has(message)),
+    ...(keepUnmatchedCurrent
+      ? currentList.filter(message => !matchedCurrent.has(message))
+      : []),
   ];
 };
 

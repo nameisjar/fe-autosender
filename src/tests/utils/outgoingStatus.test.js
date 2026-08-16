@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createOutgoingMessageId,
+  isConfirmedOutgoingFailure,
   mergeOutgoingResponseStatus,
   mergeOutgoingSnapshotStatuses,
   mergeOutgoingStatus,
@@ -21,6 +22,16 @@ describe('outgoing message status helpers', () => {
     expect(mergeOutgoingResponseStatus('sending', undefined)).toBe('sending');
     expect(mergeOutgoingResponseStatus('pending', null)).toBe('sending');
     expect(mergeOutgoingResponseStatus('sending', 'pending')).toBe('sending');
+  });
+
+  it('distinguishes confirmed send failures from an uncertain HTTP result', () => {
+    expect(isConfirmedOutgoingFailure({ outgoingFailureConfirmed: true })).toBe(true);
+    expect(isConfirmedOutgoingFailure({ response: { status: 400 } })).toBe(true);
+    expect(isConfirmedOutgoingFailure({ response: { status: 401 } })).toBe(true);
+    expect(isConfirmedOutgoingFailure({ response: { status: 408 } })).toBe(false);
+    expect(isConfirmedOutgoingFailure({ response: { status: 429 } })).toBe(false);
+    expect(isConfirmedOutgoingFailure({ response: { status: 500 } })).toBe(false);
+    expect(isConfirmedOutgoingFailure({ code: 'ECONNABORTED' })).toBe(false);
   });
 
   it.each(['error', 'delivery_ack', 'read'])(
@@ -100,6 +111,20 @@ describe('outgoing message status helpers', () => {
     expect(notDowngraded[0].status).toBe('read');
   });
 
+  it('lets authoritative delivery evidence repair a browser-local error', () => {
+    const delivered = mergeOutgoingSnapshotStatuses(
+      [{ tempId: 'message-a', status: 'error' }],
+      [{ id: 'message-a', status: 'delivery_ack' }],
+    );
+    const stalePending = mergeOutgoingSnapshotStatuses(
+      [{ tempId: 'message-b', status: 'error' }],
+      [{ id: 'message-b', status: 'pending' }],
+    );
+
+    expect(delivered[0].status).toBe('delivery_ack');
+    expect(stalePending[0].status).toBe('error');
+  });
+
   it('keeps optimistic messages that are not present in an older snapshot yet', () => {
     const current = [
       { tempId: 'persisted', status: 'sending' },
@@ -110,6 +135,11 @@ describe('outgoing message status helpers', () => {
     expect(mergeOutgoingSnapshotStatuses(current, snapshot)).toEqual([
       { id: 'persisted', status: 'sending' },
       { tempId: 'just-sent', status: 'error' },
+    ]);
+    expect(mergeOutgoingSnapshotStatuses(current, snapshot, {
+      keepUnmatchedCurrent: false,
+    })).toEqual([
+      { id: 'persisted', status: 'sending' },
     ]);
   });
 
