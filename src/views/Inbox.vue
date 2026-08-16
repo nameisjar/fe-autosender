@@ -731,6 +731,7 @@
                 </svg>
               </button>
               <textarea
+                id="inbox-reply-textarea"
                 v-model="replyText"
                 :placeholder="selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan atau tempel gambar...'"
                 class="reply-textarea"
@@ -2242,7 +2243,8 @@ const focusReplyInput = async ({ force = false, afterPaint = false } = {}) => {
   if (afterPaint && typeof window.requestAnimationFrame === 'function') {
     await new Promise(resolve => window.requestAnimationFrame(resolve));
   }
-  const textarea = replyTextarea.value;
+  const textarea = replyTextarea.value
+    || document.getElementById('inbox-reply-textarea');
   if (!textarea || !selectedConversation.value) return false;
 
   const activeElement = document.activeElement;
@@ -2257,6 +2259,43 @@ const focusReplyInput = async ({ force = false, afterPaint = false } = {}) => {
     textarea.focus();
   }
   return document.activeElement === textarea;
+};
+
+const scheduledReplyFocusTimers = new Set();
+
+const clearScheduledReplyFocus = () => {
+  scheduledReplyFocusTimers.forEach(timer => clearTimeout(timer));
+  scheduledReplyFocusTimers.clear();
+};
+
+const scheduleReplyInputFocus = () => {
+  clearScheduledReplyFocus();
+  const conversationFrom = selectedConversation.value?.from;
+  if (!conversationFrom) return;
+
+  [0, 80, 200, 500, 900].forEach((delay) => {
+    const timer = setTimeout(async () => {
+      scheduledReplyFocusTimers.delete(timer);
+      if (
+        !sameConversationJid(selectedConversation.value?.from, conversationFrom)
+        || isOpeningNavigationTarget.value
+      ) return;
+
+      const textarea = replyTextarea.value;
+      const modal = textarea?.closest?.('.conversation-modal');
+      const activeElement = document.activeElement;
+      const userSelectedAnotherModalControl = Boolean(
+        modal?.contains(activeElement) && activeElement !== textarea,
+      );
+      if (userSelectedAnotherModalControl) {
+        clearScheduledReplyFocus();
+        return;
+      }
+
+      await focusReplyInput({ force: true, afterPaint: delay === 0 });
+    }, delay);
+    scheduledReplyFocusTimers.add(timer);
+  });
 };
 
 const handleInboxComposerTyping = async (event) => {
@@ -3988,8 +4027,12 @@ watch(q, () => {
 watch(
   () => [selectedConversation.value?.from || '', isOpeningNavigationTarget.value],
   ([conversationFrom, openingNavigation]) => {
-    if (!conversationFrom || openingNavigation) return;
-    void focusReplyInput({ force: true, afterPaint: true });
+    if (!conversationFrom) {
+      clearScheduledReplyFocus();
+      return;
+    }
+    if (openingNavigation) return;
+    scheduleReplyInputFocus();
   },
   { flush: 'post' },
 );
@@ -4059,6 +4102,7 @@ watch(
 );
 
 onUnmounted(() => {
+  clearScheduledReplyFocus();
   releaseInitialBottomPin();
   clearStatusReconciliationTimers();
   conversationRequestController?.abort();
