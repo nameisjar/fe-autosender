@@ -729,6 +729,11 @@ defineEmits([
   color: #6b21a8;
 }
 
+:global(html.dark) .feature-badge.feature-contacts,
+:global(html.dark) .feature-badge.feature-groups {
+  color: #ffffff;
+}
+
 .feature-badge.feature-loading {
   background: var(--theme-surface-soft);
   border: 1px solid var(--theme-border-strong);
