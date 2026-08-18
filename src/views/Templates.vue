@@ -291,7 +291,11 @@
     </section>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click="closeFormModal">
+    <div
+      v-if="showFormModal"
+      class="modal-overlay form-modal-overlay"
+      @click="closeFormModal"
+    >
       <div class="form-modal" @click.stop>
         <div class="modal-header">
           <h3>{{ isEditMode ? "Edit Template" : "Tambah Template Baru" }}</h3>
@@ -2068,6 +2072,60 @@ loadFeedbacks();
     width: 100%;
     justify-content: center;
   }
+
+  .modal-overlay.form-modal-overlay {
+    z-index: 1100;
+    align-items: stretch;
+  }
+
+  .form-modal {
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .form-modal .modal-header {
+    min-height: 64px;
+    padding: max(16px, env(safe-area-inset-top)) 16px 14px;
+  }
+
+  .form-modal .modal-body {
+    min-height: 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .form-grid-modal {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid-modal .form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 18px;
+  }
+
+  .form-grid-modal .btn-cancel,
+  .form-grid-modal .btn-save {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .form-grid-modal .form-group input,
+  .form-grid-modal .form-group textarea,
+  .search-box input,
+  .course-filter select {
+    min-width: 0;
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2116,6 +2174,17 @@ loadFeedbacks();
 
   .btn-action {
     width: 100%;
+  }
+
+  .card-header-section {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .btn-reload {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
   }
 }
 

@@ -86,8 +86,9 @@
           </div>
 
           <div class="form-group">
-            <div id="broadcast-message-label" class="form-label">
-              Pesan <span class="required">*</span>
+            <div id="broadcast-message-label" class="form-label message-template-label">
+              <span class="message-label-title">Pesan <span class="required">*</span></span>
+              <div class="template-actions" aria-label="Template pesan broadcast">
               <button
                 type="button"
                 class="badge-template"
@@ -160,6 +161,7 @@
                 </svg>
                 Invit Grad
               </button>
+              </div>
             </div>
             <textarea
               v-model.trim="form.message"
@@ -637,6 +639,23 @@ function onDeviceChanged() {
   font-size: 13px;
 }
 
+.message-template-label {
+  flex-wrap: wrap;
+}
+
+.message-label-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.template-actions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .required {
   color: #ef4444;
 }
@@ -652,7 +671,7 @@ function onDeviceChanged() {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  margin-left: 8px;
+  margin-left: 0;
   background: var(--theme-gradient-warning);
   color: var(--theme-warning-text);
   border: 1px solid #f59e0b;
@@ -891,12 +910,75 @@ function onDeviceChanged() {
     font-size: 20px;
   }
 
+  .page-header {
+    margin-bottom: 20px;
+  }
+
+  .broadcast-form {
+    gap: 16px;
+  }
+
   .card-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
     padding: 14px 16px;
   }
 
+  .card-title {
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .btn-refresh-header {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
   .card-body {
-    padding: 16px;
+    min-width: 0;
+    padding: 14px;
+  }
+
+  .form-group,
+  .form-row {
+    min-width: 0;
+  }
+
+  .message-template-label {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .template-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .badge-template {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 7px 6px;
+    justify-content: center;
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  .form-input,
+  .form-textarea {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .form-help {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 }
 </style>

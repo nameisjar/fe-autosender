@@ -909,11 +909,33 @@ const onDeviceChanged = () => {
   }
 
   .card-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
     padding: 14px 16px;
   }
 
+  .card-title {
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .btn-refresh-header {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
   .card-body {
-    padding: 16px;
+    min-width: 0;
+    padding: 14px;
+  }
+
+  .form-input,
+  .form-textarea,
+  .form-select {
+    min-width: 0;
+    font-size: 16px;
   }
 }
 </style>

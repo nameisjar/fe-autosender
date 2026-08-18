@@ -40,6 +40,8 @@ const closeSidebar = () => {
   display: grid;
   grid-template-columns: 280px 1fr;
   height: 100vh;
+  height: 100dvh;
+  min-width: 0;
   background: var(--theme-bg);
 }
 
@@ -118,8 +120,10 @@ const closeSidebar = () => {
 
 /* Main Content */
 main {
+  min-width: 0;
   padding: 32px;
   overflow: auto;
+  overflow-x: hidden;
   background: var(--theme-bg);
 }
 

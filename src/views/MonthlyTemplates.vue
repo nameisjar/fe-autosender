@@ -307,7 +307,11 @@
     </section>
 
     <!-- View Detail Modal -->
-    <div v-if="showDetailModal" class="modal-overlay" @click="closeDetailModal">
+    <div
+      v-if="showDetailModal"
+      class="modal-overlay detail-modal-overlay"
+      @click="closeDetailModal"
+    >
       <div class="detail-modal" @click.stop>
         <div class="modal-header">
           <h3>Detail Template</h3>
@@ -353,7 +357,11 @@
     </div>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click="closeFormModal">
+    <div
+      v-if="showFormModal"
+      class="modal-overlay form-modal-overlay"
+      @click="closeFormModal"
+    >
       <div class="form-modal" @click.stop>
         <div class="modal-header">
           <h3>{{ isEditMode ? "Edit Template" : "Tambah Template Baru" }}</h3>
@@ -1889,6 +1897,115 @@ onMounted(() => {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar-section,
+  .filter-group,
+  .course-filter {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .search-box,
+  .course-filter select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .action-buttons {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .btn-add-new {
+    grid-column: 1 / -1;
+  }
+
+  .action-buttons button {
+    min-width: 0;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .detail-modal-overlay,
+  .form-modal-overlay {
+    z-index: 1100;
+    align-items: stretch;
+  }
+
+  .detail-modal,
+  .form-modal {
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .detail-modal .modal-header,
+  .form-modal .modal-header {
+    min-height: 64px;
+    padding: max(16px, env(safe-area-inset-top)) 16px 14px;
+  }
+
+  .detail-modal .modal-body,
+  .form-modal .modal-body {
+    min-height: 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .form-actions button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .search-box input,
+  .course-filter select {
+    min-width: 0;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-header-section {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .btn-reload {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .course-header,
+  .course-body {
+    padding: 14px;
+  }
+
+  .header-left {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .header-left h4 {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 </style>
