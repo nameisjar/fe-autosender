@@ -281,7 +281,7 @@
     <Transition name="inbox-modal">
       <div
         v-if="selectedConversation"
-        class="modal-overlay"
+        class="modal-overlay conversation-modal-overlay"
         :class="{ 'modal-overlay--opening-navigation': isOpeningNavigationTarget }"
         @click="closeConversation"
       >
@@ -731,7 +731,6 @@
                 v-model="replyText"
                 :placeholder="selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan atau tempel gambar...'"
                 class="reply-textarea"
-                autofocus
                 @keydown.enter.exact="handleEnterKey"
                 @paste="handleReplyPaste"
                 rows="1"
@@ -2246,11 +2245,23 @@ const setupSocketListener = () => {
   }
 };
 
-const focusReplyInput = async ({ force = false, afterPaint = false } = {}) => {
+const isCompactTouchViewport = () => {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth <= 768 || window.matchMedia?.('(pointer: coarse)')?.matches;
+};
+
+const focusReplyInput = async ({
+  force = false,
+  afterPaint = false,
+  allowCompactTouch = false,
+} = {}) => {
   await nextTick();
   if (afterPaint && typeof window.requestAnimationFrame === 'function') {
     await new Promise(resolve => window.requestAnimationFrame(resolve));
   }
+  // Opening a conversation must not summon the virtual keyboard or shift the
+  // visual viewport. Mobile users can focus the composer explicitly by tap.
+  if (!allowCompactTouch && isCompactTouchViewport()) return false;
   const textarea = replyTextarea.value
     || document.getElementById('inbox-reply-textarea');
   if (!textarea || !selectedConversation.value) return false;
@@ -2331,7 +2342,7 @@ const handleInboxComposerTyping = async (event) => {
 
   event.preventDefault();
   replyText.value = value;
-  await focusReplyInput({ force: true });
+  await focusReplyInput({ force: true, allowCompactTouch: true });
   await nextTick();
   replyTextarea.value?.setSelectionRange?.(caret, caret);
 };
@@ -3925,6 +3936,18 @@ watch(
   { flush: 'post' },
 );
 
+const setConversationScrollLock = locked => {
+  if (typeof document === 'undefined') return;
+  document.documentElement.classList.toggle('inbox-conversation-open', locked);
+  document.body.classList.toggle('inbox-conversation-open', locked);
+};
+
+watch(
+  () => Boolean(selectedConversation.value),
+  isOpen => setConversationScrollLock(isOpen),
+  { flush: 'post' },
+);
+
 // Lifecycle
 onMounted(async () => {
   window.addEventListener('keydown', handleImagePreviewKeydown);
@@ -3996,6 +4019,7 @@ watch(
 );
 
 onUnmounted(() => {
+  setConversationScrollLock(false);
   cacheCurrentInboxList();
   clearScheduledReplyFocus();
   releaseInitialBottomPin();
@@ -6310,6 +6334,12 @@ const handleMediaError = (event, message) => {
 
 /* Responsive */
 @media (max-width: 768px) {
+  :global(html.inbox-conversation-open),
+  :global(body.inbox-conversation-open) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   .wrapper {
     padding: 16px;
   }
@@ -6362,20 +6392,87 @@ const handleMediaError = (event, message) => {
     display: none;
   }
   
-  .conversation-modal {
-    max-width: 100%;
+  .conversation-modal-overlay {
+    z-index: 1100;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+    overscroll-behavior: contain;
+  }
+
+  .conversation-modal,
+  .conversation-modal--fullscreen {
+    width: 100vw;
+    max-width: none;
     height: 100vh;
     max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
+    transition: none;
+  }
+
+  .conversation-modal .modal-header {
+    flex: 0 0 auto;
+    gap: 8px;
+    min-height: 64px;
+    padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+  }
+
+  .modal-header-info {
+    gap: 9px;
+  }
+
+  .modal-avatar-shell,
+  .modal-header-info .avatar-circle,
+  .avatar-image.modal-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .modal-avatar-shell {
+    flex-basis: 40px;
+  }
+
+  .modal-header-info h3 {
+    font-size: 15px;
+  }
+
+  .modal-name-row {
+    gap: 5px;
+  }
+
+  .modal-labels {
+    max-width: min(120px, 30vw);
+  }
+
+  .modal-phone {
+    margin-top: 1px;
+    font-size: 10px;
+  }
+
+  .modal-subtitle {
+    font-size: 11px;
+  }
+
+  .modal-header-actions {
+    gap: 4px;
+  }
+
+  .conversation-modal .btn-close,
+  .conversation-modal .btn-add-contact {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
   }
 
   .btn-fullscreen {
     display: none;
   }
 
-  .btn-add-contact {
-    width: 36px;
-    padding: 8px;
+  .conversation-modal .btn-add-contact {
+    padding: 0;
   }
 
   .btn-add-contact span {
@@ -6386,12 +6483,40 @@ const handleMediaError = (event, message) => {
     grid-template-columns: 1fr;
   }
   
-  .chat-body {
-    max-height: calc(100vh - 140px);
+  .conversation-modal .modal-body.chat-body {
+    max-height: none;
+    min-height: 0;
   }
-  
+
+  .chat-messages {
+    min-height: 0;
+    gap: 10px;
+    padding: 12px 10px 16px;
+    scroll-padding-block: 12px;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .chat-bubble {
-    max-width: 90%;
+    max-width: calc(100% - 40px);
+  }
+
+  .bubble-content {
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .bubble-text {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .message-reaction-control.incoming {
+    right: -34px;
+  }
+
+  .message-reaction-control.outgoing {
+    left: -34px;
   }
 
   .image-preview-overlay {
@@ -6416,7 +6541,27 @@ const handleMediaError = (event, message) => {
   }
   
   .reply-input-container {
-    padding: 12px 16px;
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .reply-input-row {
+    gap: 8px;
+  }
+
+  .btn-attachment,
+  .btn-send-reply {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .reply-textarea {
+    min-width: 0;
+    min-height: 44px;
+    padding: 11px 12px;
+    font-size: 16px;
   }
 }
 </style>
