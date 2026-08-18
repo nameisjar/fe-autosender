@@ -342,6 +342,43 @@ html.dark :where(.status-error, .error-card, .alert-error) {
     border-color: #991b1b !important;
 }
 
+/*
+ * Keep semantic notices readable on dark surfaces across every menu.
+ * PDF/print templates are excluded so their fixed light palette is preserved.
+ */
+html.dark
+    :where(
+        .info-card,
+        .info-box,
+        .alert,
+        .alert-compact,
+        .success-message,
+        .error-message,
+        .warning-message,
+        .notice,
+        .status-bar-connecting,
+        .recipients-info-box
+    ):not(.pdf-template *):not(.pdf-container *) {
+    color: #ffffff !important;
+}
+
+html.dark
+    :where(
+        .info-card,
+        .info-box,
+        .alert,
+        .alert-compact,
+        .success-message,
+        .error-message,
+        .warning-message,
+        .notice,
+        .status-bar-connecting,
+        .recipients-info-box
+    ):not(.pdf-template *):not(.pdf-container *)
+    :where(.info-text, .info-content, strong, span, p, svg) {
+    color: #ffffff !important;
+}
+
 html.dark
     :where(
         .health-card.error,
