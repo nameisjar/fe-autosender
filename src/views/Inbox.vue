@@ -143,7 +143,7 @@
             <!-- Fallback avatar circle -->
             <div
               class="avatar-circle"
-              :style="{ backgroundColor: conv.contact?.colorCode || getRandomColor(conv.from) }"
+              :style="{ backgroundColor: getAvatarFallbackColor(conv) }"
             >
               <span v-if="conv.contact">
                 {{ getInitials(conv.contact.firstName, conv.contact.lastName) }}
@@ -317,7 +317,7 @@
               />
               <div
                 class="avatar-circle"
-                :style="{ backgroundColor: selectedConversation.contact?.colorCode || getRandomColor(selectedConversation.from) }"
+                :style="{ backgroundColor: getAvatarFallbackColor(selectedConversation) }"
               >
                 <span v-if="selectedConversation.contact">
                   {{ getInitials(selectedConversation.contact.firstName, selectedConversation.contact.lastName) }}
@@ -3690,6 +3690,13 @@ const getRandomColor = (seed) => {
   return colors[hash % colors.length];
 };
 
+const getAvatarFallbackColor = (conversation) => {
+  // Group profile pictures can contain transparent pixels. Keep their backing
+  // layer neutral so a random red/magenta contact color never bleeds through.
+  if (conversation?.isGroup || conversation?.from?.includes('@g.us')) return '#1e3a8a';
+  return conversation?.contact?.colorCode || getRandomColor(conversation?.from);
+};
+
 // Get sender name with fallback priority: groupName (for groups) > contact > pushName > formatted phone/id
 const getSenderName = (conv) => {
   // For group messages, show group name first
@@ -4992,8 +4999,8 @@ const handleMediaError = (event, message) => {
 }
 
 .modal-header-info .avatar-circle {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
 }
 
