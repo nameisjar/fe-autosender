@@ -57,7 +57,9 @@ export default defineConfig(({ mode }) => {
                         // Vendor chunks for better caching
                         'vendor-vue': ['vue', 'vue-router', 'pinia'],
                         'vendor-highlight': ['highlight.js'],
-                        'vendor-utils': ['axios', 'qrcode', 'xlsx'],
+                        'vendor-utils': ['axios', 'qrcode'],
+                        // XLSX hanya dimuat ketika user memakai fitur import/export.
+                        'vendor-xlsx': ['xlsx'],
                         'vendor-pdf': ['html2pdf.js'],
                     },
                 },

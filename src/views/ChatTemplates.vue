@@ -11,12 +11,43 @@
         </h2>
         <p>Simpan pesan yang sering digunakan dan pilih langsung dari Inbox.</p>
       </div>
-      <button class="btn-primary" type="button" @click="openCreate">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-        Tambah Template
-      </button>
+      <div class="page-actions">
+        <button class="btn-secondary" type="button" :disabled="downloadingFormat" @click="downloadFormat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+          </svg>
+          {{ downloadingFormat ? 'Menyiapkan...' : 'Download Format' }}
+        </button>
+        <button class="btn-secondary btn-import-action" type="button" :disabled="readingImport" @click="openImportPicker">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          {{ readingImport ? 'Membaca...' : 'Import XLSX' }}
+        </button>
+        <button class="btn-secondary btn-export-action" type="button" :disabled="exporting" @click="exportTemplates">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          {{ exporting ? 'Mengekspor...' : 'Export XLSX' }}
+        </button>
+        <button class="btn-primary" type="button" @click="openCreate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Tambah Template
+        </button>
+        <input
+          ref="importInput"
+          class="visually-hidden"
+          type="file"
+          accept=".xlsx,.xls"
+          @change="handleImportFile"
+        />
+      </div>
     </header>
 
     <section class="content-card">
@@ -179,6 +210,54 @@
         </div>
       </div>
     </div>
+
+    <div v-if="importPreview" class="modal-overlay" @click.self="closeImportPreview">
+      <div class="import-modal">
+        <header class="import-modal-header">
+          <div>
+            <h3>Preview Import Template</h3>
+            <p>{{ importPreview.fileName }}</p>
+          </div>
+          <button type="button" class="btn-close" aria-label="Tutup" :disabled="importing" @click="closeImportPreview">×</button>
+        </header>
+        <div class="import-modal-body">
+          <div class="import-summary">
+            <div><strong>{{ importPreview.summary.total }}</strong><span>Total baris</span></div>
+            <div><strong>{{ importPreview.summary.create }}</strong><span>Template baru</span></div>
+            <div><strong>{{ importPreview.summary.update }}</strong><span>Diperbarui</span></div>
+            <div><strong>{{ importPreview.summary.unchanged || 0 }}</strong><span>Tanpa perubahan</span></div>
+          </div>
+          <div v-if="importPreview.errors.length" class="import-validation error">
+            <strong>{{ importPreview.errors.length }} masalah ditemukan</strong>
+            <p>Perbaiki file Excel, lalu import kembali. Belum ada data yang disimpan.</p>
+            <ul>
+              <li v-for="(error, index) in importPreview.errors.slice(0, 20)" :key="`${error.rowNumber}-${index}`">
+                {{ error.rowNumber ? `Baris ${error.rowNumber}: ` : '' }}{{ error.message }}
+              </li>
+            </ul>
+            <small v-if="importPreview.errors.length > 20">
+              Dan {{ importPreview.errors.length - 20 }} masalah lainnya.
+            </small>
+          </div>
+          <div v-else class="import-validation success">
+            <strong>File siap diimport</strong>
+            <p>Template lama diperbarui berdasarkan template_id. ID kosong akan dibuat sebagai template baru.</p>
+          </div>
+          <p class="import-note">Menghapus baris dari Excel tidak akan menghapus template di aplikasi.</p>
+        </div>
+        <footer class="modal-actions import-modal-actions">
+          <button type="button" class="btn-secondary" :disabled="importing" @click="closeImportPreview">Batal</button>
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="importing || importPreview.errors.length > 0"
+            @click="confirmImport"
+          >
+            {{ importing ? 'Mengimport...' : 'Import Sekarang' }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -187,6 +266,10 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useChatTemplates } from '../composables/useChatTemplates.js';
 import { useToast } from '../composables/useToast.js';
 import { hasStudentVariable } from '../utils/chatTemplate.js';
+import {
+  downloadChatTemplateWorkbook,
+  readChatTemplateWorkbook,
+} from '../utils/chatTemplateWorkbook.js';
 
 const toast = useToast();
 const {
@@ -197,6 +280,7 @@ const {
   createChatTemplate,
   updateChatTemplate,
   deleteChatTemplate,
+  importChatTemplates,
 } = useChatTemplates();
 const search = ref('');
 const currentPage = ref(1);
@@ -206,6 +290,12 @@ const editingTemplate = ref(null);
 const templateToDelete = ref(null);
 const saving = ref(false);
 const deleting = ref(false);
+const importInput = ref(null);
+const readingImport = ref(false);
+const importing = ref(false);
+const exporting = ref(false);
+const downloadingFormat = ref(false);
+const importPreview = ref(null);
 const form = reactive({ title: '', message: '' });
 
 const filteredTemplates = computed(() => {
@@ -312,6 +402,95 @@ async function confirmDelete() {
   }
 }
 
+function openImportPicker() {
+  if (readingImport.value || importing.value) return;
+  importInput.value?.click();
+}
+
+async function handleImportFile(event) {
+  const input = event?.target;
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!/\.xlsx?$/i.test(file.name)) {
+    toast.error('Pilih file Excel dengan format .xlsx atau .xls');
+    input.value = '';
+    return;
+  }
+
+  readingImport.value = true;
+  try {
+    const rows = await readChatTemplateWorkbook(file);
+    const preview = await importChatTemplates(rows, { dryRun: true });
+    importPreview.value = {
+      fileName: file.name,
+      rows,
+      summary: preview?.summary || {
+        total: rows.length, create: 0, update: 0, unchanged: 0,
+      },
+      errors: Array.isArray(preview?.errors) ? preview.errors : [],
+    };
+  } catch (error) {
+    toast.error(apiError(error, 'Gagal membaca file template chat'));
+  } finally {
+    readingImport.value = false;
+    input.value = '';
+  }
+}
+
+function closeImportPreview() {
+  if (importing.value) return;
+  importPreview.value = null;
+}
+
+async function confirmImport() {
+  if (!importPreview.value || importPreview.value.errors.length || importing.value) return;
+  importing.value = true;
+  try {
+    const result = await importChatTemplates(importPreview.value.rows);
+    const created = Number(result?.summary?.create || 0);
+    const updated = Number(result?.summary?.update || 0);
+    const unchanged = Number(result?.summary?.unchanged || 0);
+    toast.success(`Import selesai: ${created} baru, ${updated} diperbarui, ${unchanged} tanpa perubahan`);
+    importPreview.value = null;
+    search.value = '';
+    currentPage.value = 1;
+  } catch (error) {
+    const validationErrors = error?.response?.data?.errors;
+    if (Array.isArray(validationErrors) && validationErrors.length) {
+      importPreview.value.errors = validationErrors;
+      importPreview.value.summary = error?.response?.data?.summary || importPreview.value.summary;
+    }
+    toast.error(apiError(error, 'Gagal mengimport template chat'));
+  } finally {
+    importing.value = false;
+  }
+}
+
+async function exportTemplates() {
+  if (exporting.value) return;
+  exporting.value = true;
+  try {
+    await downloadChatTemplateWorkbook(chatTemplates.value);
+    toast.success('Template chat berhasil diexport');
+  } catch (error) {
+    toast.error(error?.message || 'Gagal mengekspor template chat');
+  } finally {
+    exporting.value = false;
+  }
+}
+
+async function downloadFormat() {
+  if (downloadingFormat.value) return;
+  downloadingFormat.value = true;
+  try {
+    await downloadChatTemplateWorkbook([], { empty: true });
+  } catch (error) {
+    toast.error(error?.message || 'Gagal menyiapkan format Excel');
+  } finally {
+    downloadingFormat.value = false;
+  }
+}
+
 async function refresh() {
   try {
     await loadChatTemplates({ force: true });
@@ -330,7 +509,9 @@ onMounted(() => refresh());
 .page-header h2 { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 26px; }
 .page-header h2 svg { width: 28px; color: var(--theme-accent); }
 .page-header p, .template-modal header p { margin: 7px 0 0; color: var(--theme-text-muted); }
-.content-card, .template-modal, .confirm-modal { background: var(--theme-surface); border: 1px solid var(--theme-border); border-radius: 18px; box-shadow: var(--theme-shadow); }
+.page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+.visually-hidden { position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+.content-card, .template-modal, .confirm-modal, .import-modal { background: var(--theme-surface); border: 1px solid var(--theme-border); border-radius: 18px; box-shadow: var(--theme-shadow); }
 .content-card { padding: 22px; }
 .toolbar { margin-bottom: 16px; }
 .toolbar-actions { display: flex; align-items: center; gap: 10px; }
@@ -342,6 +523,11 @@ onMounted(() => refresh());
 .btn-primary, .btn-secondary, .btn-danger { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 11px; padding: 0 17px; font-weight: 700; cursor: pointer; }
 .btn-primary { border: 1px solid var(--theme-accent); background: var(--theme-accent); color: white; }
 .btn-secondary { border: 1px solid var(--theme-border); background: var(--theme-surface-elevated); color: var(--theme-text); }
+.btn-import-action, .btn-export-action { padding-inline: 20px; border-radius: 10px; font-weight: 600; transition: all .2s ease; }
+.btn-import-action { border-color: transparent; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; box-shadow: 0 2px 8px rgba(59, 130, 246, .3); }
+.btn-import-action:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, .4); }
+.btn-export-action { border-color: transparent; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; box-shadow: 0 2px 8px rgba(16, 185, 129, .3); }
+.btn-export-action:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, .4); }
 .btn-danger { border: 1px solid #b91c1c; background: #dc2626; color: white; }
 button:disabled { opacity: .55; cursor: not-allowed; }
 .btn-primary svg, .btn-secondary svg { width: 19px; }
@@ -386,11 +572,28 @@ code, .variable-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .confirm-modal { width: min(430px, 100%); padding: 24px; }
 .confirm-modal p { color: var(--theme-text-secondary); line-height: 1.5; }
 .confirm-modal .modal-actions { justify-content: flex-end; margin-top: 22px; }
+.import-modal { width: min(720px, 100%); max-height: calc(100dvh - 40px); overflow: auto; }
+.import-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 22px; border-bottom: 1px solid var(--theme-border); }
+.import-modal-header h3 { margin: 0; }
+.import-modal-header p { margin: 6px 0 0; color: var(--theme-text-muted); overflow-wrap: anywhere; }
+.import-modal-body { display: grid; gap: 16px; padding: 22px; }
+.import-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; }
+.import-summary > div { display: grid; gap: 4px; padding: 15px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface-soft); }
+.import-summary strong { color: var(--theme-text); font-size: 24px; }
+.import-summary span { color: var(--theme-text-muted); font-size: 12px; font-weight: 700; }
+.import-validation { padding: 15px 16px; border: 1px solid; border-radius: 12px; line-height: 1.5; }
+.import-validation p { margin: 5px 0 0; }
+.import-validation ul { max-height: 220px; margin: 12px 0 0; padding-left: 20px; overflow: auto; }
+.import-validation.error { border-color: var(--theme-danger-border); background: var(--theme-danger-soft); color: var(--theme-danger-text); }
+.import-validation.success { border-color: var(--theme-success-border); background: var(--theme-success-soft); color: var(--theme-success-text); }
+.import-note { margin: 0; color: var(--theme-text-muted); font-size: 13px; }
+.import-modal-actions { justify-content: flex-end; padding: 17px 22px; border-top: 1px solid var(--theme-border); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 700px) {
   .chat-templates-page { padding: 16px 12px 30px; }
   .page-header, .toolbar { align-items: stretch; flex-direction: column; }
-  .page-header .btn-primary, .toolbar .btn-secondary { width: 100%; }
+  .page-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .page-actions button, .toolbar .btn-secondary { width: 100%; }
   .toolbar-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .page-size-control { justify-content: space-between; }
   .content-card { padding: 14px; border-radius: 14px; }
@@ -401,7 +604,11 @@ code, .variable-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monosp
   .page-navigation span { display: none; }
   .page-navigation { min-width: 40px; padding: 0 8px; }
   .modal-overlay { align-items: end; padding: 0; }
-  .template-modal, .confirm-modal { width: 100%; max-height: 92dvh; border-radius: 20px 20px 0 0; }
-  .template-modal > .modal-actions, .confirm-modal .modal-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .template-modal, .confirm-modal, .import-modal { width: 100%; max-height: 92dvh; border-radius: 20px 20px 0 0; }
+  .template-modal > .modal-actions, .confirm-modal .modal-actions, .import-modal-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .import-summary { grid-template-columns: 1fr; }
+}
+@media (max-width: 430px) {
+  .page-actions { grid-template-columns: 1fr; }
 }
 </style>

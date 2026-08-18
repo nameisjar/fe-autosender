@@ -79,6 +79,15 @@ export async function deleteChatTemplate(id) {
   loadedAt = Date.now();
 }
 
+export async function importChatTemplates(rows, { dryRun = false } = {}) {
+  const { data } = await userApi.post('/chat-templates/import', { rows, dryRun });
+  if (!dryRun && Array.isArray(data?.data)) {
+    chatTemplates.value = data.data;
+    loadedAt = Date.now();
+  }
+  return data;
+}
+
 export function useChatTemplates() {
   return {
     chatTemplates,
@@ -88,6 +97,7 @@ export function useChatTemplates() {
     createChatTemplate,
     updateChatTemplate,
     deleteChatTemplate,
+    importChatTemplates,
   };
 }
 
