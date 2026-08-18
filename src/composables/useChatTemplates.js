@@ -7,6 +7,16 @@ const loadingChatTemplates = ref(false);
 const chatTemplatesError = ref('');
 let loadedAt = 0;
 let pendingRequest = null;
+let stateGeneration = 0;
+
+export function resetChatTemplatesCache() {
+  stateGeneration += 1;
+  chatTemplates.value = [];
+  loadingChatTemplates.value = false;
+  chatTemplatesError.value = '';
+  loadedAt = 0;
+  pendingRequest = null;
+}
 
 const errorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;
@@ -19,20 +29,26 @@ export async function loadChatTemplates({ force = false } = {}) {
 
   loadingChatTemplates.value = true;
   chatTemplatesError.value = '';
+  const requestGeneration = stateGeneration;
   pendingRequest = userApi
     .get('/chat-templates')
     .then(({ data }) => {
+      if (requestGeneration !== stateGeneration) return [];
       chatTemplates.value = Array.isArray(data?.data) ? data.data : [];
       loadedAt = Date.now();
       return chatTemplates.value;
     })
     .catch((error) => {
-      chatTemplatesError.value = errorMessage(error, 'Gagal memuat template chat');
+      if (requestGeneration === stateGeneration) {
+        chatTemplatesError.value = errorMessage(error, 'Gagal memuat template chat');
+      }
       throw error;
     })
     .finally(() => {
-      loadingChatTemplates.value = false;
-      pendingRequest = null;
+      if (requestGeneration === stateGeneration) {
+        loadingChatTemplates.value = false;
+        pendingRequest = null;
+      }
     });
 
   return pendingRequest;

@@ -18,6 +18,21 @@ const loadingLabels = ref(false);
 // 🔧 Track device untuk auto-reload saat device berubah
 let lastContactsDeviceId = null;
 let lastLabelsDeviceId = null;
+let stateGeneration = 0;
+
+export function resetRecipientsCache() {
+  stateGeneration += 1;
+  contacts.value = [];
+  searchedContacts.value = [];
+  isSearchingContacts.value = false;
+  loadingContacts.value = false;
+  labels.value = [];
+  searchedLabels.value = [];
+  isSearchingLabels.value = false;
+  loadingLabels.value = false;
+  lastContactsDeviceId = null;
+  lastLabelsDeviceId = null;
+}
 
 export function useRecipients() {
   const toast = useToast();
@@ -94,6 +109,7 @@ export function useRecipients() {
 
   // 🆕 Server-side search function with debounce
   const searchContactsOnServer = debounce(async (query) => {
+    const requestGeneration = stateGeneration;
     if (!query || query.length < 2) {
       isSearchingContacts.value = false;
       searchedContacts.value = [];
@@ -111,6 +127,7 @@ export function useRecipients() {
           pageSize: 50,
         },
       });
+      if (requestGeneration !== stateGeneration) return;
       
       const responseData = res?.data;
       searchedContacts.value = Array.isArray(responseData?.data)
@@ -122,7 +139,7 @@ export function useRecipients() {
     } catch (e) {
       console.error("Failed to search contacts", e);
     } finally {
-      loadingContacts.value = false;
+      if (requestGeneration === stateGeneration) loadingContacts.value = false;
     }
   }, 300);
 
@@ -161,6 +178,7 @@ export function useRecipients() {
 
   // 🆕 Server-side search function for labels with debounce
   const searchLabelsOnServer = debounce(async (query) => {
+    const requestGeneration = stateGeneration;
     if (!query || query.length < 2) {
       isSearchingLabels.value = false;
       searchedLabels.value = [];
@@ -178,6 +196,7 @@ export function useRecipients() {
           pageSize: 50,
         },
       });
+      if (requestGeneration !== stateGeneration) return;
       
       const data = res?.data;
       const labelList = Array.isArray(data?.labels)
@@ -190,7 +209,7 @@ export function useRecipients() {
     } catch (e) {
       console.error("Failed to search labels", e);
     } finally {
-      loadingLabels.value = false;
+      if (requestGeneration === stateGeneration) loadingLabels.value = false;
     }
   }, 300);
 
@@ -359,6 +378,7 @@ export function useRecipients() {
   };
 
   const loadContacts = async (deviceIdOverride, { force = false } = {}) => {
+    const requestGeneration = stateGeneration;
     try {
       const deviceId = deviceIdOverride || (await ensureDeviceId()) || undefined;
       
@@ -377,6 +397,7 @@ export function useRecipients() {
           pageSize: 50,
         },
       });
+      if (requestGeneration !== stateGeneration) return;
       
       const responseData = res?.data;
       contacts.value = Array.isArray(responseData?.data)
@@ -390,11 +411,12 @@ export function useRecipients() {
     } catch (e) {
       console.error("Failed to load contacts", e);
     } finally {
-      loadingContacts.value = false;
+      if (requestGeneration === stateGeneration) loadingContacts.value = false;
     }
   };
 
   const loadLabels = async (deviceIdOverride, { force = false } = {}) => {
+    const requestGeneration = stateGeneration;
     try {
       const deviceId = deviceIdOverride || (await ensureDeviceId()) || undefined;
       
@@ -412,6 +434,7 @@ export function useRecipients() {
           pageSize: 50,
         },
       });
+      if (requestGeneration !== stateGeneration) return;
       const data = res?.data;
       let list = Array.isArray(data?.labels)
         ? data.labels
@@ -430,6 +453,7 @@ export function useRecipients() {
       // 🔧 Track device yang sudah di-load
       lastLabelsDeviceId = deviceId;
     } catch (_) {
+      if (requestGeneration !== stateGeneration) return;
       if (!contacts.value || contacts.value.length === 0) {
         await loadContacts(deviceIdOverride, { force }).catch(() => {});
       }
@@ -437,7 +461,7 @@ export function useRecipients() {
       labels.value = mapLabels(list);
       lastLabelsDeviceId = deviceIdOverride || lastContactsDeviceId;
     } finally {
-      loadingLabels.value = false;
+      if (requestGeneration === stateGeneration) loadingLabels.value = false;
     }
   };
 

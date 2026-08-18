@@ -28,6 +28,7 @@ let lifecycleListenersReady = false;
 let lastResyncAt = 0;
 let lastLoadedAt = 0;
 let lastLoadedToken = '';
+let stateGeneration = 0;
 
 const RESYNC_THROTTLE_MS = 5000;
 const FALLBACK_POLL_MS = 60000;
@@ -67,6 +68,29 @@ export function invalidateDevicesCache({ clearState = false } = {}) {
   }
 }
 
+function cleanupSharedSocketListeners() {
+  socketCleanups.forEach((cleanup) => {
+    if (typeof cleanup !== 'function') return;
+    try { cleanup(); } catch (_) {}
+  });
+  socketCleanups = [];
+}
+
+export function resetDevicesState() {
+  stateGeneration += 1;
+  cleanupSharedSocketListeners();
+  devices.value = [];
+  selectedDeviceId.value = '';
+  loading.value = false;
+  deviceHealthCache.value = {};
+  healthLoading.value = {};
+  loadPromise = null;
+  latestLoadDevices = null;
+  lastResyncAt = 0;
+  lastLoadedAt = 0;
+  lastLoadedToken = '';
+}
+
 export function useDevices() {
   const loadDevices = async ({ force = false } = {}) => {
     if (loadPromise) return loadPromise;
@@ -78,10 +102,12 @@ export function useDevices() {
       && Date.now() - lastLoadedAt < DEVICES_CACHE_TTL_MS;
     if (!force && hasFreshSnapshot) return devices.value;
 
+    const requestGeneration = stateGeneration;
     loadPromise = (async () => {
       try {
         loading.value = true;
         const { data } = await userApi.get('/devices');
+        if (requestGeneration !== stateGeneration) return [];
         devices.value = Array.isArray(data)
           ? data.map((device) => ({
               ...device,
@@ -118,10 +144,14 @@ export function useDevices() {
 
         setupSocketListeners();
       } catch (error) {
-        console.error('Error loading devices:', error);
+        if (requestGeneration === stateGeneration) {
+          console.error('Error loading devices:', error);
+        }
       } finally {
-        loading.value = false;
-        loadPromise = null;
+        if (requestGeneration === stateGeneration) {
+          loading.value = false;
+          loadPromise = null;
+        }
       }
     })();
 

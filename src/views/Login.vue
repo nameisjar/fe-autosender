@@ -73,7 +73,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { userApi } from "../api/http.js";
+import { userApi, waitForLogoutRevocation } from "../api/http.js";
 
 const router = useRouter();
 const identifier = ref("");
@@ -85,6 +85,8 @@ const login = async () => {
   error.value = "";
   loading.value = true;
   try {
+    // Hindari respons logout lama menghapus cookie dari sesi yang baru.
+    await waitForLogoutRevocation();
     const { data } = await userApi.post("/auth/login", {
       identifier: identifier.value,
       password: password.value,

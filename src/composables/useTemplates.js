@@ -11,24 +11,39 @@ const feedbackTemplatesError = ref('');
 const monthlyTemplates = ref([]);
 const loadingMonthlyTemplates = ref(false);
 const monthlyTemplatesError = ref('');
+let stateGeneration = 0;
+
+export function resetTemplatesCache() {
+  stateGeneration += 1;
+  feedbackTemplates.value = [];
+  loadingFeedbackTemplates.value = false;
+  feedbackTemplatesError.value = '';
+  monthlyTemplates.value = [];
+  loadingMonthlyTemplates.value = false;
+  monthlyTemplatesError.value = '';
+}
 
 /**
  * Load course feedback templates
  */
 export async function loadFeedbackTemplates() {
+  const requestGeneration = stateGeneration;
   loadingFeedbackTemplates.value = true;
   feedbackTemplatesError.value = '';
   
   try {
     const { data } = await userApi.get('/course/feedbacks');
     const templates = Array.isArray(data?.data) ? data.data : [];
+    if (requestGeneration !== stateGeneration) return [];
     feedbackTemplates.value = templates;
     return templates;
   } catch (e) {
-    feedbackTemplatesError.value = e?.response?.data?.message || e?.message || 'Failed to load templates';
+    if (requestGeneration === stateGeneration) {
+      feedbackTemplatesError.value = e?.response?.data?.message || e?.message || 'Failed to load templates';
+    }
     return [];
   } finally {
-    loadingFeedbackTemplates.value = false;
+    if (requestGeneration === stateGeneration) loadingFeedbackTemplates.value = false;
   }
 }
 
@@ -36,19 +51,23 @@ export async function loadFeedbackTemplates() {
  * Load monthly templates
  */
 export async function loadMonthlyTemplates() {
+  const requestGeneration = stateGeneration;
   loadingMonthlyTemplates.value = true;
   monthlyTemplatesError.value = '';
   
   try {
     const { data } = await userApi.get('/algorithmics/monthly-templates');
     const templates = Array.isArray(data?.data) ? data.data : [];
+    if (requestGeneration !== stateGeneration) return [];
     monthlyTemplates.value = templates;
     return templates;
   } catch (e) {
-    monthlyTemplatesError.value = e?.response?.data?.message || e?.message || 'Failed to load monthly templates';
+    if (requestGeneration === stateGeneration) {
+      monthlyTemplatesError.value = e?.response?.data?.message || e?.message || 'Failed to load monthly templates';
+    }
     return [];
   } finally {
-    loadingMonthlyTemplates.value = false;
+    if (requestGeneration === stateGeneration) loadingMonthlyTemplates.value = false;
   }
 }
 

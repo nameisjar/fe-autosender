@@ -14,6 +14,7 @@ const loadingState = ref(false);
 const errorState = ref('');
 let inFlight = null;
 let socketCleanups = [];
+let stateGeneration = 0;
 
 // ✅ Cache configuration
 const CACHE_KEY_PREFIX = 'groups_device_';
@@ -88,6 +89,7 @@ const fetchGroupsFromDatabase = async (options = {}) => {
 
 // 🔥 Internal load function at module scope
 const loadGroupsInternal = async ({ force = false } = {}) => {
+  const requestGeneration = stateGeneration;
   errorState.value = '';
   
   const deviceId = getDeviceId();
@@ -123,6 +125,7 @@ const loadGroupsInternal = async ({ force = false } = {}) => {
   inFlight = (async () => {
     try {
       const { groups: data } = await fetchGroupsFromDatabase({ pageSize: 50 });
+      if (requestGeneration !== stateGeneration) return [];
       groupsState.value = data;
       
       // ✅ Save to cache
@@ -137,19 +140,28 @@ const loadGroupsInternal = async ({ force = false } = {}) => {
       
       return groupsState.value;
     } catch (e) {
-      const errorMsg = e?.response?.data?.message || e?.message || 'Gagal memuat grup dari database';
-      errorState.value = errorMsg;
+      if (requestGeneration === stateGeneration) {
+        const errorMsg = e?.response?.data?.message || e?.message || 'Gagal memuat grup dari database';
+        errorState.value = errorMsg;
+      }
       return [];
     } finally {
-      loadingState.value = false;
-      inFlight = null;
+      if (requestGeneration === stateGeneration) {
+        loadingState.value = false;
+        inFlight = null;
+      }
     }
   })();
   return inFlight;
 };
 
-const clearGroups = () => {
+export const clearGroupsCache = () => {
+  stateGeneration += 1;
+  debouncedLoadGroups.cancel?.();
   groupsState.value = [];
+  searchedGroupsState.value = [];
+  isSearchingGroupsState.value = false;
+  loadingState.value = false;
   errorState.value = '';
   inFlight = null;
   socketSetupCompleted = false; // ✅ Reset flag
@@ -161,6 +173,8 @@ const clearGroups = () => {
     cache.invalidate(cacheKey);
   }
 };
+
+const clearGroups = clearGroupsCache;
 
 // 🆕 Cleanup socket listeners
 const cleanupSocketListeners = () => {

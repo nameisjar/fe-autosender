@@ -88,6 +88,47 @@ const authRefreshApi = axios.create({
 });
 
 let refreshRequest = null;
+let logoutInProgress = false;
+let logoutRequest = null;
+
+export const setLogoutInProgress = (value) => {
+    logoutInProgress = Boolean(value);
+};
+
+export const revokeSessionInBackground = () => {
+    if (logoutRequest) return logoutRequest;
+    if (typeof fetch !== 'function') {
+        logoutInProgress = false;
+        return Promise.resolve();
+    }
+
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timeoutId = setTimeout(() => controller?.abort(), 3000);
+    try {
+        const baseUrl = API_BASE.replace(/\/$/, '');
+        logoutRequest = fetch(`${baseUrl}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
+            keepalive: true,
+            signal: controller?.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+        })
+            .catch(() => undefined)
+            .finally(() => {
+                clearTimeout(timeoutId);
+                logoutRequest = null;
+                logoutInProgress = false;
+            });
+    } catch (_) {
+        clearTimeout(timeoutId);
+        logoutInProgress = false;
+        return Promise.resolve();
+    }
+    return logoutRequest;
+};
+
+export const waitForLogoutRevocation = () => logoutRequest || Promise.resolve();
 
 const isPublicAuthRequest = (config) => {
     const url = String(config?.url || '');
@@ -108,6 +149,10 @@ const expireUserSession = () => {
 };
 
 const refreshAccessToken = async () => {
+    if (logoutInProgress) {
+        throw new Error('Logout sedang berlangsung');
+    }
+
     if (!refreshRequest) {
         refreshRequest = authRefreshApi
             .post('/auth/refresh-token', {})
@@ -146,6 +191,10 @@ userApi.interceptors.response.use(
     async (err) => {
         const config = err?.config;
         if (err?.response?.status === 401 && config && !isPublicAuthRequest(config)) {
+            // Request lama bisa selesai sesudah pengguna menekan logout. Jangan
+            // hidupkan sesi kembali dengan refresh token pada kondisi tersebut.
+            if (logoutInProgress) return Promise.reject(err);
+
             if (config.__skipAuthRefresh || config.__authRetry || !localStorage.getItem('token')) {
                 expireUserSession();
                 return Promise.reject(err);

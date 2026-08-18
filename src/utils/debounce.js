@@ -4,7 +4,7 @@ export function debounce(func, wait = 1000) {
   let timeout;
   let pendingResolvers = [];
 
-  return function executedFunction(...args) {
+  function executedFunction(...args) {
     clearTimeout(timeout);
 
     return new Promise((resolve) => {
@@ -23,5 +23,15 @@ export function debounce(func, wait = 1000) {
         }
       }, wait);
     });
+  }
+
+  executedFunction.cancel = () => {
+    clearTimeout(timeout);
+    timeout = undefined;
+    const resolvers = pendingResolvers;
+    pendingResolvers = [];
+    resolvers.forEach((resolve) => resolve(undefined));
   };
+
+  return executedFunction;
 }
