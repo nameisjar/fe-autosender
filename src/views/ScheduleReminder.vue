@@ -82,11 +82,17 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label"> Pesan <span class="required">*</span> </label>
+            <div id="recurring-message-label" class="form-label message-template-label">
+              <span class="message-label-title">Pesan <span class="required">*</span></span>
+              <div class="template-actions" aria-label="Template pesan broadcast berulang">
+                <ChatTemplatePicker @select="selectTemplate" />
+              </div>
+            </div>
             <textarea
               v-model.trim="form.message"
+              aria-labelledby="recurring-message-label"
               rows="4"
-              placeholder="Tulis pesan yang akan dikirim secara berulang..."
+              placeholder="Tulis pesan yang akan dikirim secara berulang...&#10;&#10;💡 Gunakan {{siswa}} untuk nama depan penerima (hanya berlaku untuk kontak)"
               required
               class="form-textarea"
             />
@@ -308,6 +314,7 @@
 import { ref, computed } from "vue";
 import { deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import ChatTemplatePicker from "../components/ChatTemplatePicker.vue";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 import DevicePicker from "../components/DevicePicker.vue";
 import MediaUpload from "../components/MediaUpload.vue";
@@ -338,6 +345,11 @@ const mediaFile = ref(null);
 const loading = ref(false);
 const msg = ref("");
 const err = ref("");
+
+function selectTemplate(template) {
+  form.value.message = template.message || "";
+  toast.success(`Template “${template.title}” berhasil diterapkan`);
+}
 
 const validationError = computed(() => {
   if (!devicePicker.value?.selectedDeviceId) return "Pilih device terlebih dahulu";
@@ -781,6 +793,20 @@ function onDeviceChanged() {
   font-size: 13px;
 }
 
+.message-template-label {
+  flex-wrap: wrap;
+}
+
+.message-label-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.template-actions {
+  min-width: 0;
+}
+
 .required {
   color: #ef4444;
 }
@@ -1038,6 +1064,16 @@ function onDeviceChanged() {
   .card-body {
     min-width: 0;
     padding: 14px;
+  }
+
+  .message-template-label {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .template-actions {
+    width: 100%;
   }
 
   .form-input,

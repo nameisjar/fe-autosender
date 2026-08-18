@@ -133,42 +133,7 @@
             <div id="reminder-message-label" class="form-label message-template-label">
               <span class="message-label-title">Pesan <span class="required">*</span></span>
               <div class="template-actions" aria-label="Template pesan reminder">
-              <button
-                type="button"
-                class="badge-template badge-template-reminder"
-                @click="applyTemplate('d-1')"
-                title="Klik untuk mengisi template pengingat H-1 (1 hari sebelum kelas)"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                D-1
-              </button>
-              <button
-                type="button"
-                class="badge-template badge-template-warning"
-                @click="applyTemplate('h-3')"
-                title="Klik untuk mengisi template pengingat H-3 (3 jam sebelum kelas)"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                H-3
-              </button>
+                <ChatTemplatePicker @select="selectTemplate" />
               </div>
             </div>
             <textarea
@@ -294,6 +259,7 @@
 import { ref, computed } from "vue";
 import { deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import ChatTemplatePicker from "../components/ChatTemplatePicker.vue";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 import DevicePicker from "../components/DevicePicker.vue";
 import MediaUpload from "../components/MediaUpload.vue";
@@ -305,34 +271,6 @@ import {
 } from "../utils/datetime.js";
 
 const toast = useToast();
-
-// Message templates
-const messageTemplates = {
-  "d-1": `Halo Parents dan adik-adik! 🌟
-Pengingat bahwa *besok kita ada kelas pukul 19.00 WIB* sesuai jadwal.
-Sampai bertemu di kelas besok! 😊✨
-
-🔗 *Link Zoom:*
-
-
-*(PESAN OTOMATIS)*`,
-  "h-3": `Halo Parents dan adik-adik! ⏰
-Pengingat bahwa kelas akan dimulai *3 jam lagi, pukul 19.00 WIB*.
-Sampai ketemu di Zoom nanti! 😊
-
-*(PESAN OTOMATIS)*`,
-};
-
-// Apply template to message textarea
-function applyTemplate(templateId) {
-  const template = messageTemplates[templateId];
-  if (template) {
-    form.value.message = template;
-    toast.success(
-      "Template berhasil diterapkan! Variabel {{siswa}} akan diganti dengan nama depan kontak saat pengiriman."
-    );
-  }
-}
 
 // Template refs
 const recipientsPicker = ref(null);
@@ -351,6 +289,11 @@ const mediaFile = ref(null);
 const loading = ref(false);
 const msg = ref("");
 const err = ref("");
+
+function selectTemplate(template) {
+  form.value.message = template.message || "";
+  toast.success(`Template “${template.title}” berhasil diterapkan`);
+}
 
 const estimatedCount = computed(() => {
   return Number(form.value.lessons || 1);
@@ -649,62 +592,6 @@ function onDeviceChanged() {
   color: #ef4444;
 }
 
-/* Template Badge */
-.badge-template {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  margin-left: 0;
-  background: var(--theme-gradient-warning);
-  color: var(--theme-warning-text);
-  border: 1px solid #f59e0b;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.badge-template:hover {
-  background: var(--theme-gradient-warning);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
-}
-
-.badge-template:active {
-  transform: translateY(0);
-}
-
-.badge-template svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* Reminder badge variant - blue/cyan color */
-.badge-template-reminder {
-  background: var(--theme-gradient-info);
-  color: #0369a1;
-  border: 1px solid #38bdf8;
-}
-
-.badge-template-reminder:hover {
-  background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
-  box-shadow: 0 2px 6px rgba(56, 189, 248, 0.3);
-}
-
-/* Warning badge variant - orange/red for urgency */
-.badge-template-warning {
-  background: var(--theme-gradient-danger);
-  color: var(--theme-danger-text);
-  border: 1px solid #f87171;
-}
-
-.badge-template-warning:hover {
-  background: var(--theme-gradient-danger);
-  box-shadow: 0 2px 6px rgba(248, 113, 113, 0.3);
-}
-
 .form-input,
 .form-textarea,
 .form-select {
@@ -975,18 +862,8 @@ function onDeviceChanged() {
   }
 
   .template-actions {
-    display: grid;
+    display: block;
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 7px;
-  }
-
-  .badge-template {
-    width: 100%;
-    min-width: 0;
-    min-height: 40px;
-    margin: 0;
-    justify-content: center;
   }
 
   .form-input,

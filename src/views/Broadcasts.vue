@@ -89,78 +89,7 @@
             <div id="broadcast-message-label" class="form-label message-template-label">
               <span class="message-label-title">Pesan <span class="required">*</span></span>
               <div class="template-actions" aria-label="Template pesan broadcast">
-              <button
-                type="button"
-                class="badge-template"
-                @click="applyTemplate('offer-ec')"
-                title="Klik untuk mengisi template penawaran Extra Class"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
-                Offer EC
-              </button>
-              <button
-                type="button"
-                class="badge-template badge-template-reminder"
-                @click="applyTemplate('reminder-ec')"
-                title="Klik untuk mengisi template pengingat Extra Class"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                Reminder EC
-              </button>
-              <button
-                type="button"
-                class="badge-template badge-template-warning"
-                @click="applyTemplate('reminder-class')"
-                title="Klik untuk mengisi template pengingat siswa belum bergabung ke kelas"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                Reminder Class
-              </button>
-              <button
-                type="button"
-                class="badge-template badge-template-graduation"
-                @click="applyTemplate('invit-grad')"
-                title="Klik untuk mengisi template undangan Graduation"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                  <path d="M6 12v5c3 3 9 3 12 0v-5" />
-                </svg>
-                Invit Grad
-              </button>
+                <ChatTemplatePicker @select="selectTemplate" />
               </div>
             </div>
             <textarea
@@ -254,12 +183,14 @@
       </div>
     </form>
   </div>
+
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed } from "vue";
 import { deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import ChatTemplatePicker from "../components/ChatTemplatePicker.vue";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 import DevicePicker from "../components/DevicePicker.vue";
 import MediaUpload from "../components/MediaUpload.vue";
@@ -277,81 +208,17 @@ const devicePicker = ref(null);
 // Template ref for RecipientsPicker
 const recipientsPicker = ref(null);
 
-// Message templates
-const messageTemplates = {
-  "offer-ec": `🤖 Pengingat Extra Class (EC)
-
-Halo Ayah/Bunda 👋
-
-Sebagai pengganti pertemuan sebelumnya, {{siswa}} telah dijadwalkan mengikuti Extra Class (EC) yang akan dilaksanakan pada:
-
-📅 Hari: Minggu
-🕔 Pukul: 17.00 WIB
-
-Mohon konfirmasi apakah {{siswa}} dapat mengikuti kelas tersebut.
-
-📝 Catatan: Link Zoom akan dibagikan oleh tutor yang bertugas mengajar kelas pengganti sebelum kelas dimulai.
-
-Terima kasih atas perhatian dan kerja samanya. 🙏
-
-(Pesan Otomatis)`,
-  "reminder-ec": `🤖 Pengingat Kelas Hari Ini
-
-Halo Ayah/Bunda,
-
-Ini adalah pengingat bahwa {{siswa}} dijadwalkan mengikuti Extra Class (EC) hari ini pukul 08.00 WIB.
-
-Mohon membantu mengingatkan {{siswa}} untuk bergabung ke Zoom tepat waktu.
-
-📝 Link Zoom.
-
-Terima kasih. 🙏
-
-(Pesan Otomatis)`,
-  "reminder-class": `🤖 Pengingat Kehadiran Kelas
-
-Halo Ayah/Bunda 👋
-
-Berdasarkan data kehadiran, hingga saat ini {{siswa}} belum bergabung ke kelas yang sedang berlangsung.
-
-Mohon bantuan Ayah/Bunda untuk mengingatkan {{siswa}} agar dapat segera bergabung ke Zoom apabila memungkinkan.
-
-Terima kasih atas perhatian dan kerja samanya. 🙏
-
-(Pesan Otomatis)`,
-  "invit-grad": `Selamat pagi Ayah/Bunda,
-
-Dengan hormat, kami mengundang Ayah/Bunda untuk menghadiri Acara Graduation (to next level) sebagai bentuk apresiasi atas proses belajar yang telah diikuti oleh {{siswa}}.
-
-Acara Graduation akan dilaksanakan pada:
-📅 Hari/Tanggal: Sabtu, 15 Juni 2025
-⏰ Waktu: 09.00 WIB – selesai
-💻 Tempat: Zoom Meeting
-
-Acara ini bertujuan untuk merayakan pencapaian siswa selama mengikuti pembelajaran serta memberikan pengalaman berharga bagi mereka.
-
-Kami sangat berharap kehadiran Ayah/Bunda untuk mendampingi {{siswa}} dalam momen spesial ini.
-
-Terima kasih atas perhatian dan kerja sama Ayah/Bunda. 🙏`,
-};
-
-// Apply template to message textarea
-function applyTemplate(templateId) {
-  const template = messageTemplates[templateId];
-  if (template) {
-    form.value.message = template;
-    toast.success(
-      "Template berhasil diterapkan! Variabel {{siswa}} akan diganti dengan nama depan kontak saat pengiriman."
-    );
-  }
-}
-
 const form = ref({
   name: "",
   delay: 5000,
   message: "",
   schedule: "",
 });
+
+function selectTemplate(template) {
+  form.value.message = template.message || "";
+  toast.success(`Template “${template.title}” berhasil diterapkan`);
+}
 
 const mediaFile = ref(null);
 
@@ -665,74 +532,6 @@ function onDeviceChanged() {
   font-weight: 400;
 }
 
-/* Template Badge */
-.badge-template {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  margin-left: 0;
-  background: var(--theme-gradient-warning);
-  color: var(--theme-warning-text);
-  border: 1px solid #f59e0b;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.badge-template:hover {
-  background: var(--theme-gradient-warning);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
-}
-
-.badge-template:active {
-  transform: translateY(0);
-}
-
-.badge-template svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* Reminder EC badge variant - blue/cyan color */
-.badge-template-reminder {
-  background: var(--theme-gradient-info);
-  color: #0369a1;
-  border: 1px solid #38bdf8;
-}
-
-.badge-template-reminder:hover {
-  background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
-  box-shadow: 0 2px 6px rgba(56, 189, 248, 0.3);
-}
-
-/* Reminder Class badge variant - orange/red for urgency */
-.badge-template-warning {
-  background: var(--theme-gradient-danger);
-  color: var(--theme-danger-text);
-  border: 1px solid #f87171;
-}
-
-.badge-template-warning:hover {
-  background: var(--theme-gradient-danger);
-  box-shadow: 0 2px 6px rgba(248, 113, 113, 0.3);
-}
-
-/* Graduation badge variant - purple/violet for celebration */
-.badge-template-graduation {
-  background: var(--theme-gradient-purple);
-  color: var(--theme-purple-text);
-  border: 1px solid #a78bfa;
-}
-
-.badge-template-graduation:hover {
-  background: var(--theme-gradient-purple);
-  box-shadow: 0 2px 6px rgba(167, 139, 250, 0.3);
-}
-
 .form-input,
 .form-textarea {
   width: 100%;
@@ -953,20 +752,8 @@ function onDeviceChanged() {
   }
 
   .template-actions {
-    display: grid;
+    display: block;
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 7px;
-  }
-
-  .badge-template {
-    width: 100%;
-    min-width: 0;
-    min-height: 40px;
-    padding: 7px 6px;
-    justify-content: center;
-    line-height: 1.2;
-    white-space: normal;
   }
 
   .form-input,
