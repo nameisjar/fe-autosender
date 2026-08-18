@@ -726,6 +726,22 @@
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                 </svg>
               </button>
+              <button
+                ref="chatTemplateButton"
+                type="button"
+                class="btn-attachment btn-chat-template"
+                :class="{ active: showChatTemplatePicker }"
+                :disabled="sendingReply"
+                title="Pilih template chat"
+                aria-label="Pilih template chat"
+                :aria-expanded="showChatTemplatePicker"
+                @click="toggleChatTemplatePicker"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <path d="M8 8h8M8 12h5" />
+                </svg>
+              </button>
               <textarea
                 id="inbox-reply-textarea"
                 v-model="replyText"
@@ -739,8 +755,8 @@
               <button
                 class="btn-send-reply"
                 @click="sendReply"
-                :disabled="(!replyText.trim() && !selectedAttachment) || sendingReply"
-                title="Kirim pesan"
+                :disabled="(!replyText.trim() && !selectedAttachment) || sendingReply || hasUnresolvedStudentVariable"
+                :title="hasUnresolvedStudentVariable ? 'Ganti variabel {{siswa}} sebelum mengirim' : 'Kirim pesan'"
               >
                 <svg v-if="sendingReply" class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
@@ -756,6 +772,78 @@
       </div>
     </div>
     </Transition>
+
+    <Teleport to="body">
+      <div
+        v-if="showChatTemplatePicker"
+        class="chat-template-picker-backdrop"
+        role="presentation"
+        @click="closeChatTemplatePicker"
+      >
+        <section
+          class="chat-template-picker"
+          :style="chatTemplatePickerStyle"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pilih template chat"
+          @click.stop
+        >
+          <header class="chat-template-picker-header">
+            <div>
+              <h3>Template Chat</h3>
+              <p>Pilih template untuk mengisi pesan.</p>
+            </div>
+            <button type="button" aria-label="Tutup template chat" @click="closeChatTemplatePicker">×</button>
+          </header>
+          <label class="chat-template-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input v-model="chatTemplateSearch" type="search" placeholder="Cari template..." autocomplete="off" />
+          </label>
+
+          <div v-if="pendingChatTemplate" class="chat-template-draft-choice">
+            <strong>Kolom pesan sudah berisi teks</strong>
+            <p>Pilih cara menerapkan “{{ pendingChatTemplate.template.title }}”.</p>
+            <div>
+              <button type="button" class="choice-secondary" @click="commitChatTemplate('append')">Tambahkan</button>
+              <button type="button" class="choice-primary" @click="commitChatTemplate('replace')">Ganti Pesan</button>
+            </div>
+          </div>
+          <div v-else-if="loadingChatTemplates" class="chat-template-picker-state">
+            <span class="chat-template-spinner"></span>
+            Memuat template...
+          </div>
+          <div v-else-if="chatTemplatePickerError" class="chat-template-picker-state error">
+            <span>{{ chatTemplatePickerError }}</span>
+            <button type="button" @click="loadInboxChatTemplates(true)">Coba Lagi</button>
+          </div>
+          <div v-else-if="!filteredChatTemplates.length" class="chat-template-picker-state">
+            <span>{{ chatTemplateSearch ? 'Template tidak ditemukan.' : 'Belum ada template chat.' }}</span>
+            <router-link to="/chat-templates" @click="closeChatTemplatePicker">Kelola Template</router-link>
+          </div>
+          <div v-else class="chat-template-picker-list">
+            <button
+              v-for="template in filteredChatTemplates"
+              :key="template.id"
+              type="button"
+              class="chat-template-picker-item"
+              @click="selectChatTemplate(template)"
+            >
+              <span class="chat-template-item-title">
+                <strong>{{ template.title }}</strong>
+                <code v-if="hasStudentVariable(template.message)"><span v-pre>{{siswa}}</span></code>
+              </span>
+              <span>{{ template.message }}</span>
+            </button>
+          </div>
+          <footer class="chat-template-picker-footer">
+            <router-link to="/chat-templates" @click="closeChatTemplatePicker">Kelola Custom Template Chat</router-link>
+          </footer>
+        </section>
+      </div>
+    </Teleport>
 
     <!-- Add Contact Modal -->
     <div
@@ -983,6 +1071,7 @@ import { ref, onMounted, computed, watch, onUnmounted, nextTick } from 'vue';
 import { userApi, deviceApi } from '../api/http.js';
 import { useToast } from '../composables/useToast.js';
 import { useDevices } from '../composables/useDevices.js';
+import { useChatTemplates } from '../composables/useChatTemplates.js';
 import { cache } from '../utils/cache.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
@@ -1018,6 +1107,11 @@ import {
   normalizeOutgoingUiStatus,
   resolveOutgoingUiStatus,
 } from '../utils/outgoingStatus.js';
+import {
+  hasStudentVariable,
+  insertTemplateAtSelection,
+  resolveChatTemplate,
+} from '../utils/chatTemplate.js';
 
 const toast = useToast();
 const route = useRoute();
@@ -1076,11 +1170,22 @@ const sendingReply = ref(false);
 const sentMessages = ref([]);
 const sentMessagesConversationJid = ref('');
 const replyTextarea = ref(null);
+const chatTemplateButton = ref(null);
 const chatMessagesContainer = ref(null);
 const attachmentInput = ref(null);
 const selectedAttachment = ref(null);
 const attachmentPreviewUrl = ref('');
 const isDraggingAttachment = ref(false);
+const showChatTemplatePicker = ref(false);
+const chatTemplateSearch = ref('');
+const chatTemplatePickerError = ref('');
+const chatTemplatePickerStyle = ref({});
+const pendingChatTemplate = ref(null);
+const {
+  chatTemplates,
+  loadingChatTemplates,
+  loadChatTemplates,
+} = useChatTemplates();
 const failedMediaIds = ref(new Set());
 const activatedMediaIds = ref(new Set());
 const isInitialBottomPinning = ref(false);
@@ -1102,6 +1207,16 @@ const attachmentKindLabel = computed(() => ({
   audio: 'Audio',
   document: 'Dokumen',
 }[attachmentKind.value]));
+
+const filteredChatTemplates = computed(() => {
+  const query = chatTemplateSearch.value.trim().toLocaleLowerCase('id-ID');
+  if (!query) return chatTemplates.value;
+  return chatTemplates.value.filter((template) =>
+    `${template.title} ${template.message}`.toLocaleLowerCase('id-ID').includes(query),
+  );
+});
+
+const hasUnresolvedStudentVariable = computed(() => hasStudentVariable(replyText.value));
 
 // Search & pagination
 const q = ref('');
@@ -2317,13 +2432,110 @@ const scheduleReplyInputFocus = () => {
   });
 };
 
+const updateChatTemplatePickerPosition = () => {
+  if (!showChatTemplatePicker.value || !chatTemplateButton.value || typeof window === 'undefined') return;
+  const rect = chatTemplateButton.value.getBoundingClientRect();
+  const width = Math.min(400, window.innerWidth - 24);
+  const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+  chatTemplatePickerStyle.value = {
+    width: `${width}px`,
+    left: `${left}px`,
+    bottom: `${Math.max(12, window.innerHeight - rect.top + 8)}px`,
+  };
+};
+
+const loadInboxChatTemplates = async (force = false) => {
+  chatTemplatePickerError.value = '';
+  try {
+    await loadChatTemplates({ force });
+  } catch (error) {
+    chatTemplatePickerError.value = error?.response?.data?.message
+      || error?.message
+      || 'Gagal memuat template chat';
+  }
+};
+
+const closeChatTemplatePicker = () => {
+  showChatTemplatePicker.value = false;
+  chatTemplateSearch.value = '';
+  pendingChatTemplate.value = null;
+};
+
+const toggleChatTemplatePicker = async () => {
+  if (showChatTemplatePicker.value) {
+    closeChatTemplatePicker();
+    return;
+  }
+  showChatTemplatePicker.value = true;
+  pendingChatTemplate.value = null;
+  await nextTick();
+  updateChatTemplatePickerPosition();
+  void loadInboxChatTemplates(false);
+};
+
+const resolvedSelectedTemplate = (template) => {
+  const firstName = selectedConversation.value?.isGroup
+    ? ''
+    : selectedConversation.value?.contact?.firstName;
+  return {
+    template,
+    ...resolveChatTemplate(template.message, firstName),
+  };
+};
+
+const applyResolvedChatTemplate = async (resolvedTemplate, mode = 'replace') => {
+  if (mode === 'append') {
+    const textarea = replyTextarea.value;
+    const { value, caret } = insertTemplateAtSelection(
+      replyText.value,
+      resolvedTemplate.message,
+      textarea?.selectionStart,
+      textarea?.selectionEnd,
+    );
+    replyText.value = value;
+    await nextTick();
+    replyTextarea.value?.setSelectionRange?.(caret, caret);
+  } else {
+    replyText.value = resolvedTemplate.message;
+  }
+
+  closeChatTemplatePicker();
+  await nextTick();
+  autoResizeTextarea();
+  await focusReplyInput({ force: true });
+
+  if (resolvedTemplate.usesStudentVariable && !resolvedTemplate.resolved) {
+    toast.warning(
+      selectedConversation.value?.isGroup
+        ? 'Variabel {{siswa}} tidak dapat diisi otomatis untuk percakapan grup. Ganti secara manual sebelum mengirim.'
+        : 'Nama depan kontak belum tersedia. Ganti {{siswa}} secara manual sebelum mengirim.',
+      5000,
+    );
+  }
+};
+
+const selectChatTemplate = (template) => {
+  const resolvedTemplate = resolvedSelectedTemplate(template);
+  if (replyText.value.trim()) {
+    pendingChatTemplate.value = resolvedTemplate;
+    return;
+  }
+  void applyResolvedChatTemplate(resolvedTemplate, 'replace');
+};
+
+const commitChatTemplate = (mode) => {
+  if (!pendingChatTemplate.value) return;
+  void applyResolvedChatTemplate(pendingChatTemplate.value, mode);
+};
+
 const handleInboxComposerTyping = async (event) => {
   const targetIsExternal = !event.target?.closest?.('.conversation-modal');
   const blocked = Boolean(
     addContactModal.value.show
     || deleteModal.value.show
     || imagePreview.value
-    || reactionDetails.value,
+    || reactionDetails.value
+    || showChatTemplatePicker.value,
   );
   if (!shouldRedirectInboxTyping(event, {
     conversationOpen: Boolean(selectedConversation.value),
@@ -2933,6 +3145,7 @@ const closeConversation = () => {
   conversationHasMoreTimeline.value = false;
   isConversationFullscreen.value = false;
   resetAttachmentDrag();
+  closeChatTemplatePicker();
   closeImagePreview();
   clearAttachment();
   conversationReactions.value = [];
@@ -3340,6 +3553,11 @@ const sendMediaReply = async () => {
 // Send reply message
 const sendReply = async () => {
   if (sendingReply.value || !selectedConversation.value) {
+    return;
+  }
+
+  if (hasUnresolvedStudentVariable.value) {
+    toast.warning('Ganti variabel {{siswa}} dengan nama kontak sebelum mengirim pesan');
     return;
   }
 
@@ -3954,6 +4172,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleInboxComposerTyping, true);
   window.addEventListener('pointerdown', handleMessagePopupPointerDown);
   window.addEventListener('resize', updateMessageActionMenuPosition);
+  window.addEventListener('resize', updateChatTemplatePickerPosition);
 
   // Connect socket and setup listeners
   const socket = connectSocket();
@@ -4030,6 +4249,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleInboxComposerTyping, true);
   window.removeEventListener('pointerdown', handleMessagePopupPointerDown);
   window.removeEventListener('resize', updateMessageActionMenuPosition);
+  window.removeEventListener('resize', updateChatTemplatePickerPosition);
   if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
   inboxNavigationGeneration++;
   conversationOpenGeneration++;
@@ -6001,6 +6221,225 @@ const handleMediaError = (event, message) => {
   height: 20px;
 }
 
+.btn-chat-template.active {
+  border-color: #3b82f6;
+  background: var(--theme-info-soft);
+  color: #2563eb;
+}
+
+.chat-template-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  background: rgba(2, 6, 23, 0.22);
+}
+
+.chat-template-picker {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  max-height: min(580px, calc(100dvh - 120px));
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 16px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: 0 24px 55px rgba(2, 6, 23, 0.32);
+}
+
+.chat-template-picker-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 17px 12px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.chat-template-picker-header h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.chat-template-picker-header p {
+  margin: 4px 0 0;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.chat-template-picker-header > button {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 1px solid var(--theme-border);
+  border-radius: 9px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.chat-template-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 13px 14px;
+  padding: 0 11px;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-input);
+}
+
+.chat-template-search svg {
+  width: 18px;
+  color: var(--theme-text-muted);
+}
+
+.chat-template-search input {
+  width: 100%;
+  height: 40px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--theme-text);
+  font: inherit;
+}
+
+.chat-template-picker-list {
+  min-height: 0;
+  padding: 0 10px 10px;
+  overflow-y: auto;
+}
+
+.chat-template-picker-item {
+  width: 100%;
+  display: block;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--theme-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-template-picker-item:hover {
+  background: var(--theme-surface-hover);
+}
+
+.chat-template-item-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.chat-template-item-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-template-item-title code {
+  flex: none;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  font-size: 10px;
+}
+
+.chat-template-picker-item > span:last-child {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.chat-template-picker-state {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px;
+  color: var(--theme-text-muted);
+  text-align: center;
+}
+
+.chat-template-picker-state button,
+.chat-template-picker-state a,
+.chat-template-picker-footer a {
+  border: 0;
+  background: transparent;
+  color: var(--theme-accent);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.chat-template-spinner {
+  width: 27px;
+  height: 27px;
+  border: 3px solid var(--theme-border);
+  border-top-color: var(--theme-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.chat-template-draft-choice {
+  margin: 0 14px 14px;
+  padding: 14px;
+  border: 1px solid var(--theme-warning-border);
+  border-radius: 11px;
+  background: var(--theme-warning-soft);
+  color: var(--theme-warning-text);
+}
+
+.chat-template-draft-choice p {
+  margin: 5px 0 12px;
+  font-size: 12px;
+}
+
+.chat-template-draft-choice > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.chat-template-draft-choice button {
+  min-height: 38px;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.choice-secondary {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.choice-primary {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.chat-template-picker-footer {
+  padding: 11px 15px;
+  border-top: 1px solid var(--theme-border);
+  background: var(--theme-surface-soft);
+  text-align: center;
+  font-size: 12px;
+}
+
 .attachment-preview {
   display: flex;
   align-items: center;
@@ -6562,6 +7001,20 @@ const handleMediaError = (event, message) => {
     min-height: 44px;
     padding: 11px 12px;
     font-size: 16px;
+  }
+
+  .chat-template-picker-backdrop {
+    background: rgba(2, 6, 23, 0.62);
+  }
+
+  .chat-template-picker {
+    left: 0 !important;
+    right: 0;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-height: min(76dvh, 620px);
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 </style>

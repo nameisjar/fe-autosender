@@ -19,6 +19,7 @@ import Broadcasts from '../views/Broadcasts.vue';
 import Contacts from '../views/Contacts.vue';
 import Groups from '../views/Groups.vue';
 import CodeSnippets from '../views/CodeSnippets.vue';
+import ChatTemplates from '../views/ChatTemplates.vue';
 import SnippetView from '../views/SnippetView.vue';
 import Inbox from '../views/Inbox.vue';
 import { useAuthStore } from '../stores/auth.js';
@@ -57,6 +58,11 @@ const routes = [
                 path: 'code-snippets',
                 name: 'code-snippets',
                 component: CodeSnippets,
+            },
+            {
+                path: 'chat-templates',
+                name: 'chat-templates',
+                component: ChatTemplates,
             },
             // keep legacy paths but protect as admin-only
             // removed: legacy 'sent-history' (admin-only)
