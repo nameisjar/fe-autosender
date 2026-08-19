@@ -110,8 +110,26 @@ export const getOutgoingFailureMessage = (
   return `${message} Coba lagi setelah ${formattedRetryAt}.`;
 };
 
-const outgoingMessageIds = message =>
-  [message?.waMessageId, message?.id, message?.tempId].filter(Boolean);
+export const getOutgoingMessageIdentityValues = message =>
+  [
+    message?.waMessageId,
+    message?.messageId,
+    message?.id,
+    message?.tempId,
+    message?.outgoingPkId,
+    message?.pkId,
+    message?.sourcePkId,
+  ]
+    .filter(value => value !== undefined && value !== null && value !== '')
+    .map(value => String(value));
+
+export const outgoingMessageMatchesStatusEvent = (message, event) => {
+  const eventIds = new Set(getOutgoingMessageIdentityValues(event));
+  return eventIds.size > 0
+    && getOutgoingMessageIdentityValues(message).some(id => eventIds.has(id));
+};
+
+const outgoingMessageIds = message => getOutgoingMessageIdentityValues(message);
 
 // Database requests are snapshots: by the time one resolves, Socket.IO may
 // already have applied a newer ACK/NACK locally. Merge matching rows by every

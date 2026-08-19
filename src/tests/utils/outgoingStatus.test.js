@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   createOutgoingMessageId,
   getOutgoingFailureMessage,
+  getOutgoingMessageIdentityValues,
   isConfirmedOutgoingFailure,
   mergeOutgoingResponseStatus,
   mergeOutgoingSnapshotStatuses,
   mergeOutgoingStatus,
   normalizeOutgoingUiStatus,
+  outgoingMessageMatchesStatusEvent,
   OUTGOING_STATUS_HIERARCHY,
   resolveOutgoingUiStatus,
 } from '../../utils/outgoingStatus.js';
@@ -145,6 +147,23 @@ describe('outgoing message status helpers', () => {
       'pending',
       'server_ack',
     ]);
+  });
+
+  it('matches socket status events by transport, durable, or database identity', () => {
+    const message = {
+      pkId: 321,
+      id: 'reserved-id',
+      tempId: 'optimistic-id',
+      waMessageId: 'wa-id',
+    };
+
+    expect(outgoingMessageMatchesStatusEvent(message, { waMessageId: 'wa-id' })).toBe(true);
+    expect(outgoingMessageMatchesStatusEvent(message, { messageId: 'reserved-id' })).toBe(true);
+    expect(outgoingMessageMatchesStatusEvent(message, { id: 'optimistic-id' })).toBe(true);
+    expect(outgoingMessageMatchesStatusEvent(message, { outgoingPkId: 321 })).toBe(true);
+    expect(outgoingMessageMatchesStatusEvent(message, { outgoingPkId: '321' })).toBe(true);
+    expect(outgoingMessageMatchesStatusEvent(message, { waMessageId: 'another-id' })).toBe(false);
+    expect(getOutgoingMessageIdentityValues({ outgoingPkId: 321 })).toEqual(['321']);
   });
 
   it('allows a snapshot to upgrade an optimistic state without downgrading later ACKs', () => {

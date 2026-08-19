@@ -1100,11 +1100,13 @@ import {
 import {
   createOutgoingMessageId,
   getOutgoingFailureMessage,
+  getOutgoingMessageIdentityValues,
   isConfirmedOutgoingFailure,
   mergeOutgoingResponseStatus,
   mergeOutgoingSnapshotStatuses,
   mergeOutgoingStatus,
   normalizeOutgoingUiStatus,
+  outgoingMessageMatchesStatusEvent,
   resolveOutgoingUiStatus,
 } from '../utils/outgoingStatus.js';
 import {
@@ -1248,6 +1250,9 @@ const MAX_CONVERSATION_SNAPSHOTS = 10;
 const reactionProfileRetryCounts = new Map();
 const reactionProfileRetryTimers = new Map();
 const statusReconciliationTimers = new Map();
+const pendingMessageStatusEvents = new Map();
+const pendingMessageStatusRetryTimers = new Set();
+const PENDING_MESSAGE_STATUS_TTL_MS = 15_000;
 
 const confirmedOutgoingError = message => {
   const error = new Error(message);
@@ -1258,6 +1263,12 @@ const confirmedOutgoingError = message => {
 const clearStatusReconciliationTimers = () => {
   statusReconciliationTimers.forEach(timer => clearTimeout(timer));
   statusReconciliationTimers.clear();
+};
+
+const clearPendingMessageStatusEvents = () => {
+  pendingMessageStatusRetryTimers.forEach(timer => clearTimeout(timer));
+  pendingMessageStatusRetryTimers.clear();
+  pendingMessageStatusEvents.clear();
 };
 
 const scheduleConversationStatusReconciliation = conversationFrom => {
@@ -1359,6 +1370,132 @@ const cacheCurrentConversationSnapshot = () => {
     timelineCursor: conversationTimelineCursor.value,
     hasMoreTimeline: conversationHasMoreTimeline.value,
   });
+};
+
+const getMessageStatusEventKey = data => {
+  const ids = getOutgoingMessageIdentityValues(data);
+  if (ids.length) return ids.sort().join('|');
+  return `${data?.conversationJid || data?.to || 'unknown'}:${data?.timestamp || Date.now()}`;
+};
+
+const applyMessageStatusEvent = data => {
+  if (!data?.status) return false;
+
+  const msgIndex = sentMessages.value.findIndex(message =>
+    outgoingMessageMatchesStatusEvent(message, data),
+  );
+  if (msgIndex === -1) return false;
+
+  const currentMessage = sentMessages.value[msgIndex];
+  const newStatus = resolveOutgoingUiStatus(data.status, {
+    readCount: data.readCount,
+    isGroup: Boolean(currentMessage.isGroup || data.isGroup),
+  });
+  const normalizedCurrentStatus = normalizeOutgoingUiStatus(currentMessage.status) || 'sending';
+  const mergedStatus = mergeOutgoingStatus(currentMessage.status, newStatus);
+  const nextMessage = {
+    ...currentMessage,
+    status: mergedStatus,
+    ...(!currentMessage.id && data.id ? { id: data.id } : {}),
+    ...(!currentMessage.pkId && data.outgoingPkId
+      ? { pkId: data.outgoingPkId }
+      : {}),
+    ...(!currentMessage.waMessageId && data.waMessageId
+      ? { waMessageId: data.waMessageId }
+      : {}),
+    ...(data.readCount !== undefined
+      && Number(data.readCount) > Number(currentMessage.readCount || 0)
+      ? {
+          readCount: Number(data.readCount),
+          readBy: Array.isArray(data.readBy) ? data.readBy : currentMessage.readBy || [],
+        }
+      : {}),
+  };
+
+  const messageChanged =
+    mergedStatus !== normalizedCurrentStatus
+    || nextMessage.id !== currentMessage.id
+    || nextMessage.pkId !== currentMessage.pkId
+    || nextMessage.waMessageId !== currentMessage.waMessageId
+    || nextMessage.readCount !== currentMessage.readCount;
+
+  if (messageChanged) {
+    sentMessages.value[msgIndex] = nextMessage;
+    sentMessages.value = [...sentMessages.value];
+
+    if (mergedStatus === 'error' && normalizedCurrentStatus !== 'error') {
+      toast.error(
+        `WhatsApp menolak pesan${data.errorCode ? ` (kode ${data.errorCode})` : ''}.`,
+      );
+    }
+
+    if (selectedConversation.value?.from) {
+      cacheConversationSnapshot(selectedConversation.value.from, {
+        sentMessages: sentMessages.value,
+      });
+    }
+  }
+
+  const summaryIndex = outgoingConversationSummaries.value.findIndex(message =>
+    outgoingMessageMatchesStatusEvent(message, data),
+  );
+  if (summaryIndex !== -1) {
+    const summary = outgoingConversationSummaries.value[summaryIndex];
+    outgoingConversationSummaries.value[summaryIndex] = {
+      ...summary,
+      status: mergeOutgoingStatus(summary.status, newStatus),
+      ...(!summary.id && data.id ? { id: data.id } : {}),
+      ...(!summary.waMessageId && data.waMessageId
+        ? { waMessageId: data.waMessageId }
+        : {}),
+    };
+    outgoingConversationSummaries.value = [...outgoingConversationSummaries.value];
+  }
+
+  return true;
+};
+
+const flushPendingMessageStatusEvents = () => {
+  const now = Date.now();
+  pendingMessageStatusEvents.forEach((entry, key) => {
+    if (entry.expiresAt <= now || applyMessageStatusEvent(entry.data)) {
+      pendingMessageStatusEvents.delete(key);
+    }
+  });
+};
+
+const queuePendingMessageStatusEvent = data => {
+  const key = getMessageStatusEventKey(data);
+  const previous = pendingMessageStatusEvents.get(key)?.data;
+  pendingMessageStatusEvents.set(key, {
+    data: previous
+      ? {
+          ...previous,
+          ...data,
+          status: mergeOutgoingStatus(previous.status, data.status),
+        }
+      : data,
+    expiresAt: Date.now() + PENDING_MESSAGE_STATUS_TTL_MS,
+  });
+
+  // Retry against local state only. Network reconciliation is separately
+  // debounced, so missed socket events never turn into continuous polling.
+  [0, 250, 1000, 4500].forEach(delay => {
+    const timer = setTimeout(() => {
+      pendingMessageStatusRetryTimers.delete(timer);
+      flushPendingMessageStatusEvents();
+    }, delay);
+    pendingMessageStatusRetryTimers.add(timer);
+  });
+
+  const conversationJid = data?.conversationJid || data?.to || selectedConversation.value?.from;
+  if (
+    conversationJid
+    && selectedConversation.value?.from
+    && sameConversationJid(selectedConversation.value.from, conversationJid)
+  ) {
+    scheduleConversationStatusReconciliation(conversationJid);
+  }
 };
 
 const conversationHasMoreHistory = computed(() => conversationHasMoreTimeline.value);
@@ -2274,51 +2411,11 @@ const setupSocketListener = () => {
     };
 
     const handleMessageStatus = (data) => {
-      // Update sentMessages array
-      // Match by waMessageId first, fallback to tempId (id field)
-      const msgIndex = sentMessages.value.findIndex(m => 
-        (m.waMessageId && m.waMessageId === data.waMessageId) || 
-        (m.tempId && m.tempId === data.waMessageId)
-      );
-      
-      if (msgIndex !== -1) {
-        const currentStatus = sentMessages.value[msgIndex].status;
-        const newStatus = resolveOutgoingUiStatus(data.status, {
-          readCount: data.readCount,
-          isGroup: Boolean(sentMessages.value[msgIndex].isGroup),
-        });
-        
-        const normalizedCurrentStatus = normalizeOutgoingUiStatus(currentStatus) || 'sending';
-        const mergedStatus = mergeOutgoingStatus(currentStatus, newStatus);
-        let messageChanged = false;
-
-        if (mergedStatus !== normalizedCurrentStatus) {
-          sentMessages.value[msgIndex].status = mergedStatus;
-          messageChanged = true;
-
-          if (mergedStatus === 'error') {
-            const errorMessage = `WhatsApp menolak pesan${data.errorCode ? ` (kode ${data.errorCode})` : ''}.`;
-            toast.error(errorMessage);
-          }
-        }
-
-        if (!sentMessages.value[msgIndex].waMessageId && data.waMessageId) {
-          sentMessages.value[msgIndex].waMessageId = data.waMessageId;
-          messageChanged = true;
-        }
-
-        if (
-          data.readCount !== undefined &&
-          data.readCount > (sentMessages.value[msgIndex].readCount || 0)
-        ) {
-          sentMessages.value[msgIndex].readCount = data.readCount;
-          sentMessages.value[msgIndex].readBy = data.readBy || [];
-          messageChanged = true;
-        }
-
-        if (messageChanged) sentMessages.value = [...sentMessages.value];
-
-        // Status pengiriman terlihat dari ikon pada bubble chat.
+      if (!applyMessageStatusEvent(data)) {
+        // An ACK/receipt can beat the HTTP response that attaches the durable
+        // ID to the optimistic bubble. Keep it briefly and reconcile from the
+        // database instead of requiring a manual page refresh.
+        queuePendingMessageStatusEvent(data);
       }
     };
 
@@ -2947,6 +3044,8 @@ const mapTimelineIncomingMessage = row => ({
 const mapTimelineOutgoingMessage = row => {
   const readBy = Array.isArray(row.readBy) ? row.readBy : [];
   return {
+    pkId: row.sourcePkId,
+    id: row.id,
     tempId: row.id,
     text: row.message || '',
     mediaPath: row.mediaPath || '',
@@ -3040,6 +3139,7 @@ const loadConversationTimeline = async (
       timelineCursor: conversationTimelineCursor.value,
       hasMoreTimeline: conversationHasMoreTimeline.value,
     });
+    flushPendingMessageStatusEvents();
   } catch (error) {
     if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
     throw error;
@@ -3489,6 +3589,8 @@ const sendMediaReply = async () => {
       );
       sentMessages.value[msgIndex] = {
         ...sentMessages.value[msgIndex],
+        pkId: saved.pkId || sentMessages.value[msgIndex].pkId,
+        id: saved.id || sentMessages.value[msgIndex].id,
         tempId: savedMessageId,
         waMessageId: savedMessageId,
         text: saved.message || optimisticMessage.text,
@@ -3498,6 +3600,7 @@ const sendMediaReply = async () => {
         status: responseUiStatus,
       };
       sentMessages.value = [...sentMessages.value];
+      flushPendingMessageStatusEvents();
     }
     if (saved.mediaPath && localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
 
@@ -3648,6 +3751,8 @@ const sendReply = async () => {
       );
       sentMessages.value[msgIndex] = {
         ...sentMessages.value[msgIndex],
+        pkId: savedMessage?.pkId || sentMessages.value[msgIndex].pkId,
+        id: savedMessage?.id || sentMessages.value[msgIndex].id,
         status: responseUiStatus,
         waMessageId: waMessageId,
         tempId: waMessageId,
@@ -3655,9 +3760,12 @@ const sendReply = async () => {
       };
       
       sentMessages.value = [...sentMessages.value];
+      flushPendingMessageStatusEvents();
     } else {
       if (waMessageId) {
         const newMessage = {
+          pkId: savedMessage?.pkId,
+          id: savedMessage?.id || waMessageId,
           tempId: waMessageId,
           text: messageText,
           timestamp: messageTimestamp ? new Date(Number(messageTimestamp) * 1000).toISOString() : new Date().toISOString(),
@@ -3670,6 +3778,7 @@ const sendReply = async () => {
         
         sentMessages.value.push(newMessage);
         sentMessages.value = [...sentMessages.value];
+        flushPendingMessageStatusEvents();
       }
     }
     
@@ -4243,6 +4352,7 @@ onUnmounted(() => {
   clearScheduledReplyFocus();
   releaseInitialBottomPin();
   clearStatusReconciliationTimers();
+  clearPendingMessageStatusEvents();
   conversationRequestController?.abort();
   conversationRequestController = null;
   window.removeEventListener('keydown', handleImagePreviewKeydown);
