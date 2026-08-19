@@ -440,15 +440,19 @@
               Muat pesan sebelumnya
             </button>
             <!-- Messages grouped by local calendar day, like WhatsApp. -->
-            <template
-              v-for="({ kind, key: timelineKey, label, message: msg }) in chatTimelineItems"
-              :key="timelineKey"
+            <section
+              v-for="day in chatTimelineGroups"
+              :key="day.key"
+              class="chat-day-group"
             >
-            <div v-if="kind === 'date'" class="chat-date-separator" role="separator">
-              <span>{{ label }}</span>
+            <div class="chat-date-separator" role="separator">
+              <span>{{ day.label }}</span>
             </div>
+            <template
+              v-for="msg in day.messages"
+              :key="`message:${msg.type}:${getMessageDomId(msg)}`"
+            >
             <div
-              v-else
               class="chat-message-row"
               :class="msg.type === 'incoming' ? 'incoming' : 'outgoing'"
               @dblclick="handleMessageDoubleClick(msg, $event)"
@@ -485,7 +489,7 @@
               <div
                 v-if="msg.type === 'incoming' && selectedConversation.isGroup"
                 class="group-sender-avatar"
-                :title="msg.pushName || getMessageSenderPhone(msg) || 'Pengirim grup'"
+                :title="getGroupSenderPrimaryLabel(msg)"
               >
                 <span>{{ getGroupSenderInitial(msg) }}</span>
                 <img
@@ -502,9 +506,26 @@
               <div class="bubble-content" :style="getMessageSwipeStyle(msg)">
                 <!-- Sender name for group incoming messages -->
                 <div v-if="msg.type === 'incoming' && selectedConversation.isGroup" class="bubble-sender">
-                  <span>{{ msg.pushName || 'Tidak dikenal' }}</span>
-                  <span v-if="getMessageSenderPhone(msg)" class="bubble-sender-phone">
-                    {{ getMessageSenderPhone(msg) }}
+                  <div class="bubble-sender-identity">
+                    <span class="bubble-sender-name">{{ getGroupSenderPrimaryLabel(msg) }}</span>
+                    <span
+                      v-for="label in getGroupSenderLabels(msg).slice(0, 2)"
+                      :key="label"
+                      class="bubble-sender-label"
+                      :title="label"
+                    >
+                      {{ label }}
+                    </span>
+                    <span
+                      v-if="getGroupSenderLabels(msg).length > 2"
+                      class="bubble-sender-label bubble-sender-label-overflow"
+                      :title="getGroupSenderLabels(msg).slice(2).join(', ')"
+                    >
+                      +{{ getGroupSenderLabels(msg).length - 2 }}
+                    </span>
+                  </div>
+                  <span v-if="getGroupSenderSecondaryLabel(msg)" class="bubble-sender-secondary">
+                    {{ getGroupSenderSecondaryLabel(msg) }}
                   </span>
                 </div>
 
@@ -801,6 +822,7 @@
             </div>
             </div>
             </template>
+            </section>
           </div>
           
           <!-- Reply Input -->
@@ -1722,28 +1744,23 @@ const allMessages = computed(() => {
   return merged;
 });
 
-const chatTimelineItems = computed(() => {
-  const items = [];
-  let previousDateKey = '';
+const chatTimelineGroups = computed(() => {
+  const groups = [];
   allMessages.value.forEach(message => {
     const dateKey = getLocalCalendarKey(message.timestamp);
-    if (dateKey !== previousDateKey) {
-      items.push({
-        kind: 'date',
+    let group = groups[groups.length - 1];
+    if (!group || group.dateKey !== dateKey) {
+      group = {
         key: `date:${dateKey}`,
+        dateKey,
         label: formatInboxDateLabel(message.timestamp, chatCalendarNow.value),
-        message: null,
-      });
-      previousDateKey = dateKey;
+        messages: [],
+      };
+      groups.push(group);
     }
-    items.push({
-      kind: 'message',
-      key: `message:${message.type}:${getMessageDomId(message)}`,
-      label: '',
-      message,
-    });
+    group.messages.push(message);
   });
-  return items;
+  return groups;
 });
 
 const reactionGroupsByMessageKey = computed(() => {
@@ -1985,7 +2002,9 @@ const startReplyToMessage = async message => {
     targetFromMe: message.type === 'outgoing',
     senderLabel: message.type === 'outgoing'
       ? 'Anda'
-      : message.pushName || getMessageSenderPhone(message) || 'pesan ini',
+      : selectedConversation.value?.isGroup
+        ? getGroupSenderPrimaryLabel(message)
+        : message.pushName || getMessageSenderPhone(message) || 'pesan ini',
     text: messageActionText(message),
     mediaPath: message.mediaPath || '',
     mediaType: message.mediaType || getInboxMediaType(message) || '',
@@ -2444,7 +2463,7 @@ const conversations = computed(() => {
     if (!grouped[key]) {
       grouped[key] = {
         from: msg.from,
-        contact: msg.contact,
+        contact: msg.isGroup || msg.from?.includes('@g.us') ? null : msg.contact,
         pushName: msg.pushName, // Add pushName from first message
         groupName: msg.groupName, // Add groupName for group messages
         groupPicUrl: msg.groupPicUrl, // Add group picture URL
@@ -3657,6 +3676,7 @@ const mapTimelineIncomingMessage = row => ({
   participant: row.participant || null,
   pushName: row.pushName || null,
   groupName: row.groupName || null,
+  senderContact: row.senderContact || null,
   senderProfilePicUrl: row.senderProfilePicUrl || null,
   senderProfileStatus: row.senderProfileStatus || 'unavailable',
 });
@@ -4985,6 +5005,33 @@ const getMessageSenderPhone = (message) => {
   return formatWhatsAppIdentity(message?.participant);
 };
 
+const getGroupSenderContact = message => message?.senderContact || message?.contact || null;
+
+const getGroupSenderContactName = message => {
+  const contact = getGroupSenderContact(message);
+  return contact
+    ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
+    : '';
+};
+
+const getGroupSenderLabels = message => getContactLabelNames(
+  getGroupSenderContact(message),
+);
+
+const getGroupSenderPrimaryLabel = message => {
+  const contactName = getGroupSenderContactName(message);
+  if (contactName) return contactName;
+  return getMessageSenderPhone(message) || message?.pushName || 'Tidak dikenal';
+};
+
+const getGroupSenderSecondaryLabel = message => {
+  if (getGroupSenderContact(message)) return '';
+  const phone = getMessageSenderPhone(message);
+  const pushName = String(message?.pushName || '').trim();
+  if (!phone || !pushName) return '';
+  return pushName.replace(/\D/g, '') === phone.replace(/\D/g, '') ? '' : pushName;
+};
+
 const getGroupSenderProfileUrl = message => {
   const source = String(message?.senderProfilePicUrl || '').trim();
   if (!source) return '';
@@ -4996,7 +5043,7 @@ const getGroupSenderProfileUrl = message => {
 
 const getGroupSenderInitial = message => {
   const label = String(
-    message?.pushName || getMessageSenderPhone(message) || '?',
+    getGroupSenderPrimaryLabel(message) || '?',
   ).trim();
   return label.replace(/^\+/, '').charAt(0).toUpperCase() || '?';
 };
@@ -6355,6 +6402,14 @@ const handleMediaError = (event, message) => {
   opacity: 0;
 }
 
+.chat-day-group {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .chat-date-separator {
   position: sticky;
   top: 8px;
@@ -6985,19 +7040,57 @@ const handleMediaError = (event, message) => {
 }
 
 .bubble-sender {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: #3b82f6;
-  margin-bottom: 4px;
 }
 
-.bubble-sender-phone {
+.bubble-sender-identity {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.bubble-sender-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #3b82f6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble-sender-secondary {
   display: block;
-  margin-top: 1px;
   color: var(--theme-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 10px;
   font-weight: 500;
+}
+
+.bubble-sender-label {
+  display: inline-flex;
+  max-width: 112px;
+  min-height: 18px;
+  align-items: center;
+  overflow: hidden;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 55%, transparent);
+  border-radius: 999px;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble-sender-label-overflow {
+  flex: 0 0 auto;
 }
 
 .bubble-text {

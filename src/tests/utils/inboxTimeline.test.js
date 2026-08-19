@@ -18,7 +18,8 @@ describe('Inbox timeline dates', () => {
   it('uses a weekday for recent messages and a full date for older messages', () => {
     const now = localDate(2026, 8, 20);
     expect(formatInboxDateLabel(localDate(2026, 8, 18), now)).toBe('Selasa');
-    expect(formatInboxDateLabel(localDate(2026, 8, 12), now)).toMatch(/12 Agustus 2026/i);
+    expect(formatInboxDateLabel(localDate(2026, 8, 12), now))
+      .toMatch(/Rabu,? 12 Agustus 2026/i);
   });
 
   it('provides stable local date keys and time-only bubble labels', () => {

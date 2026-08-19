@@ -86,6 +86,18 @@ describe('Cache Utils', () => {
       expect(cache.get('key2')).toBeNull();
       expect(cache.get('key3')).toBeNull();
     });
+
+    it('should invalidate every key with the selected prefix', () => {
+      cache.set('contacts-page:device-a:1', 'page-1');
+      cache.set('contacts-page:device-a:2', 'page-2');
+      cache.set('contacts-page:device-b:1', 'other-device');
+
+      cache.invalidatePrefix('contacts-page:device-a:');
+
+      expect(cache.get('contacts-page:device-a:1')).toBeNull();
+      expect(cache.get('contacts-page:device-a:2')).toBeNull();
+      expect(cache.get('contacts-page:device-b:1')).toBe('other-device');
+    });
   });
 
   describe('has', () => {

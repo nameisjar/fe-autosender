@@ -37,6 +37,13 @@ class CacheManager {
     }
   }
 
+  invalidatePrefix(prefix) {
+    if (!prefix) return;
+    for (const key of this.cache.keys()) {
+      if (String(key).startsWith(prefix)) this.cache.delete(key);
+    }
+  }
+
   has(key) {
     const cached = this.cache.get(key);
     if (!cached) return false;

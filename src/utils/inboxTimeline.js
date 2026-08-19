@@ -38,6 +38,7 @@ export const formatInboxDateLabel = (value, nowValue = Date.now()) => {
     }).format(date));
   }
   return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',

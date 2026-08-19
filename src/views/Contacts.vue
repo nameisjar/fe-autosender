@@ -948,6 +948,11 @@ const invalidateLabelsCache = () => {
   labelsCache.value = { data: [], timestamp: 0, deviceId: null };
 };
 
+const invalidateContactsPageCache = () => {
+  if (!selectedDeviceId.value) return;
+  cache.invalidatePrefix(`contacts-page:${selectedDeviceId.value}:`);
+};
+
 // Get all available labels from API (not just current page)
 const availableLabels = computed(() => {
   return allLabels.value.sort();
@@ -964,7 +969,7 @@ const onDeviceChange = () => {
   fetchAllLabels(); // Fetch all labels when device changes
 };
 
-const loadContacts = async () => {
+const loadContacts = async ({ background = false } = {}) => {
   if (!selectedDeviceId.value) {
     contacts.value = [];
     return;
@@ -987,7 +992,7 @@ const loadContacts = async () => {
     meta.value = cached.meta;
   }
 
-  loading.value = !cached;
+  if (!background) loading.value = !cached;
   err.value = "";
 
   try {
@@ -1019,13 +1024,13 @@ const loadContacts = async () => {
   } catch (e) {
     // console.error('❌ Error loading contacts:', e);
     // console.error('❌ Error response:', e?.response);
-    err.value = e?.response?.data?.message || "Gagal memuat kontak";
-    if (!cached) {
+    if (!background) err.value = e?.response?.data?.message || "Gagal memuat kontak";
+    if (!cached && !background) {
       contacts.value = []; // Reset contacts on error
       meta.value = { totalContacts: 0, currentPage: 1, totalPages: 1, hasMore: false };
     }
   } finally {
-    if (requestId === latestContactsRequest) loading.value = false;
+    if (requestId === latestContactsRequest && !background) loading.value = false;
   }
 };
 
@@ -1228,20 +1233,40 @@ const deleteContact = async (contactId) => {
 const confirmDelete = async () => {
   if (!contactToDelete.value) return;
 
+  const deletedContactId = contactToDelete.value.id;
   deleting.value = true;
 
   try {
     await userApi.delete("/contacts", {
-      data: { contactIds: [contactToDelete.value.id] },
+      data: { contactIds: [deletedContactId] },
     });
-    toast.success("Kontak berhasil dihapus");
 
-    // Close modal
+    contacts.value = contacts.value.filter(contact => contact.id !== deletedContactId);
+    const totalContacts = Math.max(0, Number(meta.value.totalContacts || 0) - 1);
+    const totalPages = Math.max(1, Math.ceil(totalContacts / pageSize.value));
+    if (contacts.value.length === 0 && page.value > totalPages) {
+      page.value = totalPages;
+    }
+    meta.value = {
+      ...meta.value,
+      totalContacts,
+      currentPage: page.value,
+      totalPages,
+      hasMore: page.value < totalPages,
+    };
+
+    invalidateContactsPageCache();
+    invalidateLabelsCache();
     showDeleteModal.value = false;
     contactToDelete.value = null;
+    toast.success("Kontak berhasil dihapus");
 
-    // Reload contacts
-    await loadContacts();
+    // Reconcile silently so the confirmed deletion feels immediate while the
+    // server remains the source of truth for pagination and orphaned labels.
+    void Promise.allSettled([
+      loadContacts({ background: true }),
+      fetchAllLabels(true),
+    ]);
   } catch (e) {
     toast.error(e?.response?.data?.message || "Gagal menghapus kontak");
   } finally {
@@ -1270,17 +1295,23 @@ const confirmDeleteAll = async () => {
     });
 
     const deletedCount = data?.deletedCount || 0;
+    contacts.value = [];
+    page.value = 1;
+    meta.value = {
+      totalContacts: 0,
+      currentPage: 1,
+      totalPages: 1,
+      hasMore: false,
+    };
+    invalidateContactsPageCache();
+    invalidateLabelsCache();
+    showDeleteAllModal.value = false;
     toast.success(`Berhasil menghapus ${deletedCount} kontak`);
 
-    // Close modal
-    showDeleteAllModal.value = false;
-
-    // Reload contacts (should be empty now)
-    await loadContacts();
-    
-    // Invalidate cache and refresh labels
-    invalidateLabelsCache();
-    await fetchAllLabels(true);
+    void Promise.allSettled([
+      loadContacts({ background: true }),
+      fetchAllLabels(true),
+    ]);
   } catch (e) {
     toast.error(e?.response?.data?.message || "Gagal menghapus semua kontak");
   } finally {
