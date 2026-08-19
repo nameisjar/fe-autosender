@@ -506,8 +506,14 @@
               <div class="bubble-content" :style="getMessageSwipeStyle(msg)">
                 <!-- Sender name for group incoming messages -->
                 <div v-if="msg.type === 'incoming' && selectedConversation.isGroup" class="bubble-sender">
-                  <div class="bubble-sender-identity">
+                  <div
+                    class="bubble-sender-identity"
+                    :class="{ 'bubble-sender-identity-unknown': !getGroupSenderContact(msg) }"
+                  >
                     <span class="bubble-sender-name">{{ getGroupSenderPrimaryLabel(msg) }}</span>
+                    <span v-if="getGroupSenderSecondaryLabel(msg)" class="bubble-sender-secondary">
+                      {{ getGroupSenderSecondaryLabel(msg) }}
+                    </span>
                     <span
                       v-for="label in getGroupSenderLabels(msg).slice(0, 2)"
                       :key="label"
@@ -524,9 +530,6 @@
                       +{{ getGroupSenderLabels(msg).length - 2 }}
                     </span>
                   </div>
-                  <span v-if="getGroupSenderSecondaryLabel(msg)" class="bubble-sender-secondary">
-                    {{ getGroupSenderSecondaryLabel(msg) }}
-                  </span>
                 </div>
 
                 <button
@@ -7064,11 +7067,22 @@ const handleMediaError = (event, message) => {
   white-space: nowrap;
 }
 
+.bubble-sender-identity-unknown {
+  flex-wrap: nowrap;
+}
+
+.bubble-sender-identity-unknown .bubble-sender-name {
+  flex-shrink: 0;
+}
+
 .bubble-sender-secondary {
-  display: block;
+  min-width: 0;
+  overflow: hidden;
   color: var(--theme-text-muted);
   font-size: 10px;
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bubble-sender-label {
