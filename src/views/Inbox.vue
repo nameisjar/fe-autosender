@@ -587,6 +587,7 @@
                     </svg>
                   </template>
                   
+                  <span v-if="msg.editedAt" class="message-edited-label">diedit</span>
                   {{ msg.type === 'incoming' ? formatFullTime(msg.receivedAt) : formatTime(msg.timestamp) }}
                   
                   <!-- ✅ Read count badge untuk grup messages -->
@@ -2271,6 +2272,7 @@ const setupSocketListener = () => {
     const outgoingEventName = `outgoing:${sessionId}`;
     const profileUpdateEventName = `incoming:${sessionId}:profile-updated`;
     const mediaUpdateEventName = `incoming:${sessionId}:media-updated`;
+    const messageEditedEventName = `incoming:${sessionId}:message-edited`;
     const statusEventName = `device:${selectedDeviceId.value}:message-status`;
     const reactionEventName = `reaction:${sessionId}`;
     const deletedMessageEventName = `message-deleted:${sessionId}`;
@@ -2419,6 +2421,45 @@ const setupSocketListener = () => {
       }
     };
 
+    const handleMessageEdited = data => {
+      if (!data?.id || typeof data.message !== 'string') return;
+
+      let listChanged = false;
+      const updatedMessages = messages.value.map(message => {
+        if (message.id !== data.id) return message;
+        listChanged = true;
+        return {
+          ...message,
+          message: data.message,
+          editedAt: data.editedAt || new Date().toISOString(),
+        };
+      });
+      if (listChanged) messages.value = updatedMessages;
+
+      if (
+        selectedConversation.value?.messages
+        && sameConversationJid(selectedConversation.value.from, data.from)
+      ) {
+        let conversationChanged = false;
+        const updatedConversationMessages = selectedConversation.value.messages.map(message => {
+          if (message.id !== data.id) return message;
+          conversationChanged = true;
+          return {
+            ...message,
+            message: data.message,
+            editedAt: data.editedAt || new Date().toISOString(),
+          };
+        });
+
+        if (conversationChanged) {
+          selectedConversation.value.messages = updatedConversationMessages;
+          cacheConversationSnapshot(selectedConversation.value.from, {
+            incomingMessages: selectedConversation.value.messages,
+          });
+        }
+      }
+    };
+
     const handleReaction = data => {
       applyInboxReactionEvent(data);
       if (
@@ -2439,6 +2480,7 @@ const setupSocketListener = () => {
     socket.on(outgoingEventName, handleOutgoing);
     socket.on(profileUpdateEventName, handleProfileUpdate); // ✅ NEW: Listen for profile picture updates
     socket.on(mediaUpdateEventName, handleMediaUpdate);
+    socket.on(messageEditedEventName, handleMessageEdited);
     socket.on(statusEventName, handleMessageStatus);
     socket.on(reactionEventName, handleReaction);
     socket.on(deletedMessageEventName, handleDeletedMessage);
@@ -2448,6 +2490,7 @@ const setupSocketListener = () => {
       socket.off(outgoingEventName, handleOutgoing);
       socket.off(profileUpdateEventName, handleProfileUpdate); // ✅ Cleanup profile update listener
       socket.off(mediaUpdateEventName, handleMediaUpdate);
+      socket.off(messageEditedEventName, handleMessageEdited);
       socket.off(statusEventName, handleMessageStatus);
       socket.off(reactionEventName, handleReaction);
       socket.off(deletedMessageEventName, handleDeletedMessage);
@@ -3036,6 +3079,7 @@ const mapTimelineIncomingMessage = row => ({
   mediaType: row.mediaType || '',
   isRead: Boolean(row.isRead),
   receivedAt: row.timestamp,
+  editedAt: row.editedAt || null,
   participant: row.participant || null,
   pushName: row.pushName || null,
   groupName: row.groupName || null,
@@ -6266,6 +6310,11 @@ const handleMediaError = (event, message) => {
 /* Checkmark styles */
 .status-icon.checkmark-single {
   color: rgba(255, 255, 255, 0.8);
+}
+
+.message-edited-label {
+  font-style: italic;
+  opacity: 0.82;
 }
 
 .status-icon.checkmark-submitted {
