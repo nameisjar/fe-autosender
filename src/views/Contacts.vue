@@ -835,6 +835,8 @@ const {
 const loading = ref(false);
 let latestContactsRequest = 0;
 let contactsRevalidationTimer;
+let contactsRevalidationDebounceTimer;
+let contactsRevalidationPromise = null;
 const saving = ref(false);
 const showAddForm = ref(false);
 const editingContact = ref(null);
@@ -1221,6 +1223,8 @@ const saveContact = async () => {
 };
 
 const deleteContact = async (contactId) => {
+  if (deleting.value) return;
+
   // Show custom delete modal instead of browser confirm
   const contact = contacts.value.find((c) => c.id === contactId);
   if (contact) {
@@ -1231,43 +1235,48 @@ const deleteContact = async (contactId) => {
 
 // New: Confirm delete action
 const confirmDelete = async () => {
-  if (!contactToDelete.value) return;
+  if (!contactToDelete.value || deleting.value) return;
 
   const deletedContactId = contactToDelete.value.id;
+  const previousContacts = contacts.value;
+  const previousMeta = { ...meta.value };
+  const previousPage = page.value;
   deleting.value = true;
+
+  // Update the visible list immediately. The snapshot above is restored if
+  // the server rejects the deletion.
+  contacts.value = contacts.value.filter(contact => contact.id !== deletedContactId);
+  const totalContacts = Math.max(0, Number(meta.value.totalContacts || 0) - 1);
+  const totalPages = Math.max(1, Math.ceil(totalContacts / pageSize.value));
+  if (contacts.value.length === 0 && page.value > totalPages) {
+    page.value = totalPages;
+  }
+  meta.value = {
+    ...meta.value,
+    totalContacts,
+    currentPage: page.value,
+    totalPages,
+    hasMore: page.value < totalPages,
+  };
+  showDeleteModal.value = false;
+  contactToDelete.value = null;
+  invalidateContactsPageCache();
 
   try {
     await userApi.delete("/contacts", {
       data: { contactIds: [deletedContactId] },
     });
 
-    contacts.value = contacts.value.filter(contact => contact.id !== deletedContactId);
-    const totalContacts = Math.max(0, Number(meta.value.totalContacts || 0) - 1);
-    const totalPages = Math.max(1, Math.ceil(totalContacts / pageSize.value));
-    if (contacts.value.length === 0 && page.value > totalPages) {
-      page.value = totalPages;
-    }
-    meta.value = {
-      ...meta.value,
-      totalContacts,
-      currentPage: page.value,
-      totalPages,
-      hasMore: page.value < totalPages,
-    };
-
-    invalidateContactsPageCache();
-    invalidateLabelsCache();
-    showDeleteModal.value = false;
-    contactToDelete.value = null;
     toast.success("Kontak berhasil dihapus");
 
-    // Reconcile silently so the confirmed deletion feels immediate while the
-    // server remains the source of truth for pagination and orphaned labels.
-    void Promise.allSettled([
-      loadContacts({ background: true }),
-      fetchAllLabels(true),
-    ]);
+    // Reconcile once, silently, to fill the current page without reloading all
+    // labels or displaying a page-level loading state.
+    scheduleContactsRevalidation(250);
   } catch (e) {
+    contacts.value = previousContacts;
+    meta.value = previousMeta;
+    page.value = previousPage;
+    invalidateContactsPageCache();
     toast.error(e?.response?.data?.message || "Gagal menghapus kontak");
   } finally {
     deleting.value = false;
@@ -1460,10 +1469,33 @@ const goNext = () => {
   }
 };
 
-const revalidateContacts = () => {
+const runContactsRevalidation = async () => {
   if (document.visibilityState !== 'visible' || !selectedDeviceId.value) return;
-  void loadContacts();
-  void fetchAllLabels();
+  if (deleting.value || deletingAll.value) return;
+  if (contactsRevalidationPromise) return contactsRevalidationPromise;
+
+  contactsRevalidationPromise = Promise.allSettled([
+    loadContacts({ background: true }),
+    fetchAllLabels(),
+  ]).finally(() => {
+    contactsRevalidationPromise = null;
+  });
+
+  return contactsRevalidationPromise;
+};
+
+const scheduleContactsRevalidation = (delay = 150) => {
+  if (contactsRevalidationDebounceTimer) {
+    window.clearTimeout(contactsRevalidationDebounceTimer);
+  }
+  contactsRevalidationDebounceTimer = window.setTimeout(() => {
+    contactsRevalidationDebounceTimer = null;
+    void runContactsRevalidation();
+  }, delay);
+};
+
+const revalidateContacts = () => {
+  scheduleContactsRevalidation();
 };
 
 onMounted(async () => {
@@ -1480,6 +1512,7 @@ onUnmounted(() => {
   window.removeEventListener('focus', revalidateContacts);
   document.removeEventListener('visibilitychange', revalidateContacts);
   if (contactsRevalidationTimer) window.clearInterval(contactsRevalidationTimer);
+  if (contactsRevalidationDebounceTimer) window.clearTimeout(contactsRevalidationDebounceTimer);
   if (searchTimer) clearTimeout(searchTimer);
 });
 </script>
@@ -2453,7 +2486,9 @@ onUnmounted(() => {
 
 /* Delete Modal */
 .delete-modal-overlay {
-  animation: fadeIn 0.2s ease-out;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  animation: fadeIn 0.12s ease-out;
 }
 
 @keyframes fadeIn {
@@ -2473,7 +2508,8 @@ onUnmounted(() => {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   padding: 32px;
   text-align: center;
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp 0.16s ease-out;
+  will-change: transform, opacity;
 }
 
 @keyframes slideUp {
@@ -2489,21 +2525,7 @@ onUnmounted(() => {
 
 .delete-modal-icon {
   margin-bottom: 20px;
-  animation: pulse 0.5s ease-out;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  animation: none;
 }
 
 .icon-circle {
@@ -2667,7 +2689,15 @@ onUnmounted(() => {
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delete-modal-overlay,
+  .delete-modal,
+  .delete-modal-icon {
+    animation: none;
+  }
 }
 
 .btn-keep {
