@@ -449,6 +449,11 @@
             </div>
             <div
               v-else
+              class="chat-message-row"
+              :class="msg.type === 'incoming' ? 'incoming' : 'outgoing'"
+              @dblclick="handleMessageDoubleClick(msg, $event)"
+            >
+            <div
               class="chat-bubble"
               :class="[
                 msg.type === 'incoming' ? 'incoming' : 'outgoing',
@@ -793,6 +798,7 @@
                   </div>
                 </div>
               </Teleport>
+            </div>
             </div>
             </template>
           </div>
@@ -2254,6 +2260,22 @@ const handleMessageGestureClick = event => {
   if (Date.now() >= suppressMessageClickUntil) return;
   event.preventDefault();
   event.stopPropagation();
+};
+
+const handleMessageDoubleClick = (message, event) => {
+  const isDesktopPointer = window.matchMedia?.(
+    '(hover: hover) and (pointer: fine)',
+  )?.matches;
+  if (
+    !isDesktopPointer
+    || event.button !== 0
+    || event.target !== event.currentTarget
+    || !canReplyToMessage(message)
+  ) return;
+
+  event.preventDefault();
+  window.getSelection?.()?.removeAllRanges?.();
+  void startReplyToMessage(message);
 };
 
 const sendReaction = async (message, selectedEmoji) => {
@@ -6412,6 +6434,20 @@ const handleMediaError = (event, message) => {
   position: relative;
   touch-action: pan-y;
   user-select: text;
+}
+
+.chat-message-row {
+  display: flex;
+  width: 100%;
+  position: relative;
+}
+
+.chat-message-row.incoming {
+  justify-content: flex-start;
+}
+
+.chat-message-row.outgoing {
+  justify-content: flex-end;
 }
 
 .chat-bubble.group-incoming {
