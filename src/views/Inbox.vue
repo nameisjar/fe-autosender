@@ -458,6 +458,17 @@
                     {{ getMessageSenderPhone(msg) }}
                   </span>
                 </div>
+
+                <button
+                  v-if="msg.quotedMessageId"
+                  type="button"
+                  class="bubble-quoted-message"
+                  :title="'Buka pesan yang dibalas'"
+                  @click.stop="focusQuotedMessage(msg)"
+                >
+                  <strong>{{ getQuotedSenderLabel(msg) }}</strong>
+                  <span>{{ getQuotedPreviewText(msg) }}</span>
+                </button>
                 
                 <!-- Incoming WhatsApp sticker (static or animated WebP) -->
                 <img
@@ -676,6 +687,20 @@
                   :style="messageActionMenuStyle"
                   @click.stop
                 >
+                  <button
+                    v-if="canReplyToMessage(msg)"
+                    type="button"
+                    @click="startReplyToMessage(msg)"
+                  >
+                    Balas
+                  </button>
+                  <button
+                    v-if="canEditMessage(msg)"
+                    type="button"
+                    @click="startEditMessage(msg)"
+                  >
+                    Edit pesan
+                  </button>
                   <button type="button" @click="confirmDeleteMessage(msg, 'me')">
                     Hapus untuk saya
                   </button>
@@ -694,6 +719,27 @@
           
           <!-- Reply Input -->
           <div class="reply-input-container">
+            <div
+              v-if="composerContext"
+              class="composer-message-context"
+              :class="composerContext.mode"
+            >
+              <div>
+                <strong>{{ composerContext.title }}</strong>
+                <span>{{ composerContext.text }}</span>
+              </div>
+              <button
+                type="button"
+                :aria-label="composerContext.mode === 'edit' ? 'Batalkan edit' : 'Batalkan balasan'"
+                :title="composerContext.mode === 'edit' ? 'Batalkan edit' : 'Batalkan balasan'"
+                @click="clearComposerContext"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
             <div v-if="selectedAttachment" class="attachment-preview">
               <img
                 v-if="attachmentKind === 'image'"
@@ -719,7 +765,7 @@
               <button
                 type="button"
                 class="btn-attachment"
-                :disabled="sendingReply"
+                :disabled="sendingReply || Boolean(editingMessage)"
                 title="Lampirkan gambar, video, audio, atau dokumen"
                 @click="attachmentInput?.click()"
               >
@@ -746,7 +792,7 @@
               <textarea
                 id="inbox-reply-textarea"
                 v-model="replyText"
-                :placeholder="selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan atau tempel gambar...'"
+                :placeholder="editingMessage ? 'Edit pesan...' : selectedAttachment ? 'Tambahkan caption (opsional)...' : 'Ketik pesan atau tempel gambar...'"
                 class="reply-textarea"
                 @keydown.enter.exact="handleEnterKey"
                 @paste="handleReplyPaste"
@@ -757,7 +803,7 @@
                 class="btn-send-reply"
                 @click="sendReply"
                 :disabled="(!replyText.trim() && !selectedAttachment) || sendingReply || hasUnresolvedStudentVariable"
-                :title="hasUnresolvedStudentVariable ? 'Ganti variabel {{siswa}} sebelum mengirim' : 'Kirim pesan'"
+                :title="hasUnresolvedStudentVariable ? 'Ganti variabel {{siswa}} sebelum mengirim' : editingMessage ? 'Simpan perubahan' : 'Kirim pesan'"
               >
                 <svg v-if="sendingReply" class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
@@ -1170,6 +1216,8 @@ const conversationOpenedFromNavigation = ref(false);
 // Reply functionality
 const replyText = ref('');
 const sendingReply = ref(false);
+const replyingToMessage = ref(null);
+const editingMessage = ref(null);
 const sentMessages = ref([]);
 const sentMessagesConversationJid = ref('');
 const replyTextarea = ref(null);
@@ -1220,6 +1268,23 @@ const filteredChatTemplates = computed(() => {
 });
 
 const hasUnresolvedStudentVariable = computed(() => hasStudentVariable(replyText.value));
+const composerContext = computed(() => {
+  if (editingMessage.value) {
+    return {
+      mode: 'edit',
+      title: 'Edit pesan',
+      text: editingMessage.value.originalText,
+    };
+  }
+  if (replyingToMessage.value) {
+    return {
+      mode: 'reply',
+      title: `Membalas ${replyingToMessage.value.senderLabel}`,
+      text: replyingToMessage.value.text,
+    };
+  }
+  return null;
+});
 
 // Search & pagination
 const q = ref('');
@@ -1708,6 +1773,94 @@ watch(reactionPickerMessageKey, value => {
 });
 
 const canDeleteMessage = message => Boolean(getMessageReactionTargetId(message));
+
+const canReplyToMessage = message => Boolean(
+  getMessageReactionTargetId(message)
+  && message?.status !== 'sending'
+  && message?.status !== 'error'
+  && !isDeletedForEveryone(message)
+);
+
+const canEditMessage = message => Boolean(
+  message?.type === 'outgoing'
+  && getMessageReactionTargetId(message)
+  && !message?.mediaPath
+  && !isDeletedForEveryone(message)
+  && ['submitted', 'server_ack', 'delivery_ack', 'read', 'played'].includes(message?.status)
+);
+
+const messageActionText = message => String(
+  message?.type === 'incoming' ? message?.message : message?.text,
+).trim() || '[Pesan]';
+
+const getQuotedSenderLabel = message =>
+  message?.quotedSender || (message?.quotedFromMe === true ? 'Anda' : 'Pesan');
+
+const getQuotedPreviewText = message => String(message?.quotedText || '[Pesan]').trim();
+
+const clearComposerContext = () => {
+  if (editingMessage.value) replyText.value = '';
+  editingMessage.value = null;
+  replyingToMessage.value = null;
+};
+
+const startReplyToMessage = async message => {
+  const targetMessageId = getMessageReactionTargetId(message);
+  if (!targetMessageId || !canReplyToMessage(message)) return;
+
+  if (editingMessage.value) replyText.value = '';
+  editingMessage.value = null;
+  replyingToMessage.value = {
+    targetMessageId,
+    targetFromMe: message.type === 'outgoing',
+    senderLabel: message.type === 'outgoing'
+      ? 'Anda'
+      : message.pushName || getMessageSenderPhone(message) || 'pesan ini',
+    text: messageActionText(message),
+  };
+  closeMessagePopups();
+  await focusReplyInput({ force: true, afterPaint: true });
+};
+
+const startEditMessage = async message => {
+  if (!canEditMessage(message)) return;
+  const targetMessageId = getMessageReactionTargetId(message);
+  const originalText = messageActionText(message);
+
+  clearAttachment();
+  closeChatTemplatePicker();
+  replyingToMessage.value = null;
+  editingMessage.value = { targetMessageId, originalText };
+  replyText.value = originalText;
+  closeMessagePopups();
+  await focusReplyInput({ force: true, afterPaint: true });
+  await nextTick();
+  replyTextarea.value?.select?.();
+};
+
+const findQuotedTarget = quotedMessageId => allMessages.value.find(message => {
+  if (message.type === 'incoming') return message.id === quotedMessageId;
+  return getOutgoingMessageIdentityValues(message).includes(quotedMessageId);
+});
+
+const focusQuotedMessage = async message => {
+  const quotedMessageId = String(message?.quotedMessageId || '');
+  if (!quotedMessageId) return;
+
+  let target = findQuotedTarget(quotedMessageId);
+  for (
+    let attempt = 0;
+    !target && conversationHasMoreHistory.value && attempt < 8;
+    attempt += 1
+  ) {
+    await loadOlderConversationMessages();
+    target = findQuotedTarget(quotedMessageId);
+  }
+
+  if (!target || !(await focusInboxMessage(getMessageDomId(target)))) {
+    toast.info('Pesan asal tidak tersedia dalam riwayat Inbox');
+  }
+};
 
 const isMessageActionMenuOpen = message =>
   messageActionMenuKey.value === getReactionMessageKey(message);
@@ -2233,6 +2386,45 @@ const loadMessages = async () => {
   }
 };
 
+const applyOutgoingEditedMessage = data => {
+  if (!data || typeof data.message !== 'string') return false;
+  const eventIds = new Set(getOutgoingMessageIdentityValues(data));
+  if (!eventIds.size) return false;
+
+  let changed = false;
+  sentMessages.value = sentMessages.value.map(message => {
+    const matches = getOutgoingMessageIdentityValues(message).some(id => eventIds.has(id));
+    if (!matches) return message;
+    changed = true;
+    return {
+      ...message,
+      text: data.message,
+      editedAt: data.editedAt || new Date().toISOString(),
+      ...(data.id ? { id: data.id } : {}),
+      ...(data.waMessageId ? { waMessageId: data.waMessageId } : {}),
+    };
+  });
+
+  const summaryIndex = outgoingConversationSummaries.value.findIndex(message =>
+    getOutgoingMessageIdentityValues(message).some(id => eventIds.has(id))
+  );
+  if (summaryIndex >= 0) {
+    outgoingConversationSummaries.value[summaryIndex] = {
+      ...outgoingConversationSummaries.value[summaryIndex],
+      message: data.message,
+      editedAt: data.editedAt || new Date().toISOString(),
+    };
+    outgoingConversationSummaries.value = [...outgoingConversationSummaries.value];
+  }
+
+  if (changed && selectedConversation.value?.from) {
+    cacheConversationSnapshot(selectedConversation.value.from, {
+      sentMessages: sentMessages.value,
+    });
+  }
+  return changed;
+};
+
 const setupSocketListener = () => {
   // Cleanup previous listener
   if (socketCleanup) {
@@ -2273,6 +2465,7 @@ const setupSocketListener = () => {
     const profileUpdateEventName = `incoming:${sessionId}:profile-updated`;
     const mediaUpdateEventName = `incoming:${sessionId}:media-updated`;
     const messageEditedEventName = `incoming:${sessionId}:message-edited`;
+    const outgoingMessageEditedEventName = `outgoing:${sessionId}:message-edited`;
     const statusEventName = `device:${selectedDeviceId.value}:message-status`;
     const reactionEventName = `reaction:${sessionId}`;
     const deletedMessageEventName = `message-deleted:${sessionId}`;
@@ -2460,6 +2653,10 @@ const setupSocketListener = () => {
       }
     };
 
+    const handleOutgoingMessageEdited = data => {
+      applyOutgoingEditedMessage(data);
+    };
+
     const handleReaction = data => {
       applyInboxReactionEvent(data);
       if (
@@ -2481,6 +2678,7 @@ const setupSocketListener = () => {
     socket.on(profileUpdateEventName, handleProfileUpdate); // ✅ NEW: Listen for profile picture updates
     socket.on(mediaUpdateEventName, handleMediaUpdate);
     socket.on(messageEditedEventName, handleMessageEdited);
+    socket.on(outgoingMessageEditedEventName, handleOutgoingMessageEdited);
     socket.on(statusEventName, handleMessageStatus);
     socket.on(reactionEventName, handleReaction);
     socket.on(deletedMessageEventName, handleDeletedMessage);
@@ -2491,6 +2689,7 @@ const setupSocketListener = () => {
       socket.off(profileUpdateEventName, handleProfileUpdate); // ✅ Cleanup profile update listener
       socket.off(mediaUpdateEventName, handleMediaUpdate);
       socket.off(messageEditedEventName, handleMessageEdited);
+      socket.off(outgoingMessageEditedEventName, handleOutgoingMessageEdited);
       socket.off(statusEventName, handleMessageStatus);
       socket.off(reactionEventName, handleReaction);
       socket.off(deletedMessageEventName, handleDeletedMessage);
@@ -2722,6 +2921,8 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
     failedMediaIds.value = new Set();
     activatedMediaIds.value = new Set();
     replyText.value = '';
+    replyingToMessage.value = null;
+    editingMessage.value = null;
     clearAttachment();
     resetAttachmentDrag();
     closeMessagePopups();
@@ -2738,6 +2939,8 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
       : conv.messages,
   };
   replyText.value = '';
+  replyingToMessage.value = null;
+  editingMessage.value = null;
 
   try {
     await focusReplyInput({ force: true });
@@ -3080,6 +3283,10 @@ const mapTimelineIncomingMessage = row => ({
   isRead: Boolean(row.isRead),
   receivedAt: row.timestamp,
   editedAt: row.editedAt || null,
+  quotedMessageId: row.quotedMessageId || null,
+  quotedFromMe: row.quotedFromMe ?? null,
+  quotedText: row.quotedText || '',
+  quotedSender: row.quotedSender || null,
   participant: row.participant || null,
   pushName: row.pushName || null,
   groupName: row.groupName || null,
@@ -3096,6 +3303,11 @@ const mapTimelineOutgoingMessage = row => {
     fileName: row.fileName || '',
     mediaType: row.mediaType || '',
     timestamp: row.timestamp,
+    editedAt: row.editedAt || null,
+    quotedMessageId: row.quotedMessageId || null,
+    quotedFromMe: row.quotedFromMe ?? null,
+    quotedText: row.quotedText || '',
+    quotedSender: row.quotedSender || null,
     status: resolveOutgoingUiStatus(row.status, {
       readCount: readBy.length,
       isGroup: Boolean(row.isGroup),
@@ -3292,6 +3504,8 @@ const closeConversation = () => {
   closeChatTemplatePicker();
   closeImagePreview();
   clearAttachment();
+  replyingToMessage.value = null;
+  editingMessage.value = null;
   conversationReactions.value = [];
   closeReactionDetails();
   reactionPickerMessageKey.value = '';
@@ -3468,6 +3682,12 @@ const handleAttachmentChange = (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
 
+  if (editingMessage.value) {
+    toast.warning('Lampiran tidak dapat ditambahkan saat mengedit pesan');
+    event.target.value = '';
+    return;
+  }
+
   if (!isSupportedAttachment(file)) {
     toast.error('Tipe file tidak didukung');
     event.target.value = '';
@@ -3498,6 +3718,11 @@ const handleReplyPaste = (event) => {
   if (!imageFile) return;
 
   event.preventDefault();
+
+  if (editingMessage.value) {
+    toast.warning('Gambar tidak dapat ditempel saat mengedit pesan');
+    return;
+  }
 
   if (sendingReply.value) {
     toast.warning('Tunggu hingga pesan sebelumnya selesai dikirim');
@@ -3550,6 +3775,10 @@ const handleConversationDrop = (event) => {
   resetAttachmentDrag();
 
   if (files.length === 0) return;
+  if (editingMessage.value) {
+    toast.warning('Lampiran tidak dapat ditambahkan saat mengedit pesan');
+    return;
+  }
   if (sendingReply.value) {
     toast.warning('Tunggu hingga pesan sebelumnya selesai dikirim');
     return;
@@ -3588,6 +3817,9 @@ const sendMediaReply = async () => {
     document: file.name,
   };
   const tempId = createOutgoingMessageId();
+  const activeReply = replyingToMessage.value
+    ? { ...replyingToMessage.value }
+    : null;
   const optimisticMessage = {
     tempId,
     text: caption || placeholders[kind],
@@ -3598,6 +3830,10 @@ const sendMediaReply = async () => {
     isGroup,
     readBy: [],
     readCount: 0,
+    quotedMessageId: activeReply?.targetMessageId || null,
+    quotedFromMe: activeReply?.targetFromMe ?? null,
+    quotedText: activeReply?.text || '',
+    quotedSender: activeReply?.senderLabel || null,
   };
 
   sentMessages.value.push(optimisticMessage);
@@ -3605,6 +3841,7 @@ const sendMediaReply = async () => {
   attachmentPreviewUrl.value = '';
   if (attachmentInput.value) attachmentInput.value.value = '';
   replyText.value = '';
+  replyingToMessage.value = null;
   sendingReply.value = true;
   setTimeout(() => scrollToBottom(), 50);
 
@@ -3613,6 +3850,10 @@ const sendMediaReply = async () => {
     formData.append('recipient', recipient);
     formData.append('caption', caption);
     formData.append('messageId', tempId);
+    if (activeReply) {
+      formData.append('replyToMessageId', activeReply.targetMessageId);
+      formData.append('replyToFromMe', String(activeReply.targetFromMe));
+    }
     formData.append('media', file);
 
     const { data } = await deviceApi.post('/messages/send/media', formData);
@@ -3642,6 +3883,10 @@ const sendMediaReply = async () => {
         fileName: saved.fileName || optimisticMessage.fileName,
         timestamp: saved.createdAt || optimisticMessage.timestamp,
         status: responseUiStatus,
+        quotedMessageId: saved.quotedMessageId || optimisticMessage.quotedMessageId,
+        quotedFromMe: saved.quotedFromMe ?? optimisticMessage.quotedFromMe,
+        quotedText: saved.quotedText || optimisticMessage.quotedText,
+        quotedSender: saved.quotedSender || optimisticMessage.quotedSender,
       };
       sentMessages.value = [...sentMessages.value];
       flushPendingMessageStatusEvents();
@@ -3697,9 +3942,56 @@ const sendMediaReply = async () => {
   }
 };
 
+const submitMessageEdit = async () => {
+  const editTarget = editingMessage.value;
+  if (!editTarget || sendingReply.value) return;
+
+  const newText = replyText.value.trim();
+  if (!newText) {
+    toast.warning('Pesan tidak boleh kosong');
+    return;
+  }
+  if (newText === editTarget.originalText.trim()) {
+    clearComposerContext();
+    return;
+  }
+
+  const device = devices.value.find(item => item.id === selectedDeviceId.value);
+  if (!device?.isConnected) {
+    toast.error('Device WhatsApp belum terhubung');
+    return;
+  }
+
+  sendingReply.value = true;
+  try {
+    const { data } = await deviceApi.put('/messages/edit', {
+      targetMessageId: editTarget.targetMessageId,
+      newText,
+    });
+    const edited = data?.message || {
+      id: editTarget.targetMessageId,
+      message: newText,
+      editedAt: new Date().toISOString(),
+    };
+    applyOutgoingEditedMessage(edited);
+    replyText.value = '';
+    editingMessage.value = null;
+    toast.success('Pesan berhasil diedit');
+  } catch (error) {
+    toast.error(error?.response?.data?.message || error?.message || 'Gagal mengedit pesan');
+  } finally {
+    sendingReply.value = false;
+  }
+};
+
 // Send reply message
 const sendReply = async () => {
   if (sendingReply.value || !selectedConversation.value) {
+    return;
+  }
+
+  if (editingMessage.value) {
+    await submitMessageEdit();
     return;
   }
 
@@ -3717,6 +4009,9 @@ const sendReply = async () => {
 
   const messageText = replyText.value.trim();
   const tempId = createOutgoingMessageId();
+  const activeReply = replyingToMessage.value
+    ? { ...replyingToMessage.value }
+    : null;
   
   const optimisticMessage = {
     tempId,
@@ -3726,10 +4021,15 @@ const sendReply = async () => {
     isGroup: selectedConversation.value.isGroup || false,
     readBy: [],
     readCount: 0,
+    quotedMessageId: activeReply?.targetMessageId || null,
+    quotedFromMe: activeReply?.targetFromMe ?? null,
+    quotedText: activeReply?.text || '',
+    quotedSender: activeReply?.senderLabel || null,
   };
   
   sentMessages.value.push(optimisticMessage);
   replyText.value = '';
+  replyingToMessage.value = null;
   setTimeout(() => scrollToBottom(), 50);
   
   sendingReply.value = true;
@@ -3755,6 +4055,14 @@ const sendReply = async () => {
         message: messageText,
         delay: 0,
         options: { messageId: tempId },
+        ...(activeReply
+          ? {
+              replyTo: {
+                targetMessageId: activeReply.targetMessageId,
+                targetFromMe: activeReply.targetFromMe,
+              },
+            }
+          : {}),
       }
     ]);
 
@@ -3801,6 +4109,10 @@ const sendReply = async () => {
         waMessageId: waMessageId,
         tempId: waMessageId,
         timestamp: messageTimestamp ? new Date(Number(messageTimestamp) * 1000).toISOString() : sentMessages.value[msgIndex].timestamp,
+        quotedMessageId: savedMessage?.quotedMessageId || sentMessages.value[msgIndex].quotedMessageId,
+        quotedFromMe: savedMessage?.quotedFromMe ?? sentMessages.value[msgIndex].quotedFromMe,
+        quotedText: savedMessage?.quotedText || sentMessages.value[msgIndex].quotedText,
+        quotedSender: savedMessage?.quotedSender || sentMessages.value[msgIndex].quotedSender,
       };
       
       sentMessages.value = [...sentMessages.value];
@@ -3818,6 +4130,10 @@ const sendReply = async () => {
           isGroup: selectedConversation.value.isGroup || false,
           readBy: [],
           readCount: 0,
+          quotedMessageId: savedMessage?.quotedMessageId || activeReply?.targetMessageId || null,
+          quotedFromMe: savedMessage?.quotedFromMe ?? activeReply?.targetFromMe ?? null,
+          quotedText: savedMessage?.quotedText || activeReply?.text || '',
+          quotedSender: savedMessage?.quotedSender || activeReply?.senderLabel || null,
         };
         
         sentMessages.value.push(newMessage);
@@ -4515,6 +4831,12 @@ function handleImagePreviewKeydown(event) {
   if (reactionPickerMessageKey.value || messageActionMenuKey.value) {
     event.preventDefault();
     closeMessagePopups();
+    return;
+  }
+
+  if (editingMessage.value || replyingToMessage.value) {
+    event.preventDefault();
+    clearComposerContext();
     return;
   }
 
@@ -6088,6 +6410,52 @@ const handleMediaError = (event, message) => {
   background: rgba(15, 23, 42, 0.08);
 }
 
+.bubble-quoted-message {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 0 9px;
+  padding: 8px 10px;
+  overflow: hidden;
+  border: 0;
+  border-left: 3px solid var(--theme-accent);
+  border-radius: 8px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bubble-quoted-message strong,
+.bubble-quoted-message span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble-quoted-message strong {
+  color: var(--theme-accent);
+  font-size: 12px;
+}
+
+.bubble-quoted-message span {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.chat-bubble.outgoing .bubble-quoted-message {
+  border-left-color: rgba(255, 255, 255, 0.9);
+  background: rgba(15, 23, 42, 0.2);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.chat-bubble.outgoing .bubble-quoted-message strong {
+  color: #ffffff;
+}
+
 .media-load-button {
   display: inline-flex;
   align-items: center;
@@ -6378,6 +6746,74 @@ const handleMediaError = (event, message) => {
 .btn-attachment svg {
   width: 20px;
   height: 20px;
+}
+
+.composer-message-context {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px 9px 13px;
+  border-left: 3px solid var(--theme-accent);
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+}
+
+.composer-message-context.edit {
+  border-left-color: #f59e0b;
+}
+
+.composer-message-context > div {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.composer-message-context strong,
+.composer-message-context span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-message-context strong {
+  color: var(--theme-accent);
+  font-size: 12px;
+}
+
+.composer-message-context.edit strong {
+  color: #d97706;
+}
+
+.composer-message-context span {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.composer-message-context > button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.composer-message-context > button:hover {
+  background: var(--theme-surface-hover);
+  color: var(--theme-text);
+}
+
+.composer-message-context > button svg {
+  width: 17px;
+  height: 17px;
 }
 
 .btn-chat-template.active {
@@ -7109,6 +7545,11 @@ const handleMediaError = (event, message) => {
     line-height: 1.45;
   }
 
+  .bubble-quoted-message {
+    margin-bottom: 7px;
+    padding: 7px 9px;
+  }
+
   .message-reaction-control.incoming {
     right: -34px;
   }
@@ -7146,6 +7587,10 @@ const handleMediaError = (event, message) => {
 
   .reply-input-row {
     gap: 8px;
+  }
+
+  .composer-message-context {
+    padding: 8px 9px 8px 11px;
   }
 
   .btn-attachment,
