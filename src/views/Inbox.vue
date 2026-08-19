@@ -439,18 +439,62 @@
             >
               Muat pesan sebelumnya
             </button>
-            <!-- All messages (incoming + outgoing) sorted by timestamp -->
+            <!-- Messages grouped by local calendar day, like WhatsApp. -->
+            <template
+              v-for="({ kind, key: timelineKey, label, message: msg }) in chatTimelineItems"
+              :key="timelineKey"
+            >
+            <div v-if="kind === 'date'" class="chat-date-separator" role="separator">
+              <span>{{ label }}</span>
+            </div>
             <div
-              v-for="msg in allMessages"
-              :key="msg.pkId || msg.tempId"
+              v-else
               class="chat-bubble"
               :class="[
                 msg.type === 'incoming' ? 'incoming' : 'outgoing',
-                { 'message-target-highlight': highlightedMessageId === getMessageDomId(msg) },
+                {
+                  'group-incoming': msg.type === 'incoming' && selectedConversation.isGroup,
+                  'message-target-highlight': highlightedMessageId === getMessageDomId(msg),
+                  'message-swipe-active': isMessageSwipeActive(msg),
+                },
               ]"
               :data-message-id="getMessageDomId(msg)"
+              @contextmenu.prevent="openMessageContextMenu(msg, $event)"
+              @pointerdown="handleMessageGestureStart(msg, $event)"
+              @pointermove="handleMessageGestureMove(msg, $event)"
+              @pointerup="handleMessageGestureEnd(msg, $event)"
+              @pointercancel="cancelMessageGesture"
+              @click.capture="handleMessageGestureClick"
             >
-              <div class="bubble-content">
+              <span
+                v-if="canReplyToMessage(msg)"
+                class="swipe-reply-indicator"
+                :class="msg.type"
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M9 7 4 12l5 5" />
+                  <path d="M5 12h8a6 6 0 0 1 6 6" />
+                </svg>
+              </span>
+              <div
+                v-if="msg.type === 'incoming' && selectedConversation.isGroup"
+                class="group-sender-avatar"
+                :title="msg.pushName || getMessageSenderPhone(msg) || 'Pengirim grup'"
+              >
+                <span>{{ getGroupSenderInitial(msg) }}</span>
+                <img
+                  v-if="getGroupSenderProfileUrl(msg)"
+                  :key="getGroupSenderProfileUrl(msg)"
+                  :src="getGroupSenderProfileUrl(msg)"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  @load="handleGroupSenderProfileLoad(msg)"
+                  @error="handleGroupSenderProfileError($event, msg)"
+                />
+              </div>
+              <div class="bubble-content" :style="getMessageSwipeStyle(msg)">
                 <!-- Sender name for group incoming messages -->
                 <div v-if="msg.type === 'incoming' && selectedConversation.isGroup" class="bubble-sender">
                   <span>{{ msg.pushName || 'Tidak dikenal' }}</span>
@@ -466,8 +510,26 @@
                   :title="'Buka pesan yang dibalas'"
                   @click.stop="focusQuotedMessage(msg)"
                 >
-                  <strong>{{ getQuotedSenderLabel(msg) }}</strong>
-                  <span>{{ getQuotedPreviewText(msg) }}</span>
+                  <span v-if="isQuotedImageMedia(msg)" class="quoted-media-thumbnail">
+                    <img
+                      :src="getQuotedMediaThumbnailUrl(msg)"
+                      alt="Preview gambar yang dibalas"
+                      loading="lazy"
+                      decoding="async"
+                      @error="handleQuotedMediaError"
+                    />
+                  </span>
+                  <span
+                    v-else-if="getQuotedMediaInfo(msg)"
+                    class="quoted-media-placeholder"
+                    aria-hidden="true"
+                  >
+                    {{ getQuotedMediaIcon(msg) }}
+                  </span>
+                  <span class="bubble-quoted-copy">
+                    <strong>{{ getQuotedSenderLabel(msg) }}</strong>
+                    <span>{{ getQuotedPreviewText(msg) }}</span>
+                  </span>
                 </button>
                 
                 <!-- Incoming WhatsApp sticker (static or animated WebP) -->
@@ -599,7 +661,7 @@
                   </template>
                   
                   <span v-if="msg.editedAt" class="message-edited-label">diedit</span>
-                  {{ msg.type === 'incoming' ? formatFullTime(msg.receivedAt) : formatTime(msg.timestamp) }}
+                  {{ formatInboxBubbleTime(msg.timestamp) }}
                   
                   <!-- ✅ Read count badge untuk grup messages -->
                   <span v-if="msg.type === 'outgoing' && msg.isGroup && msg.readCount > 0" class="read-count-badge" :title="`Dibaca oleh ${msg.readCount} orang`">
@@ -681,40 +743,58 @@
               <Teleport to="body">
                 <div
                   v-if="isMessageActionMenuOpen(msg)"
-                  :ref="setMessageActionMenuElement"
-                  class="message-actions-menu"
-                  :class="msg.type"
-                  :style="messageActionMenuStyle"
-                  @click.stop
+                  class="message-actions-layer"
+                  :class="`message-actions-layer--${messageActionMenuPresentation}`"
+                  @click.self="closeMessagePopups"
                 >
-                  <button
-                    v-if="canReplyToMessage(msg)"
-                    type="button"
-                    @click="startReplyToMessage(msg)"
+                  <div
+                    :ref="setMessageActionMenuElement"
+                    class="message-actions-menu"
+                    :class="[
+                      msg.type,
+                      `message-actions-menu--${messageActionMenuPresentation}`,
+                    ]"
+                    :style="messageActionMenuPresentation === 'popover' ? messageActionMenuStyle : undefined"
+                    role="menu"
+                    @click.stop
                   >
-                    Balas
-                  </button>
-                  <button
-                    v-if="canEditMessage(msg)"
-                    type="button"
-                    @click="startEditMessage(msg)"
-                  >
-                    Edit pesan
-                  </button>
-                  <button type="button" @click="confirmDeleteMessage(msg, 'me')">
-                    Hapus untuk saya
-                  </button>
-                  <button
-                    v-if="msg.type === 'outgoing' && !isDeletedForEveryone(msg)"
-                    type="button"
-                    class="danger"
-                    @click="confirmDeleteMessage(msg, 'everyone')"
-                  >
-                    Hapus untuk semua
-                  </button>
+                    <div v-if="messageActionMenuPresentation === 'sheet'" class="message-actions-sheet-handle"></div>
+                    <div v-if="messageActionMenuPresentation === 'sheet'" class="message-actions-sheet-title">
+                      Aksi pesan
+                    </div>
+                    <button
+                      v-if="canReplyToMessage(msg)"
+                      type="button"
+                      role="menuitem"
+                      @click="startReplyToMessage(msg)"
+                    >
+                      Balas
+                    </button>
+                    <button
+                      v-if="canEditMessage(msg)"
+                      type="button"
+                      role="menuitem"
+                      @click="startEditMessage(msg)"
+                    >
+                      Edit pesan
+                    </button>
+                    <button type="button" role="menuitem" @click="confirmDeleteMessage(msg, 'me')">
+                      Hapus untuk saya
+                    </button>
+                    <button
+                      v-if="msg.type === 'outgoing' && !isDeletedForEveryone(msg)"
+                      type="button"
+                      role="menuitem"
+                      class="danger"
+                      @click="confirmDeleteMessage(msg, 'everyone')"
+                    >
+                      Hapus untuk semua
+                    </button>
+                  </div>
                 </div>
               </Teleport>
             </div>
+            </template>
           </div>
           
           <!-- Reply Input -->
@@ -1124,6 +1204,11 @@ import { connectSocket, getSocket } from '../api/socket.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
 import { getInboxMediaType } from '../utils/inboxMedia.js';
 import {
+  formatInboxBubbleTime,
+  formatInboxDateLabel,
+  getLocalCalendarKey,
+} from '../utils/inboxTimeline.js';
+import {
   insertComposerCharacter,
   shouldRedirectInboxTyping,
 } from '../utils/inboxComposer.js';
@@ -1197,6 +1282,8 @@ const sendingReactionMessageKey = ref('');
 const messageActionMenuKey = ref('');
 const messageActionMenuAnchor = ref(null);
 const messageActionMenuElement = ref(null);
+const messageActionMenuPresentation = ref('popover');
+const messageActionMenuPoint = ref(null);
 const hiddenMessageActionMenuStyle = () => ({
   top: '0px',
   left: '0px',
@@ -1204,6 +1291,9 @@ const hiddenMessageActionMenuStyle = () => ({
   visibility: 'hidden',
 });
 const messageActionMenuStyle = ref(hiddenMessageActionMenuStyle());
+const activeMessageSwipe = ref({ key: '', offset: 0 });
+const senderProfileRetryVersions = ref({});
+const chatCalendarNow = ref(Date.now());
 const imagePreview = ref(null);
 const highlightedMessageId = ref('');
 const isPreparingConversation = ref(false);
@@ -1315,10 +1405,19 @@ const conversationSnapshotCache = new Map();
 const MAX_CONVERSATION_SNAPSHOTS = 10;
 const reactionProfileRetryCounts = new Map();
 const reactionProfileRetryTimers = new Map();
+const senderProfileRetryCounts = new Map();
+const senderProfileRetryTimers = new Map();
 const statusReconciliationTimers = new Map();
 const pendingMessageStatusEvents = new Map();
 const pendingMessageStatusRetryTimers = new Set();
 const PENDING_MESSAGE_STATUS_TTL_MS = 15_000;
+const MESSAGE_LONG_PRESS_MS = 520;
+const MESSAGE_SWIPE_TRIGGER_PX = 58;
+const MESSAGE_SWIPE_MAX_PX = 76;
+let messageGesture = null;
+let messageLongPressTimer = null;
+let suppressMessageClickUntil = 0;
+let chatCalendarTimer = null;
 
 const confirmedOutgoingError = message => {
   const error = new Error(message);
@@ -1617,6 +1716,30 @@ const allMessages = computed(() => {
   return merged;
 });
 
+const chatTimelineItems = computed(() => {
+  const items = [];
+  let previousDateKey = '';
+  allMessages.value.forEach(message => {
+    const dateKey = getLocalCalendarKey(message.timestamp);
+    if (dateKey !== previousDateKey) {
+      items.push({
+        kind: 'date',
+        key: `date:${dateKey}`,
+        label: formatInboxDateLabel(message.timestamp, chatCalendarNow.value),
+        message: null,
+      });
+      previousDateKey = dateKey;
+    }
+    items.push({
+      kind: 'message',
+      key: `message:${message.type}:${getMessageDomId(message)}`,
+      label: '',
+      message,
+    });
+  });
+  return items;
+});
+
 const reactionGroupsByMessageKey = computed(() => {
   const grouped = new Map();
   allMessages.value.forEach(message => {
@@ -1744,6 +1867,8 @@ const closeMessagePopups = () => {
   reactionPickerAnchor.value = null;
   messageActionMenuKey.value = '';
   messageActionMenuAnchor.value = null;
+  messageActionMenuPoint.value = null;
+  messageActionMenuPresentation.value = 'popover';
   messageActionMenuElement.value = null;
   messageActionMenuStyle.value = hiddenMessageActionMenuStyle();
 };
@@ -1798,6 +1923,45 @@ const getQuotedSenderLabel = message =>
 
 const getQuotedPreviewText = message => String(message?.quotedText || '[Pesan]').trim();
 
+const getQuotedMediaInfo = message => {
+  if (!message?.quotedMessageId) return null;
+  const target = findQuotedTarget(message.quotedMessageId);
+  const mediaPath = message.quotedMediaPath || target?.mediaPath || '';
+  if (!mediaPath) return null;
+  const mediaType = message.quotedMediaType
+    || target?.mediaType
+    || getInboxMediaType(target || {
+      mediaPath,
+      fileName: message.quotedFileName,
+      message: message.quotedText,
+    });
+  return {
+    mediaPath,
+    mediaType: mediaType || 'document',
+    fileName: message.quotedFileName || target?.fileName || '',
+  };
+};
+
+const isQuotedImageMedia = message =>
+  getQuotedMediaInfo(message)?.mediaType === 'image';
+
+const getQuotedMediaThumbnailUrl = message => {
+  const info = getQuotedMediaInfo(message);
+  return info ? mediaThumbnailUrl(info.mediaPath) : '';
+};
+
+const getQuotedMediaIcon = message => ({
+  video: '▶',
+  audio: '♪',
+  document: '▤',
+}[getQuotedMediaInfo(message)?.mediaType] || '▧');
+
+const handleQuotedMediaError = event => {
+  if (event?.currentTarget?.parentElement) {
+    event.currentTarget.parentElement.style.display = 'none';
+  }
+};
+
 const clearComposerContext = () => {
   if (editingMessage.value) replyText.value = '';
   editingMessage.value = null;
@@ -1817,6 +1981,9 @@ const startReplyToMessage = async message => {
       ? 'Anda'
       : message.pushName || getMessageSenderPhone(message) || 'pesan ini',
     text: messageActionText(message),
+    mediaPath: message.mediaPath || '',
+    mediaType: message.mediaType || getInboxMediaType(message) || '',
+    fileName: message.fileName || '',
   };
   closeMessagePopups();
   await focusReplyInput({ force: true, afterPaint: true });
@@ -1871,11 +2038,25 @@ const setMessageActionMenuElement = element => {
 
 const updateMessageActionMenuPosition = () => {
   const anchor = messageActionMenuAnchor.value;
+  const point = messageActionMenuPoint.value;
   const menu = messageActionMenuElement.value;
   const boundary = chatMessagesContainer.value;
-  if (!anchor || !menu || !boundary || !messageActionMenuKey.value) return;
+  if (
+    messageActionMenuPresentation.value !== 'popover'
+    || (!anchor && !point)
+    || !menu
+    || !boundary
+    || !messageActionMenuKey.value
+  ) return;
 
-  const anchorRect = anchor.getBoundingClientRect();
+  const anchorRect = point
+    ? {
+        left: point.x,
+        right: point.x,
+        top: point.y,
+        bottom: point.y,
+      }
+    : anchor.getBoundingClientRect();
   const menuRect = menu.getBoundingClientRect();
   const boundaryRect = boundary.getBoundingClientRect();
   const gap = 6;
@@ -1919,10 +2100,160 @@ const toggleMessageActionMenu = async (message, event) => {
   }
 
   messageActionMenuAnchor.value = event?.currentTarget || null;
+  messageActionMenuPoint.value = null;
+  messageActionMenuPresentation.value = 'popover';
   messageActionMenuStyle.value = hiddenMessageActionMenuStyle();
   messageActionMenuKey.value = messageKey;
   await nextTick();
   updateMessageActionMenuPosition();
+};
+
+const openMessageActionMenu = async (
+  message,
+  { anchor = null, point = null, presentation = 'popover' } = {},
+) => {
+  if (!canDeleteMessage(message)) return;
+  reactionPickerMessageKey.value = '';
+  reactionPickerAnchor.value = null;
+  messageActionMenuAnchor.value = anchor;
+  messageActionMenuPoint.value = point;
+  messageActionMenuPresentation.value = presentation;
+  messageActionMenuStyle.value = hiddenMessageActionMenuStyle();
+  messageActionMenuKey.value = getReactionMessageKey(message);
+  await nextTick();
+  if (presentation === 'popover') updateMessageActionMenuPosition();
+};
+
+const openMessageContextMenu = (message, event) => {
+  if (!canDeleteMessage(message)) return;
+  suppressMessageClickUntil = Date.now() + 250;
+  const useBottomSheet = event?.pointerType === 'touch'
+    || window.matchMedia?.('(hover: none)')?.matches;
+  void openMessageActionMenu(message, {
+    point: useBottomSheet ? null : { x: event.clientX, y: event.clientY },
+    presentation: useBottomSheet ? 'sheet' : 'popover',
+  });
+};
+
+const clearMessageLongPress = () => {
+  if (messageLongPressTimer) clearTimeout(messageLongPressTimer);
+  messageLongPressTimer = null;
+};
+
+const resetMessageSwipe = () => {
+  activeMessageSwipe.value = { key: '', offset: 0 };
+};
+
+const isMessageSwipeActive = message =>
+  activeMessageSwipe.value.key === getReactionMessageKey(message);
+
+const getMessageSwipeStyle = message => {
+  if (!isMessageSwipeActive(message)) return undefined;
+  return { transform: `translateX(${activeMessageSwipe.value.offset}px)` };
+};
+
+const isMessageGestureInteractiveTarget = target => Boolean(
+  typeof target?.closest === 'function'
+  && target.closest(
+    'button, a, input, textarea, audio, video, .reaction-picker, .message-actions-menu',
+  ),
+);
+
+const handleMessageGestureStart = (message, event) => {
+  if (
+    event.pointerType === 'mouse'
+    || event.button !== 0
+    || !canDeleteMessage(message)
+    || isMessageGestureInteractiveTarget(event.target)
+  ) return;
+
+  clearMessageLongPress();
+  resetMessageSwipe();
+  messageGesture = {
+    message,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    horizontal: false,
+    moved: false,
+    longPressed: false,
+  };
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+  messageLongPressTimer = setTimeout(() => {
+    if (!messageGesture || messageGesture.moved) return;
+    messageGesture.longPressed = true;
+    suppressMessageClickUntil = Date.now() + 700;
+    navigator.vibrate?.(20);
+    void openMessageActionMenu(message, { presentation: 'sheet' });
+  }, MESSAGE_LONG_PRESS_MS);
+};
+
+const handleMessageGestureMove = (message, event) => {
+  if (!messageGesture || messageGesture.pointerId !== event.pointerId) return;
+  const deltaX = event.clientX - messageGesture.startX;
+  const deltaY = event.clientY - messageGesture.startY;
+  const absoluteX = Math.abs(deltaX);
+  const absoluteY = Math.abs(deltaY);
+
+  if (!messageGesture.horizontal && (absoluteX > 7 || absoluteY > 7)) {
+    messageGesture.moved = true;
+    clearMessageLongPress();
+    if (absoluteY >= absoluteX) return;
+    messageGesture.horizontal = true;
+  }
+  if (!messageGesture.horizontal || !canReplyToMessage(message)) return;
+
+  const direction = message.type === 'incoming' ? 1 : -1;
+  const directionalDistance = deltaX * direction;
+  if (directionalDistance <= 0) {
+    resetMessageSwipe();
+    return;
+  }
+
+  event.preventDefault();
+  const easedDistance = Math.min(
+    MESSAGE_SWIPE_MAX_PX,
+    directionalDistance * 0.82,
+  );
+  activeMessageSwipe.value = {
+    key: getReactionMessageKey(message),
+    offset: easedDistance * direction,
+  };
+};
+
+const finishMessageGesture = async (event, cancelled = false) => {
+  if (!messageGesture || messageGesture.pointerId !== event?.pointerId) return;
+  const gesture = messageGesture;
+  const reachedReplyThreshold = Boolean(
+    !cancelled
+    && gesture.horizontal
+    && Math.abs(activeMessageSwipe.value.offset) >= MESSAGE_SWIPE_TRIGGER_PX,
+  );
+  clearMessageLongPress();
+  resetMessageSwipe();
+  messageGesture = null;
+
+  if (gesture.longPressed || gesture.moved) {
+    suppressMessageClickUntil = Date.now() + 500;
+  }
+  if (reachedReplyThreshold) {
+    navigator.vibrate?.(12);
+    await startReplyToMessage(gesture.message);
+  }
+};
+
+const handleMessageGestureEnd = (message, event) => {
+  void finishMessageGesture(event);
+};
+
+const cancelMessageGesture = event => {
+  void finishMessageGesture(event, true);
+};
+
+const handleMessageGestureClick = event => {
+  if (Date.now() >= suppressMessageClickUntil) return;
+  event.preventDefault();
+  event.stopPropagation();
 };
 
 const sendReaction = async (message, selectedEmoji) => {
@@ -2548,14 +2879,26 @@ const setupSocketListener = () => {
     
     // ✅ NEW: Handle profile picture update from background fetch
     const handleProfileUpdate = (data) => {
+      const profilePatch = {
+        ...(data.profilePicUrl !== undefined ? { profilePicUrl: data.profilePicUrl } : {}),
+        ...(data.groupPicUrl !== undefined ? { groupPicUrl: data.groupPicUrl } : {}),
+        ...(data.profilePictureStatus !== undefined
+          ? { profilePictureStatus: data.profilePictureStatus }
+          : {}),
+        ...(data.senderProfilePicUrl !== undefined
+          ? { senderProfilePicUrl: data.senderProfilePicUrl }
+          : {}),
+        ...(data.senderProfileStatus !== undefined
+          ? { senderProfileStatus: data.senderProfileStatus }
+          : {}),
+      };
       // Update message in messages list
       const msgIndex = messages.value.findIndex(m => m.id === data.id);
       if (msgIndex !== -1) {
         // ✅ Force reactivity by creating new object
         messages.value[msgIndex] = { 
           ...messages.value[msgIndex], 
-          profilePicUrl: data.profilePicUrl,
-          groupPicUrl: data.groupPicUrl 
+          ...profilePatch,
         };
         // Trigger reactivity
         messages.value = [...messages.value];
@@ -2567,8 +2910,7 @@ const setupSocketListener = () => {
         if (convMsgIndex !== -1) {
           selectedConversation.value.messages[convMsgIndex] = {
             ...selectedConversation.value.messages[convMsgIndex],
-            profilePicUrl: data.profilePicUrl,
-            groupPicUrl: data.groupPicUrl
+            ...profilePatch,
           };
           // Trigger reactivity
           selectedConversation.value.messages = [...selectedConversation.value.messages];
@@ -3287,9 +3629,14 @@ const mapTimelineIncomingMessage = row => ({
   quotedFromMe: row.quotedFromMe ?? null,
   quotedText: row.quotedText || '',
   quotedSender: row.quotedSender || null,
+  quotedMediaPath: row.quotedMediaPath || '',
+  quotedMediaType: row.quotedMediaType || '',
+  quotedFileName: row.quotedFileName || '',
   participant: row.participant || null,
   pushName: row.pushName || null,
   groupName: row.groupName || null,
+  senderProfilePicUrl: row.senderProfilePicUrl || null,
+  senderProfileStatus: row.senderProfileStatus || 'unavailable',
 });
 
 const mapTimelineOutgoingMessage = row => {
@@ -3308,6 +3655,9 @@ const mapTimelineOutgoingMessage = row => {
     quotedFromMe: row.quotedFromMe ?? null,
     quotedText: row.quotedText || '',
     quotedSender: row.quotedSender || null,
+    quotedMediaPath: row.quotedMediaPath || '',
+    quotedMediaType: row.quotedMediaType || '',
+    quotedFileName: row.quotedFileName || '',
     status: resolveOutgoingUiStatus(row.status, {
       readCount: readBy.length,
       isGroup: Boolean(row.isGroup),
@@ -3834,6 +4184,9 @@ const sendMediaReply = async () => {
     quotedFromMe: activeReply?.targetFromMe ?? null,
     quotedText: activeReply?.text || '',
     quotedSender: activeReply?.senderLabel || null,
+    quotedMediaPath: activeReply?.mediaPath || '',
+    quotedMediaType: activeReply?.mediaType || '',
+    quotedFileName: activeReply?.fileName || '',
   };
 
   sentMessages.value.push(optimisticMessage);
@@ -3887,6 +4240,9 @@ const sendMediaReply = async () => {
         quotedFromMe: saved.quotedFromMe ?? optimisticMessage.quotedFromMe,
         quotedText: saved.quotedText || optimisticMessage.quotedText,
         quotedSender: saved.quotedSender || optimisticMessage.quotedSender,
+        quotedMediaPath: optimisticMessage.quotedMediaPath,
+        quotedMediaType: optimisticMessage.quotedMediaType,
+        quotedFileName: optimisticMessage.quotedFileName,
       };
       sentMessages.value = [...sentMessages.value];
       flushPendingMessageStatusEvents();
@@ -4025,6 +4381,9 @@ const sendReply = async () => {
     quotedFromMe: activeReply?.targetFromMe ?? null,
     quotedText: activeReply?.text || '',
     quotedSender: activeReply?.senderLabel || null,
+    quotedMediaPath: activeReply?.mediaPath || '',
+    quotedMediaType: activeReply?.mediaType || '',
+    quotedFileName: activeReply?.fileName || '',
   };
   
   sentMessages.value.push(optimisticMessage);
@@ -4113,6 +4472,9 @@ const sendReply = async () => {
         quotedFromMe: savedMessage?.quotedFromMe ?? sentMessages.value[msgIndex].quotedFromMe,
         quotedText: savedMessage?.quotedText || sentMessages.value[msgIndex].quotedText,
         quotedSender: savedMessage?.quotedSender || sentMessages.value[msgIndex].quotedSender,
+        quotedMediaPath: sentMessages.value[msgIndex].quotedMediaPath || '',
+        quotedMediaType: sentMessages.value[msgIndex].quotedMediaType || '',
+        quotedFileName: sentMessages.value[msgIndex].quotedFileName || '',
       };
       
       sentMessages.value = [...sentMessages.value];
@@ -4134,6 +4496,9 @@ const sendReply = async () => {
           quotedFromMe: savedMessage?.quotedFromMe ?? activeReply?.targetFromMe ?? null,
           quotedText: savedMessage?.quotedText || activeReply?.text || '',
           quotedSender: savedMessage?.quotedSender || activeReply?.senderLabel || null,
+          quotedMediaPath: activeReply?.mediaPath || '',
+          quotedMediaType: activeReply?.mediaType || '',
+          quotedFileName: activeReply?.fileName || '',
         };
         
         sentMessages.value.push(newMessage);
@@ -4598,6 +4963,51 @@ const getMessageSenderPhone = (message) => {
   return formatWhatsAppIdentity(message?.participant);
 };
 
+const getGroupSenderProfileUrl = message => {
+  const source = String(message?.senderProfilePicUrl || '').trim();
+  if (!source) return '';
+  const key = String(message?.participant || source);
+  const version = senderProfileRetryVersions.value[key] || 0;
+  const separator = source.includes('?') ? '&' : '?';
+  return `${mediaUrl(source)}${separator}senderProfileRetry=${version}`;
+};
+
+const getGroupSenderInitial = message => {
+  const label = String(
+    message?.pushName || getMessageSenderPhone(message) || '?',
+  ).trim();
+  return label.replace(/^\+/, '').charAt(0).toUpperCase() || '?';
+};
+
+const handleGroupSenderProfileLoad = message => {
+  const key = String(message?.participant || '');
+  if (!key) return;
+  const timer = senderProfileRetryTimers.get(key);
+  if (timer) clearTimeout(timer);
+  senderProfileRetryTimers.delete(key);
+  senderProfileRetryCounts.delete(key);
+};
+
+const handleGroupSenderProfileError = (event, message) => {
+  if (event?.currentTarget) event.currentTarget.style.visibility = 'hidden';
+  const key = String(message?.participant || '');
+  if (!key || message?.senderProfileStatus === 'unavailable') return;
+
+  const attempt = senderProfileRetryCounts.get(key) || 0;
+  const retryDelays = [1200, 2500, 5000, 9000];
+  if (attempt >= retryDelays.length || senderProfileRetryTimers.has(key)) return;
+
+  senderProfileRetryCounts.set(key, attempt + 1);
+  const timer = setTimeout(() => {
+    senderProfileRetryTimers.delete(key);
+    senderProfileRetryVersions.value = {
+      ...senderProfileRetryVersions.value,
+      [key]: (senderProfileRetryVersions.value[key] || 0) + 1,
+    };
+  }, retryDelays[attempt]);
+  senderProfileRetryTimers.set(key, timer);
+};
+
 const getConversationAvatar = (conversation) => {
   if (!conversation) return '';
   return (conversation.isGroup ? conversation.groupPicUrl : conversation.profilePicUrl) || '';
@@ -4637,6 +5047,9 @@ watch(
 
 // Lifecycle
 onMounted(async () => {
+  chatCalendarTimer = window.setInterval(() => {
+    chatCalendarNow.value = Date.now();
+  }, 60_000);
   window.addEventListener('keydown', handleImagePreviewKeydown);
   window.addEventListener('keydown', handleInboxComposerTyping, true);
   window.addEventListener('pointerdown', handleMessagePopupPointerDown);
@@ -4707,6 +5120,8 @@ watch(
 );
 
 onUnmounted(() => {
+  if (chatCalendarTimer) window.clearInterval(chatCalendarTimer);
+  chatCalendarTimer = null;
   setConversationScrollLock(false);
   cacheCurrentInboxList();
   clearScheduledReplyFocus();
@@ -4724,6 +5139,11 @@ onUnmounted(() => {
   inboxNavigationGeneration++;
   conversationOpenGeneration++;
   closeReactionDetails();
+  clearMessageLongPress();
+  resetMessageSwipe();
+  senderProfileRetryTimers.forEach(timer => clearTimeout(timer));
+  senderProfileRetryTimers.clear();
+  senderProfileRetryCounts.clear();
   closeImagePreview();
   clearAttachment();
   if (socketCleanup) {
@@ -5913,6 +6333,37 @@ const handleMediaError = (event, message) => {
   opacity: 0;
 }
 
+.chat-date-separator {
+  position: sticky;
+  top: 8px;
+  z-index: 32;
+  align-self: center;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 28px;
+  margin: 2px 0;
+  pointer-events: none;
+}
+
+.chat-date-separator span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 5px 11px;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface);
+  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(8px);
+  color: var(--theme-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .conversation-sync-indicator {
   position: absolute;
   top: 12px;
@@ -5959,6 +6410,91 @@ const handleMediaError = (event, message) => {
 .chat-bubble {
   max-width: 78%;
   position: relative;
+  touch-action: pan-y;
+  user-select: text;
+}
+
+.chat-bubble.group-incoming {
+  padding-left: 40px;
+}
+
+.chat-bubble .bubble-content {
+  position: relative;
+  z-index: 2;
+  will-change: transform;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chat-bubble.message-swipe-active .bubble-content {
+  transition: none;
+  user-select: none;
+}
+
+.swipe-reply-indicator {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  opacity: 0;
+  transform: translateY(-50%) scale(0.82);
+  transition: opacity 120ms ease, transform 120ms ease;
+  pointer-events: none;
+}
+
+.swipe-reply-indicator.incoming {
+  left: 4px;
+}
+
+.chat-bubble.group-incoming .swipe-reply-indicator.incoming {
+  left: 44px;
+}
+
+.swipe-reply-indicator.outgoing {
+  right: 4px;
+}
+
+.chat-bubble.message-swipe-active .swipe-reply-indicator {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.swipe-reply-indicator svg {
+  width: 19px;
+  height: 19px;
+}
+
+.group-sender-avatar {
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  z-index: 3;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.group-sender-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--theme-surface-soft);
 }
 
 .history-loading,
@@ -6279,7 +6815,8 @@ const handleMediaError = (event, message) => {
 }
 
 .btn-message-actions.incoming {
-  left: 5px;
+  right: 5px;
+  left: auto;
   color: var(--theme-text-muted);
   background: transparent;
 }
@@ -6312,6 +6849,28 @@ const handleMediaError = (event, message) => {
   opacity: 0.65;
 }
 
+.message-actions-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+}
+
+.message-actions-layer--popover {
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+.message-actions-layer--sheet {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px max(12px, env(safe-area-inset-right))
+    calc(16px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(2, 6, 23, 0.48);
+  backdrop-filter: blur(2px);
+}
+
 .message-actions-menu {
   position: fixed;
   z-index: 2100;
@@ -6323,6 +6882,48 @@ const handleMediaError = (event, message) => {
   border-radius: 12px;
   background: var(--theme-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+}
+
+.message-actions-menu--popover {
+  pointer-events: auto;
+}
+
+.message-actions-menu--sheet {
+  position: relative;
+  width: min(480px, 100%);
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(2, 6, 23, 0.3);
+  animation: messageActionsSheetEnter 160ms ease-out;
+}
+
+.message-actions-sheet-handle {
+  width: 38px;
+  height: 4px;
+  margin: 2px auto 8px;
+  border-radius: 999px;
+  background: var(--theme-border-strong);
+}
+
+.message-actions-sheet-title {
+  padding: 5px 10px 9px;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.message-actions-menu--sheet button {
+  min-height: 46px;
+  font-size: 15px;
+}
+
+@keyframes messageActionsSheetEnter {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .message-actions-menu button {
@@ -6414,8 +7015,9 @@ const handleMediaError = (event, message) => {
   width: 100%;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
   margin: 0 0 9px;
   padding: 8px 10px;
   overflow: hidden;
@@ -6429,8 +7031,17 @@ const handleMediaError = (event, message) => {
   cursor: pointer;
 }
 
+.bubble-quoted-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
 .bubble-quoted-message strong,
-.bubble-quoted-message span {
+.bubble-quoted-copy > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6441,9 +7052,35 @@ const handleMediaError = (event, message) => {
   font-size: 12px;
 }
 
-.bubble-quoted-message span {
+.bubble-quoted-copy > span {
   font-size: 12px;
   line-height: 1.35;
+}
+
+.quoted-media-thumbnail,
+.quoted-media-placeholder {
+  position: relative;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--theme-surface) 72%, var(--theme-border));
+}
+
+.quoted-media-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.quoted-media-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--theme-accent);
+  font-size: 20px;
+  font-weight: 800;
 }
 
 .chat-bubble.outgoing .bubble-quoted-message {
@@ -6453,6 +7090,11 @@ const handleMediaError = (event, message) => {
 }
 
 .chat-bubble.outgoing .bubble-quoted-message strong {
+  color: #ffffff;
+}
+
+.chat-bubble.outgoing .quoted-media-placeholder {
+  background: rgba(15, 23, 42, 0.26);
   color: #ffffff;
 }
 
@@ -7531,6 +8173,18 @@ const handleMediaError = (event, message) => {
     -webkit-overflow-scrolling: touch;
   }
 
+  .chat-date-separator {
+    top: 6px;
+    min-height: 26px;
+    margin: 1px 0;
+  }
+
+  .chat-date-separator span {
+    min-height: 26px;
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+
   .chat-bubble {
     max-width: calc(100% - 40px);
   }
@@ -7548,6 +8202,13 @@ const handleMediaError = (event, message) => {
   .bubble-quoted-message {
     margin-bottom: 7px;
     padding: 7px 9px;
+  }
+
+  .quoted-media-thumbnail,
+  .quoted-media-placeholder {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
   }
 
   .message-reaction-control.incoming {
