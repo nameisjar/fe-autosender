@@ -4628,6 +4628,7 @@ const deleteModal = ref({
   description: '',
   type: '', // 'conversation' or 'all'
   from: null,
+  displayLabel: '',
   message: null,
   scope: null,
   loading: false,
@@ -4645,6 +4646,7 @@ const confirmDeleteMessage = (message, scope) => {
       : 'Pesan akan dihapus dari Inbox Anda. Sinkronisasi ke perangkat WhatsApp akan dilakukan jika App State WhatsApp tersedia.',
     type: 'message',
     from: selectedConversation.value?.from || null,
+    displayLabel: '',
     message,
     scope,
     loading: false,
@@ -4652,12 +4654,14 @@ const confirmDeleteMessage = (message, scope) => {
 };
 
 const confirmDeleteConversation = (conv) => {
+  const displayLabel = getDeleteConversationLabel(conv);
   deleteModal.value = {
     show: true,
     title: 'Hapus Percakapan',
-    description: `Apakah Anda yakin ingin menghapus ${conv.messageCount} pesan dari ${getSenderName(conv)}? Tindakan ini tidak dapat dibatalkan.`,
+    description: `Apakah Anda yakin ingin menghapus ${conv.messageCount} pesan dari ${displayLabel}? Tindakan ini tidak dapat dibatalkan.`,
     type: 'conversation',
     from: conv.from,
+    displayLabel,
     message: null,
     scope: null,
     loading: false,
@@ -4671,6 +4675,7 @@ const confirmDeleteAll = () => {
     description: 'Apakah Anda yakin ingin menghapus seluruh pesan masuk dan keluar pada device ini? Tindakan ini tidak dapat dibatalkan.',
     type: 'all',
     from: null,
+    displayLabel: '',
     message: null,
     scope: null,
     loading: false,
@@ -4708,7 +4713,11 @@ const executeDelete = async () => {
       const { data } = await userApi.delete(`/devices/${selectedDeviceId.value}/inbox/conversation`, {
         data: { from: deleteModal.value.from },
       });
-      toast.success(data?.message || 'Pesan masuk dan keluar berhasil dihapus');
+      const deletedCount = Number.isFinite(Number(data?.deletedCount))
+        ? Number(data.deletedCount)
+        : 0;
+      const displayLabel = deleteModal.value.displayLabel || 'Kontak WhatsApp';
+      toast.success(`Berhasil menghapus ${deletedCount} pesan dari ${displayLabel}`);
     } else {
       const { data } = await userApi.delete(`/devices/${selectedDeviceId.value}/inbox`);
       toast.success(data?.message || 'Semua pesan masuk dan keluar berhasil dihapus');
@@ -4858,6 +4867,21 @@ const formatWhatsAppIdentity = (jid) => {
 
   const digits = cleaned.replace(/\D/g, '');
   return digits ? `+${digits}` : cleaned;
+};
+
+const getDeleteConversationLabel = (conversation) => {
+  if (!conversation) return 'Kontak WhatsApp';
+
+  if (conversation.isGroup || String(conversation.from || '').includes('@g.us')) {
+    return String(conversation.groupName || '').trim() || 'Grup WhatsApp';
+  }
+
+  const contactName = conversation.contact
+    ? `${conversation.contact.firstName || ''} ${conversation.contact.lastName || ''}`.trim()
+    : '';
+  if (contactName) return contactName;
+
+  return formatWhatsAppIdentity(conversation.from) || 'Kontak WhatsApp';
 };
 
 const getConversationPhone = (conversation) => {
