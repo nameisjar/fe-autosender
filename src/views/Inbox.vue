@@ -1277,6 +1277,7 @@ import {
   insertTemplateAtSelection,
   resolveChatTemplate,
 } from '../utils/chatTemplate.js';
+import { isWithinMessageEditWindow } from '../utils/messageEdit.js';
 
 const toast = useToast();
 const route = useRoute();
@@ -1937,6 +1938,10 @@ const canEditMessage = message => Boolean(
   && getMessageReactionTargetId(message)
   && !message?.mediaPath
   && !isDeletedForEveryone(message)
+  && isWithinMessageEditWindow(
+    message?.timestamp,
+    Math.max(chatCalendarNow.value, Date.now()),
+  )
   && ['submitted', 'server_ack', 'delivery_ack', 'read', 'played'].includes(message?.status)
 );
 
@@ -4377,7 +4382,6 @@ const submitMessageEdit = async () => {
     applyOutgoingEditedMessage(edited);
     replyText.value = '';
     editingMessage.value = null;
-    toast.success('Pesan berhasil diedit');
   } catch (error) {
     toast.error(error?.response?.data?.message || error?.message || 'Gagal mengedit pesan');
   } finally {
