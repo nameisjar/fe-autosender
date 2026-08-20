@@ -604,6 +604,12 @@
 
           <div class="contact-preview" v-if="contactToDelete">
             <div class="preview-avatar">
+              <CachedProfileImage
+                v-if="contactToDelete.profilePicUrl"
+                :src="contactToDelete.profilePicUrl"
+                :status="contactToDelete.profilePictureStatus"
+                :alt="`Foto profil ${contactToDelete.firstName}`"
+              />
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
@@ -2658,12 +2664,25 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-avatar img {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .preview-avatar svg {
   width: 24px;
   height: 24px;
   color: #1e40af;
+  position: relative;
+  z-index: 1;
 }
 
 .preview-info {
