@@ -546,6 +546,16 @@
                 Pisahkan dengan koma (,) untuk menambahkan beberapa label
               </small>
             </div>
+            <label class="whatsapp-sync-option span-2">
+              <input v-model="form.syncToWhatsApp" type="checkbox" />
+              <span class="whatsapp-sync-switch" aria-hidden="true"></span>
+              <span class="whatsapp-sync-copy">
+                <strong>{{ editingContact ? "Perbarui juga di WhatsApp" : "Simpan juga ke WhatsApp" }}</strong>
+                <small>
+                  Kontak disimpan terenkripsi di akun WhatsApp, bukan ke buku telepon atau Google.
+                </small>
+              </span>
+            </label>
           </div>
           <div class="modal-actions">
             <button type="button" class="btn-cancel" @click="cancelForm">
@@ -895,6 +905,7 @@ const form = ref({
   email: "",
   gender: "",
   dob: "",
+  syncToWhatsApp: true,
 });
 const labelInput = ref("");
 const q = ref("");
@@ -1119,6 +1130,7 @@ const resetForm = () => {
     email: "",
     gender: "",
     dob: "",
+    syncToWhatsApp: true,
   };
   labelInput.value = "";
   editingContact.value = null;
@@ -1140,6 +1152,7 @@ const editContact = (contact) => {
     email: "", // kosongkan email untuk tutor
     gender: "", // kosongkan gender untuk tutor
     dob: "", // kosongkan dob untuk tutor
+    syncToWhatsApp: true,
   };
   // Pre-fill only non-device labels
   labelInput.value = filteredContactLabels(contact).join(", ");
@@ -1210,10 +1223,36 @@ const saveContact = async () => {
     let response;
     if (editingContact.value) {
       response = await userApi.put(`/contacts/${editingContact.value.id}`, payload);
-      toast.success("Kontak berhasil diperbarui");
+      const whatsappSync = response.data?.whatsappSync;
+      if (whatsappSync?.requested && whatsappSync.synced) {
+        toast.success("Kontak berhasil diperbarui di Algose dan WhatsApp");
+      } else if (whatsappSync?.requested && whatsappSync.status === "device_offline") {
+        toast.warning(
+          "Kontak diperbarui di Algose, tetapi belum diperbarui di WhatsApp karena perangkat tidak terhubung"
+        );
+      } else if (whatsappSync?.requested) {
+        toast.warning(
+          "Kontak diperbarui di Algose, tetapi gagal diperbarui di kontak WhatsApp"
+        );
+      } else {
+        toast.success("Kontak berhasil diperbarui");
+      }
     } else {
       response = await userApi.post("/contacts/create", payload);
-      toast.success("Kontak berhasil ditambahkan");
+      const whatsappSync = response.data?.whatsappSync;
+      if (whatsappSync?.requested && whatsappSync.synced) {
+        toast.success("Kontak berhasil ditambahkan dan disimpan di WhatsApp");
+      } else if (whatsappSync?.requested && whatsappSync.status === "device_offline") {
+        toast.warning(
+          "Kontak tersimpan di Algose, tetapi belum disimpan di WhatsApp karena perangkat tidak terhubung"
+        );
+      } else if (whatsappSync?.requested) {
+        toast.warning(
+          "Kontak tersimpan di Algose, tetapi gagal disimpan ke kontak WhatsApp"
+        );
+      } else {
+        toast.success("Kontak berhasil ditambahkan");
+      }
     }
 
     // Reset form immediately
@@ -2437,6 +2476,78 @@ onUnmounted(() => {
   grid-column: span 2;
 }
 
+.whatsapp-sync-option {
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 12px;
+  background: var(--theme-surface-soft);
+  cursor: pointer;
+}
+
+.whatsapp-sync-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.whatsapp-sync-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--theme-border-strong);
+  transition: background 0.2s ease;
+}
+
+.whatsapp-sync-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.28);
+  transition: transform 0.2s ease;
+}
+
+.whatsapp-sync-option input:checked + .whatsapp-sync-switch {
+  background: #22c55e;
+}
+
+.whatsapp-sync-option input:checked + .whatsapp-sync-switch::after {
+  transform: translateX(20px);
+}
+
+.whatsapp-sync-option input:focus-visible + .whatsapp-sync-switch {
+  outline: 3px solid rgba(59, 130, 246, 0.28);
+  outline-offset: 2px;
+}
+
+.whatsapp-sync-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.whatsapp-sync-copy strong {
+  color: var(--theme-text);
+  font-size: 13px;
+}
+
+.whatsapp-sync-copy small {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .help-text {
   display: flex;
   align-items: center;
@@ -3217,6 +3328,10 @@ onUnmounted(() => {
   }
 
   .form-grid .form-group.span-2 {
+    grid-column: span 1;
+  }
+
+  .whatsapp-sync-option {
     grid-column: span 1;
   }
 

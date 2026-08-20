@@ -556,7 +556,12 @@
                     {{ getQuotedMediaIcon(msg) }}
                   </span>
                   <span class="bubble-quoted-copy">
-                    <strong>{{ getQuotedSenderLabel(msg) }}</strong>
+                    <span class="bubble-quoted-identity">
+                      <strong>{{ getQuotedSenderLabel(msg) }}</strong>
+                      <small v-if="getQuotedSenderPhone(msg)">
+                        {{ getQuotedSenderPhone(msg) }}
+                      </small>
+                    </span>
                     <span>{{ getQuotedPreviewText(msg) }}</span>
                   </span>
                 </button>
@@ -1071,6 +1076,17 @@
             />
             <small>Pisahkan beberapa label dengan koma.</small>
           </label>
+
+          <label class="inbox-whatsapp-sync-option">
+            <input v-model="addContactModal.syncToWhatsApp" type="checkbox" />
+            <span class="inbox-whatsapp-sync-switch" aria-hidden="true"></span>
+            <span class="inbox-whatsapp-sync-copy">
+              <strong>Simpan juga ke WhatsApp</strong>
+              <small>
+                Kontak disimpan terenkripsi di akun WhatsApp, bukan ke buku telepon atau Google.
+              </small>
+            </span>
+          </label>
         </div>
 
         <div class="add-contact-actions">
@@ -1306,6 +1322,7 @@ const addContactModal = ref({
   lastName: '',
   phone: '',
   labels: '',
+  syncToWhatsApp: true,
 });
 const conversationReactions = ref([]);
 const reactionDetails = ref(null);
@@ -1951,8 +1968,30 @@ const messageActionText = message => String(
   message?.type === 'incoming' ? message?.message : message?.text,
 ).trim() || '[Pesan]';
 
-const getQuotedSenderLabel = message =>
-  message?.quotedSender || (message?.quotedFromMe === true ? 'Anda' : 'Pesan');
+const getQuotedSenderIdentity = message => {
+  if (message?.quotedFromMe === true) return { name: 'Anda', phone: '' };
+
+  const target = message?.quotedMessageId
+    ? findQuotedTarget(message.quotedMessageId)
+    : null;
+  if (target) {
+    return target.type === 'outgoing'
+      ? { name: 'Anda', phone: '' }
+      : getIncomingSenderIdentity(target);
+  }
+
+  const name = String(message?.quotedSender || 'Pesan').trim();
+  const phone = String(message?.quotedSenderPhone || '').trim();
+  return {
+    name,
+    phone: phone && phone.replace(/\D/g, '') !== name.replace(/\D/g, '')
+      ? phone
+      : '',
+  };
+};
+
+const getQuotedSenderLabel = message => getQuotedSenderIdentity(message).name;
+const getQuotedSenderPhone = message => getQuotedSenderIdentity(message).phone;
 
 const getQuotedPreviewText = message => String(message?.quotedText || '[Pesan]').trim();
 
@@ -2007,14 +2046,14 @@ const startReplyToMessage = async message => {
 
   if (editingMessage.value) replyText.value = '';
   editingMessage.value = null;
+  const senderIdentity = message.type === 'outgoing'
+    ? { name: 'Anda', phone: '' }
+    : getIncomingSenderIdentity(message);
   replyingToMessage.value = {
     targetMessageId,
     targetFromMe: message.type === 'outgoing',
-    senderLabel: message.type === 'outgoing'
-      ? 'Anda'
-      : selectedConversation.value?.isGroup
-        ? getGroupSenderPrimaryLabel(message)
-        : message.pushName || getMessageSenderPhone(message) || 'pesan ini',
+    senderLabel: senderIdentity.name,
+    senderPhone: senderIdentity.phone,
     text: messageActionText(message),
     mediaPath: message.mediaPath || '',
     mediaType: message.mediaType || getInboxMediaType(message) || '',
@@ -3683,6 +3722,7 @@ const mapTimelineIncomingMessage = row => ({
   quotedFromMe: row.quotedFromMe ?? null,
   quotedText: row.quotedText || '',
   quotedSender: row.quotedSender || null,
+  quotedSenderPhone: row.quotedSenderPhone || '',
   quotedMediaPath: row.quotedMediaPath || '',
   quotedMediaType: row.quotedMediaType || '',
   quotedFileName: row.quotedFileName || '',
@@ -3710,6 +3750,7 @@ const mapTimelineOutgoingMessage = row => {
     quotedFromMe: row.quotedFromMe ?? null,
     quotedText: row.quotedText || '',
     quotedSender: row.quotedSender || null,
+    quotedSenderPhone: row.quotedSenderPhone || '',
     quotedMediaPath: row.quotedMediaPath || '',
     quotedMediaType: row.quotedMediaType || '',
     quotedFileName: row.quotedFileName || '',
@@ -4244,6 +4285,7 @@ const sendMediaReply = async () => {
     quotedFromMe: activeReply?.targetFromMe ?? null,
     quotedText: activeReply?.text || '',
     quotedSender: activeReply?.senderLabel || null,
+    quotedSenderPhone: activeReply?.senderPhone || '',
     quotedMediaPath: activeReply?.mediaPath || '',
     quotedMediaType: activeReply?.mediaType || '',
     quotedFileName: activeReply?.fileName || '',
@@ -4300,6 +4342,7 @@ const sendMediaReply = async () => {
         quotedFromMe: saved.quotedFromMe ?? optimisticMessage.quotedFromMe,
         quotedText: saved.quotedText || optimisticMessage.quotedText,
         quotedSender: saved.quotedSender || optimisticMessage.quotedSender,
+        quotedSenderPhone: saved.quotedSenderPhone || optimisticMessage.quotedSenderPhone,
         quotedMediaPath: optimisticMessage.quotedMediaPath,
         quotedMediaType: optimisticMessage.quotedMediaType,
         quotedFileName: optimisticMessage.quotedFileName,
@@ -4440,6 +4483,7 @@ const sendReply = async () => {
     quotedFromMe: activeReply?.targetFromMe ?? null,
     quotedText: activeReply?.text || '',
     quotedSender: activeReply?.senderLabel || null,
+    quotedSenderPhone: activeReply?.senderPhone || '',
     quotedMediaPath: activeReply?.mediaPath || '',
     quotedMediaType: activeReply?.mediaType || '',
     quotedFileName: activeReply?.fileName || '',
@@ -4531,6 +4575,8 @@ const sendReply = async () => {
         quotedFromMe: savedMessage?.quotedFromMe ?? sentMessages.value[msgIndex].quotedFromMe,
         quotedText: savedMessage?.quotedText || sentMessages.value[msgIndex].quotedText,
         quotedSender: savedMessage?.quotedSender || sentMessages.value[msgIndex].quotedSender,
+        quotedSenderPhone:
+          savedMessage?.quotedSenderPhone || sentMessages.value[msgIndex].quotedSenderPhone,
         quotedMediaPath: sentMessages.value[msgIndex].quotedMediaPath || '',
         quotedMediaType: sentMessages.value[msgIndex].quotedMediaType || '',
         quotedFileName: sentMessages.value[msgIndex].quotedFileName || '',
@@ -4555,6 +4601,7 @@ const sendReply = async () => {
           quotedFromMe: savedMessage?.quotedFromMe ?? activeReply?.targetFromMe ?? null,
           quotedText: savedMessage?.quotedText || activeReply?.text || '',
           quotedSender: savedMessage?.quotedSender || activeReply?.senderLabel || null,
+          quotedSenderPhone: savedMessage?.quotedSenderPhone || activeReply?.senderPhone || '',
           quotedMediaPath: activeReply?.mediaPath || '',
           quotedMediaType: activeReply?.mediaType || '',
           quotedFileName: activeReply?.fileName || '',
@@ -4948,6 +4995,7 @@ const openAddContactModal = () => {
     lastName: suggestedName.lastName,
     phone: normalizeInboxContactPhone(selectedConversation.value),
     labels: '',
+    syncToWhatsApp: true,
   };
 };
 
@@ -4959,6 +5007,7 @@ const closeAddContactModal = () => {
     lastName: '',
     phone: '',
     labels: '',
+    syncToWhatsApp: true,
   };
 };
 
@@ -5015,6 +5064,7 @@ const saveInboxContact = async () => {
       dob: '',
       labels,
       deviceId: selectedDeviceId.value,
+      syncToWhatsApp: addContactModal.value.syncToWhatsApp,
     });
 
     applyCreatedContactToInbox(conversationFrom, {
@@ -5026,7 +5076,16 @@ const saveInboxContact = async () => {
       ContactLabel: labels.map(name => ({ label: { name } })),
     });
     addContactModal.value.show = false;
-    toast.success('Kontak berhasil ditambahkan');
+    const whatsappSync = data?.whatsappSync;
+    if (whatsappSync?.requested && whatsappSync.synced) {
+      toast.success('Kontak berhasil ditambahkan dan disimpan di WhatsApp');
+    } else if (whatsappSync?.requested && whatsappSync.status === 'device_offline') {
+      toast.warning('Kontak tersimpan di Algose, tetapi belum disimpan di WhatsApp karena perangkat tidak terhubung');
+    } else if (whatsappSync?.requested) {
+      toast.warning('Kontak tersimpan di Algose, tetapi gagal disimpan ke kontak WhatsApp');
+    } else {
+      toast.success('Kontak berhasil ditambahkan');
+    }
     await loadMessages();
   } catch (error) {
     const errorMessage = error?.response?.data?.message || error?.message || 'Gagal menyimpan kontak';
@@ -5048,11 +5107,35 @@ const getMessageSenderPhone = (message) => {
 
 const getGroupSenderContact = message => message?.senderContact || message?.contact || null;
 
-const getGroupSenderContactName = message => {
-  const contact = getGroupSenderContact(message);
-  return contact
+const getIncomingSenderIdentity = message => {
+  const isGroup = Boolean(
+    selectedConversation.value?.isGroup
+    || String(selectedConversation.value?.from || '').includes('@g.us'),
+  );
+  const contact = isGroup
+    ? getGroupSenderContact(message)
+    : message?.contact || selectedConversation.value?.contact || null;
+  const savedName = contact
     ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
     : '';
+  if (savedName) return { name: savedName, phone: '' };
+
+  const phone = isGroup
+    ? getMessageSenderPhone(message)
+    : formatWhatsAppIdentity(
+        message?.participant || selectedConversation.value?.from,
+      );
+  const pushName = String(
+    message?.pushName || (!isGroup ? selectedConversation.value?.pushName : '') || '',
+  ).trim();
+  if (pushName) {
+    if (phone && pushName.replace(/\D/g, '') === phone.replace(/\D/g, '')) {
+      return { name: phone, phone: '' };
+    }
+    return { name: pushName, phone };
+  }
+
+  return { name: phone || 'Tidak dikenal', phone: '' };
 };
 
 const getGroupSenderLabels = message => getContactLabelNames(
@@ -5060,7 +5143,10 @@ const getGroupSenderLabels = message => getContactLabelNames(
 );
 
 const getGroupSenderPrimaryLabel = message => {
-  const contactName = getGroupSenderContactName(message);
+  const contact = getGroupSenderContact(message);
+  const contactName = contact
+    ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
+    : '';
   if (contactName) return contactName;
   return getMessageSenderPhone(message) || message?.pushName || 'Tidak dikenal';
 };
@@ -6377,6 +6463,77 @@ const handleMediaError = (event, message) => {
   font-size: 11px;
 }
 
+.inbox-whatsapp-sync-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 12px;
+  background: var(--theme-surface-soft);
+  cursor: pointer;
+}
+
+.inbox-whatsapp-sync-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.inbox-whatsapp-sync-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--theme-border-strong);
+  transition: background 0.2s ease;
+}
+
+.inbox-whatsapp-sync-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.28);
+  transition: transform 0.2s ease;
+}
+
+.inbox-whatsapp-sync-option input:checked + .inbox-whatsapp-sync-switch {
+  background: #22c55e;
+}
+
+.inbox-whatsapp-sync-option input:checked + .inbox-whatsapp-sync-switch::after {
+  transform: translateX(20px);
+}
+
+.inbox-whatsapp-sync-option input:focus-visible + .inbox-whatsapp-sync-switch {
+  outline: 3px solid rgba(59, 130, 246, 0.28);
+  outline-offset: 2px;
+}
+
+.inbox-whatsapp-sync-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.inbox-whatsapp-sync-copy strong {
+  color: var(--theme-text);
+  font-size: 12px;
+}
+
+.inbox-whatsapp-sync-copy small {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .add-contact-actions {
   display: flex;
   justify-content: flex-end;
@@ -7221,6 +7378,29 @@ const handleMediaError = (event, message) => {
   gap: 3px;
 }
 
+.bubble-quoted-identity {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bubble-quoted-identity strong {
+  min-width: 0;
+  flex: 1;
+}
+
+.bubble-quoted-identity small {
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: var(--theme-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bubble-quoted-message strong,
 .bubble-quoted-copy > span {
   overflow: hidden;
@@ -7272,6 +7452,10 @@ const handleMediaError = (event, message) => {
 
 .chat-bubble.outgoing .bubble-quoted-message strong {
   color: #ffffff;
+}
+
+.chat-bubble.outgoing .bubble-quoted-identity small {
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .chat-bubble.outgoing .quoted-media-placeholder {
