@@ -1278,8 +1278,10 @@ import {
   resolveChatTemplate,
 } from '../utils/chatTemplate.js';
 import { isWithinMessageEditWindow } from '../utils/messageEdit.js';
+import { useInboxUnread } from '../composables/useInboxUnread.js';
 
 const toast = useToast();
+const { setUnreadCount, decrementUnreadCount } = useInboxUnread();
 const route = useRoute();
 const router = useRouter();
 const isOpeningNavigationTarget = ref(Boolean(route.query.device && route.query.conversation));
@@ -2697,6 +2699,9 @@ const loadMessages = async () => {
     if (requestId !== latestLoadRequest || requestedDeviceId !== selectedDeviceId.value) return;
 
     const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+    if (!q.value && data?.metadata?.totalUnreadCount != null) {
+      setUnreadCount(requestedDeviceId, data.metadata.totalUnreadCount);
+    }
 
     // A socket message can arrive while this request is in flight. Preserve it so
     // a slower HTTP response cannot make a real-time message disappear again.
@@ -3840,6 +3845,10 @@ const loadConversationReactions = async (conversationFrom, signal) => {
 const markConversationAsRead = async (from) => {
   const unreadMessages = messages.value.filter(msg => msg.from === from && !msg.isRead);
   if (unreadMessages.length === 0) return true;
+  const clearedUnreadCount = Math.max(
+    unreadMessages.length,
+    ...unreadMessages.map(msg => Number(msg.conversationUnreadCount) || 0),
+  );
 
   try {
     // Update UI immediately (optimistic update)
@@ -3862,6 +3871,7 @@ const markConversationAsRead = async (from) => {
     await userApi.put(`/devices/${selectedDeviceId.value}/inbox/conversation/read`, {
       from: from,
     });
+    decrementUnreadCount(selectedDeviceId.value, clearedUnreadCount);
     return true;
   } catch (e) {
     // Restore only messages that were unread before this request. This prevents

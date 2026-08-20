@@ -3,6 +3,7 @@ import { connectSocket, getSocket } from '../api/socket.js';
 import { useToast } from './useToast.js';
 import { userApi } from '../api/http.js';
 import { useRouter } from 'vue-router';
+import { useInboxUnread } from './useInboxUnread.js';
 
 const NOTIFICATION_DEDUP_TTL_MS = 10 * 60 * 1000;
 const MAX_RECENT_NOTIFICATIONS = 1000;
@@ -11,6 +12,7 @@ const MAX_RECENT_NOTIFICATIONS = 1000;
 export function useGlobalNotifications() {
   const toast = useToast();
   const router = useRouter();
+  const { incrementUnreadCount } = useInboxUnread();
   const devices = ref([]);
   let socketCleanup = null;
   let connectionCleanup = null;
@@ -132,6 +134,8 @@ export function useGlobalNotifications() {
       const device = userDevices.find(item => item.sessionId === sessionId);
       const handler = (data) => {
         if (isDuplicateNotification(sessionId, data?.id)) return;
+
+        incrementUnreadCount(device?.id, 1);
 
         const senderName = getSenderName(data);
         const preview = data.message?.substring(0, 50) || 'Media/File';

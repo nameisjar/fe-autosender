@@ -97,6 +97,10 @@
           </svg>
           <span>Grup</span>
         </router-link>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-label">KOMUNIKASI</span>
         <router-link to="/broadcasts" @click="$emit('close')">
           <svg
             class="nav-icon"
@@ -132,6 +136,10 @@
           </svg>
           <span>Broadcast Berulang</span>
         </router-link>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-label">FEEDBACK &amp; REMINDER</span>
         <router-link to="/schedule-feedback" @click="$emit('close')">
           <svg
             class="nav-icon"
@@ -200,6 +208,10 @@
           </svg>
           <span>Feedback Bulanan (Custom)</span>
         </router-link>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-label">JADWAL &amp; PESAN</span>
         <router-link to="/schedules" @click="$emit('close')">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
             <rect
@@ -234,6 +246,9 @@
             <polyline points="22,6 12,13 2,6" />
           </svg>
           <span>Pesan Masuk</span>
+          <span v-if="inboxUnreadCount > 0" class="nav-badge" aria-label="Pesan belum dibaca">
+            {{ inboxUnreadCount > 99 ? "99+" : inboxUnreadCount }}
+          </span>
         </router-link>
         <router-link to="/code-snippets" @click="$emit('close')">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
@@ -433,10 +448,11 @@ import { onMounted, computed, ref, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../../stores/auth.js";
 import { useDevices } from "../../composables/useDevices.js";
-import { deviceApi } from "../../api/http.js";
+import { deviceApi, userApi } from "../../api/http.js";
 import { listenToDeviceStatus } from "../../api/socket.js";
 import { useTheme } from "../../composables/useTheme.js";
 import { useToast } from "../../composables/useToast.js";
+import { useInboxUnread } from "../../composables/useInboxUnread.js";
 
 const props = defineProps({
   isOpen: {
@@ -452,6 +468,7 @@ const route = useRoute();
 const auth = useAuthStore();
 const { theme, setTheme } = useTheme();
 const toast = useToast();
+const { unreadByDevice, setUnreadCount } = useInboxUnread();
 const themeOptions = [
   { value: "light", label: "Terang", icon: "☀", description: "Selalu gunakan tema terang" },
   { value: "dark", label: "Gelap", icon: "☾", description: "Selalu gunakan tema gelap" },
@@ -466,6 +483,9 @@ const selectedDeviceId = ref(localStorage.getItem("device_selected_id"));
 const isFetchingProfile = ref(false);
 const currentDeviceStatus = ref(null);
 const initialLoadDone = ref(false);
+const inboxUnreadCount = computed(() =>
+  Number(unreadByDevice.value[String(selectedDeviceId.value)] || 0)
+);
 let isCheckingStatus = false;
 let cleanupSocketListener = null;
 let retryCount = 0;
@@ -476,6 +496,7 @@ onMounted(async () => {
 
   // First check device status before fetching profile
   await checkDeviceStatusAndFetchProfile();
+  await refreshInboxUnreadCount();
   initialLoadDone.value = true;
 
   // Listen to storage events for cross-tab changes
@@ -581,6 +602,21 @@ const checkDeviceStatusAndFetchProfile = async () => {
   }
 };
 
+const refreshInboxUnreadCount = async () => {
+  const deviceId = selectedDeviceId.value || localStorage.getItem("device_selected_id");
+  if (!deviceId || !localStorage.getItem("token")) return;
+
+  try {
+    const { data } = await userApi.get(`/devices/${deviceId}/inbox`, {
+      params: { summary: true, page: 1, pageSize: 1, _t: Date.now() },
+      headers: { "Cache-Control": "no-cache, no-store" },
+    });
+    setUnreadCount(deviceId, data?.metadata?.totalUnreadCount || 0);
+  } catch (_) {
+    // Pertahankan jumlah terakhir saat ringkasan Inbox sementara tidak tersedia.
+  }
+};
+
 // Setup listener untuk status device
 const setupDeviceStatusListener = () => {
   const deviceId = localStorage.getItem("device_selected_id");
@@ -642,6 +678,7 @@ const handleStorageChange = (event) => {
     selectedDeviceId.value = event.newValue;
     checkDeviceStatusAndFetchProfile();
     setupDeviceStatusListener();
+    void refreshInboxUnreadCount();
   }
 };
 
@@ -651,6 +688,7 @@ const handleDeviceChange = () => {
     selectedDeviceId.value = currentDeviceId;
     checkDeviceStatusAndFetchProfile();
     setupDeviceStatusListener();
+    void refreshInboxUnreadCount();
   }
 };
 
@@ -664,18 +702,21 @@ function handleDeviceChangedCanonical(event) {
 
   checkDeviceStatusAndFetchProfile();
   setupDeviceStatusListener();
+  void refreshInboxUnreadCount();
 }
 
 const handleUserLoggedIn = () => {
   setTimeout(() => {
     checkDeviceStatusAndFetchProfile();
     setupDeviceStatusListener();
+    void refreshInboxUnreadCount();
   }, 1500);
 };
 
 const handleDevicesLoaded = () => {
   checkDeviceStatusAndFetchProfile();
   setupDeviceStatusListener();
+  void refreshInboxUnreadCount();
 };
 
 // Cleanup
@@ -795,6 +836,10 @@ nav {
   gap: 2px;
 }
 
+.nav-section + .nav-section {
+  margin-top: 4px;
+}
+
 .nav-label {
   font-size: 11px;
   font-weight: 600;
@@ -816,7 +861,7 @@ nav a {
   gap: 12px;
   text-decoration: none;
   color: var(--theme-text-secondary);
-  padding: 12px 16px;
+  padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
@@ -855,6 +900,27 @@ nav a.router-link-active::before {
 
 nav a.router-link-active .nav-icon {
   color: #ffffff;
+}
+
+.nav-badge {
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--theme-accent);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+nav a.router-link-active .nav-badge {
+  background: #ffffff;
+  color: #2563eb;
 }
 
 /* Sidebar Footer */
