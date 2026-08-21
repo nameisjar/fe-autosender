@@ -1,0 +1,54 @@
+import { describe, expect, it } from 'vitest';
+import {
+  buildIncomingNotification,
+  shouldShowSystemNotification,
+} from '../../utils/incomingNotification.js';
+
+describe('incoming notification presentation', () => {
+  it('prefers a saved contact and personal WhatsApp photo', () => {
+    expect(buildIncomingNotification({
+      from: '628123456789@s.whatsapp.net',
+      message: 'Halo',
+      pushName: 'Nama Profil',
+      contact: { firstName: 'Nama', lastName: 'Kontak' },
+      profilePicUrl: '/profile/contact',
+    })).toEqual(expect.objectContaining({
+      title: 'Nama Kontak',
+      description: 'Halo',
+      avatarUrl: '/profile/contact',
+      avatarFallback: 'NK',
+    }));
+  });
+
+  it('uses the group identity while retaining the member name in the preview', () => {
+    expect(buildIncomingNotification({
+      from: '120363001@g.us',
+      participant: '628111@s.whatsapp.net',
+      message: 'Besok kelas tetap ada',
+      pushName: 'Niko',
+      groupName: 'Kelas A',
+      groupPicUrl: '/profile/group',
+    })).toEqual(expect.objectContaining({
+      title: 'Kelas A',
+      senderName: 'Niko',
+      description: 'Niko: Besok kelas tetap ada',
+      avatarUrl: '/profile/group',
+    }));
+  });
+
+  it('falls back to a formatted WhatsApp number', () => {
+    expect(buildIncomingNotification({
+      from: '628123456789:7@s.whatsapp.net',
+      message: 'Halo',
+    }).title).toBe('+628123456789');
+  });
+
+  it('shows native notifications only when the page is not active', () => {
+    expect(shouldShowSystemNotification({ visibilityState: 'hidden', hasFocus: false }))
+      .toBe(true);
+    expect(shouldShowSystemNotification({ visibilityState: 'visible', hasFocus: false }))
+      .toBe(true);
+    expect(shouldShowSystemNotification({ visibilityState: 'visible', hasFocus: true }))
+      .toBe(false);
+  });
+});

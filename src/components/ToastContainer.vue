@@ -15,7 +15,16 @@
           @mouseenter="pauseTimer(toast.id)"
           @mouseleave="resumeTimer(toast.id)"
         >
-          <div class="toast-icon">
+          <div v-if="isRichToast(toast)" class="toast-avatar">
+            <span>{{ toast.avatarFallback || '?' }}</span>
+            <CachedProfileImage
+              v-if="toast.avatarUrl"
+              :src="toast.avatarUrl"
+              :status="toast.avatarStatus"
+              :alt="toast.title ? `Foto ${toast.title}` : 'Foto profil WhatsApp'"
+            />
+          </div>
+          <div v-else class="toast-icon">
             <svg v-if="toast.type === 'success'" viewBox="0 0 24 24" fill="none">
               <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -32,7 +41,8 @@
           </div>
           
           <div class="toast-content">
-            <div class="toast-message">{{ toast.message }}</div>
+            <div v-if="toast.title" class="toast-title">{{ toast.title }}</div>
+            <div class="toast-message">{{ toast.description || toast.message }}</div>
           </div>
           
           <button class="toast-close" @click.stop="removeToast(toast.id)" aria-label="Tutup notifikasi">
@@ -48,6 +58,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import CachedProfileImage from './CachedProfileImage.vue';
 
 const toasts = ref([]);
 const timers = ref({});
@@ -63,6 +74,11 @@ const addToast = (toast) => {
     duration,
     onClick: typeof toast.onClick === 'function' ? toast.onClick : null,
     ariaLabel: toast.ariaLabel || null,
+    title: toast.title || '',
+    description: toast.description || '',
+    avatarUrl: toast.avatarUrl || '',
+    avatarStatus: toast.avatarStatus || '',
+    avatarFallback: toast.avatarFallback || '',
   });
 
   // Auto dismiss
@@ -74,6 +90,27 @@ const addToast = (toast) => {
 };
 
 const isClickable = (toast) => typeof toast?.onClick === 'function';
+const isRichToast = toast => Boolean(
+  toast?.title || toast?.avatarUrl || toast?.avatarFallback,
+);
+
+const updateToast = (id, patch = {}) => {
+  const toast = toasts.value.find(item => item.id === id);
+  if (!toast) return false;
+
+  for (const key of [
+    'message',
+    'title',
+    'description',
+    'avatarUrl',
+    'avatarStatus',
+    'avatarFallback',
+    'ariaLabel',
+  ]) {
+    if (patch[key] !== undefined) toast[key] = patch[key];
+  }
+  return true;
+};
 
 const activateToast = (toast) => {
   if (!isClickable(toast)) return;
@@ -111,7 +148,7 @@ const resumeTimer = (id) => {
   }
 };
 
-defineExpose({ addToast, removeToast });
+defineExpose({ addToast, updateToast, removeToast });
 </script>
 
 <style scoped>
@@ -218,6 +255,30 @@ defineExpose({ addToast, removeToast });
   height: 18px;
 }
 
+.toast-avatar {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: rgba(59, 130, 246, 0.2);
+  color: currentColor;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.toast-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .toast-content {
   flex: 1;
   min-width: 0;
@@ -228,6 +289,17 @@ defineExpose({ addToast, removeToast });
   font-weight: 500;
   line-height: 1.4;
   word-break: break-word;
+}
+
+.toast-title {
+  margin-bottom: 2px;
+  overflow: hidden;
+  color: currentColor;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toast-close {
@@ -306,6 +378,11 @@ defineExpose({ addToast, removeToast });
   .toast-icon {
     width: 28px;
     height: 28px;
+  }
+
+  .toast-avatar {
+    width: 36px;
+    height: 36px;
   }
   
   .toast-icon svg {

@@ -1,6 +1,6 @@
 import { defineComponent, h } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const socketHarness = vi.hoisted(() => {
   const listeners = new Map();
@@ -27,6 +27,7 @@ const socketHarness = vi.hoisted(() => {
 
 const notificationHarness = vi.hoisted(() => ({
   info: vi.fn(),
+  update: vi.fn(),
   push: vi.fn(() => Promise.resolve()),
 }));
 
@@ -36,13 +37,17 @@ vi.mock('../../api/socket.js', () => ({
 }));
 
 vi.mock('../../api/http.js', () => ({
+  API_BASE: '',
   userApi: {
     get: vi.fn(),
   },
 }));
 
 vi.mock('../../composables/useToast.js', () => ({
-  useToast: () => ({ info: notificationHarness.info }),
+  useToast: () => ({
+    info: notificationHarness.info,
+    update: notificationHarness.update,
+  }),
 }));
 
 vi.mock('vue-router', () => ({
@@ -58,11 +63,18 @@ describe('useGlobalNotifications', () => {
     socketHarness.socket.on.mockClear();
     socketHarness.socket.off.mockClear();
     notificationHarness.info.mockClear();
+    notificationHarness.info.mockReturnValue('toast-1');
+    notificationHarness.update.mockClear();
     notificationHarness.push.mockClear();
     localStorage.getItem.mockReturnValue('jwt-token');
     userApi.get.mockResolvedValue({
       data: [{ id: 'device-1', sessionId: 'session-1' }],
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('keeps other incoming-message listeners registered', async () => {
@@ -133,9 +145,12 @@ describe('useGlobalNotifications', () => {
     });
 
     expect(notificationHarness.info).toHaveBeenCalledWith(
-      '💬 Niko: Halo',
-      5000,
+      'Halo',
+      6000,
       expect.objectContaining({
+        title: 'Niko',
+        description: 'Halo',
+        avatarFallback: 'N',
         onClick: expect.any(Function),
         ariaLabel: 'Buka pesan dari Niko',
       }),
@@ -202,8 +217,13 @@ describe('useGlobalNotifications', () => {
       groupPicUrl: '/inbox-profile/device-1/group',
     });
 
-    expect(notificationHarness.info.mock.calls[0][0]).toContain(
-      'IND 1-1 PS2 607: Halo grup',
+    expect(notificationHarness.info).toHaveBeenCalledWith(
+      'Niko: Halo grup',
+      6000,
+      expect.objectContaining({
+        title: 'IND 1-1 PS2 607',
+        avatarUrl: '/inbox-profile/device-1/group',
+      }),
     );
     await notificationHarness.info.mock.calls[0][2].onClick();
     expect(notificationHarness.push).toHaveBeenCalledWith({
@@ -216,6 +236,116 @@ describe('useGlobalNotifications', () => {
       }),
     });
 
+    wrapper.unmount();
+  });
+
+  it('shows a clickable Windows/browser notification only while the tab is inactive', async () => {
+    const nativeNotifications = [];
+    class FakeNotification {
+      static permission = 'granted';
+
+      constructor(title, options) {
+        this.title = title;
+        this.options = options;
+        this.close = vi.fn();
+        nativeNotifications.push(this);
+      }
+    }
+    vi.stubGlobal('Notification', FakeNotification);
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    const focusSpy = vi.spyOn(window, 'focus').mockImplementation(() => {});
+
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+    await flushPromises();
+
+    const [incomingHandler] = socketHarness.listeners.get('incoming:session-1');
+    incomingHandler({
+      id: 'background-message-1',
+      from: '628123@s.whatsapp.net',
+      message: 'Pesan latar belakang',
+      contact: { firstName: 'Niko', lastName: 'Algonova' },
+      profilePicUrl: '/inbox-profile/device-1/niko',
+    });
+
+    expect(nativeNotifications).toHaveLength(1);
+    expect(nativeNotifications[0].title).toBe('Niko Algonova');
+    expect(nativeNotifications[0].options).toEqual(expect.objectContaining({
+      body: 'Pesan latar belakang',
+      icon: expect.stringContaining('/inbox-profile/device-1/niko'),
+    }));
+
+    nativeNotifications[0].onclick();
+    await flushPromises();
+    expect(focusSpy).toHaveBeenCalledOnce();
+    expect(notificationHarness.push).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'inbox',
+    }));
+    expect(nativeNotifications[0].close).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('requests browser notification permission after a user gesture only once', async () => {
+    class FakeNotification {
+      static permission = 'default';
+      static requestPermission = vi.fn().mockResolvedValue('granted');
+    }
+    vi.stubGlobal('Notification', FakeNotification);
+
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+    await flushPromises();
+
+    expect(FakeNotification.requestPermission).not.toHaveBeenCalled();
+    document.dispatchEvent(new Event('pointerdown'));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flushPromises();
+
+    expect(FakeNotification.requestPermission).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('updates a personal or group toast when the profile picture arrives later', async () => {
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+    await flushPromises();
+
+    const [incomingHandler] = socketHarness.listeners.get('incoming:session-1');
+    const [profileHandler] = socketHarness.listeners.get(
+      'incoming:session-1:profile-updated',
+    );
+    incomingHandler({
+      id: 'late-avatar-message',
+      from: '628123@s.whatsapp.net',
+      message: 'Halo',
+      pushName: 'Niko',
+      profilePicUrl: null,
+    });
+    profileHandler({
+      id: 'late-avatar-message',
+      from: '628123@s.whatsapp.net',
+      profilePicUrl: '/inbox-profile/device-1/628123',
+      profilePictureStatus: 'available',
+    });
+
+    expect(notificationHarness.update).toHaveBeenCalledWith('toast-1', {
+      avatarUrl: '/inbox-profile/device-1/628123',
+      avatarStatus: 'available',
+      avatarFallback: 'N',
+    });
     wrapper.unmount();
   });
 });

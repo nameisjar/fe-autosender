@@ -4,9 +4,16 @@ import { useToast } from './useToast.js';
 import { userApi } from '../api/http.js';
 import { useRouter } from 'vue-router';
 import { useInboxUnread } from './useInboxUnread.js';
+import {
+  buildIncomingNotification,
+  shouldShowSystemNotification,
+} from '../utils/incomingNotification.js';
+import { mediaUrl } from '../utils/mediaUrl.js';
 
 const NOTIFICATION_DEDUP_TTL_MS = 10 * 60 * 1000;
 const MAX_RECENT_NOTIFICATIONS = 1000;
+const SYSTEM_NOTIFICATION_AVATAR_WAIT_MS = 2500;
+const ACTIVE_NOTIFICATION_TTL_MS = 10_000;
 
 /** Global toast and sound notifications for incoming WhatsApp messages. */
 export function useGlobalNotifications() {
@@ -19,7 +26,9 @@ export function useGlobalNotifications() {
   let refreshTimer = null;
   let setupGeneration = 0;
   let audioContext = null;
+  let notificationPermissionRequested = false;
   const recentNotifications = new Map();
+  const activeNotifications = new Map();
 
   const isDuplicateNotification = (sessionId, messageId, now = Date.now()) => {
     if (!messageId) return false;
@@ -43,23 +52,6 @@ export function useGlobalNotifications() {
     return false;
   };
 
-  const formatPhone = (jid) => {
-    if (!jid) return '';
-    if (jid.includes('@lid')) return 'Kontak WhatsApp';
-    return jid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
-  };
-
-  const getSenderName = (data) => {
-    if ((data.isGroup || data.from?.endsWith('@g.us')) && data.groupName) {
-      return data.groupName;
-    }
-    if (data.contact) {
-      return `${data.contact.firstName} ${data.contact.lastName || ''}`.trim();
-    }
-    if (data.pushName) return data.pushName;
-    return formatPhone(data.from);
-  };
-
   const getAudioContext = () => {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return null;
@@ -76,6 +68,17 @@ export function useGlobalNotifications() {
       const context = getAudioContext();
       if (context?.state === 'suspended') await context.resume();
     } catch (_) {}
+    if (
+      localStorage.getItem('token')
+      && 'Notification' in window
+      && window.Notification.permission === 'default'
+      && !notificationPermissionRequested
+    ) {
+      notificationPermissionRequested = true;
+      try {
+        await window.Notification.requestPermission();
+      } catch (_) {}
+    }
   };
 
   const playNotificationSound = async () => {
@@ -109,6 +112,54 @@ export function useGlobalNotifications() {
     }
   };
 
+  const absoluteNotificationIcon = avatarUrl => {
+    if (!avatarUrl) return undefined;
+    try {
+      return new URL(mediaUrl(avatarUrl), window.location.origin).href;
+    } catch (_) {
+      return undefined;
+    }
+  };
+
+  const showSystemNotification = ({ data, device, notification, openInboxMessage }) => {
+    if (!('Notification' in window) || window.Notification.permission !== 'granted') return false;
+    if (!shouldShowSystemNotification({
+      visibilityState: document.visibilityState,
+      hasFocus: document.hasFocus(),
+    })) return false;
+
+    try {
+      const systemNotification = new window.Notification(notification.title, {
+        body: notification.description,
+        icon: absoluteNotificationIcon(notification.avatarUrl),
+        tag: `inbox:${device?.id || 'device'}:${data.from || data.id || 'message'}`,
+        renotify: true,
+        data: {
+          deviceId: device?.id || '',
+          conversationJid: data.from || '',
+          messageId: data.id || '',
+        },
+      });
+      systemNotification.onclick = () => {
+        window.focus();
+        systemNotification.close();
+        void openInboxMessage();
+      };
+      return true;
+    } catch (_) {
+      // Toast and sound remain available when native notifications are rejected.
+      return false;
+    }
+  };
+
+  const clearActiveNotification = key => {
+    const entry = activeNotifications.get(key);
+    if (!entry) return;
+    if (entry.systemTimer) clearTimeout(entry.systemTimer);
+    if (entry.expiryTimer) clearTimeout(entry.expiryTimer);
+    activeNotifications.delete(key);
+  };
+
   const setupGlobalListener = async () => {
     const socket = getSocket();
     if (!socket) return;
@@ -131,34 +182,94 @@ export function useGlobalNotifications() {
 
     uniqueSessionIds.forEach((sessionId) => {
       const eventName = `incoming:${sessionId}`;
+      const profileEventName = `incoming:${sessionId}:profile-updated`;
       const device = userDevices.find(item => item.sessionId === sessionId);
       const handler = (data) => {
         if (isDuplicateNotification(sessionId, data?.id)) return;
 
         incrementUnreadCount(device?.id, 1);
 
-        const senderName = getSenderName(data);
-        const preview = data.message?.substring(0, 50) || 'Media/File';
+        const notification = buildIncomingNotification(data);
         const openInboxMessage = () => router.push({
           name: 'inbox',
           query: {
             device: device?.id || '',
             conversation: data.from || '',
             message: data.id || '',
-            displayName: senderName,
-            isGroup: String(Boolean(data.isGroup || data.from?.endsWith('@g.us'))),
+            displayName: notification.title,
+            isGroup: String(notification.isGroup),
             profilePicUrl: data.groupPicUrl || data.profilePicUrl || '',
           },
         });
-        toast.info(`💬 ${senderName}: ${preview}`, 5000, {
+        const toastId = toast.info(notification.description, 6000, {
+          title: notification.title,
+          description: notification.description,
+          avatarUrl: notification.avatarUrl,
+          avatarStatus: data.profilePictureStatus || '',
+          avatarFallback: notification.avatarFallback,
           onClick: openInboxMessage,
-          ariaLabel: `Buka pesan dari ${senderName}`,
+          ariaLabel: `Buka pesan dari ${notification.title}`,
         });
+        const notificationKey = `${sessionId}:${data.id || data.from || Date.now()}`;
+        const entry = {
+          data,
+          device,
+          notification,
+          openInboxMessage,
+          toastId,
+          systemShown: false,
+          systemTimer: null,
+          expiryTimer: null,
+        };
+        activeNotifications.set(notificationKey, entry);
+        entry.expiryTimer = setTimeout(
+          () => clearActiveNotification(notificationKey),
+          ACTIVE_NOTIFICATION_TTL_MS,
+        );
+        if (notification.avatarUrl) {
+          entry.systemShown = showSystemNotification(entry);
+        } else {
+          entry.systemTimer = setTimeout(() => {
+            entry.systemTimer = null;
+            entry.systemShown = showSystemNotification(entry);
+          }, SYSTEM_NOTIFICATION_AVATAR_WAIT_MS);
+        }
         void playNotificationSound();
       };
 
+      const profileHandler = (profileData) => {
+        const matchingEntries = [...activeNotifications.entries()].filter(([key, entry]) => (
+          key.startsWith(`${sessionId}:`)
+          && entry.data
+          && (
+            (profileData?.id && entry.data.id === profileData.id)
+            || (profileData?.from && entry.data.from === profileData.from)
+          )
+        ));
+
+        for (const [, entry] of matchingEntries) {
+          entry.data = { ...entry.data, ...profileData };
+          entry.notification = buildIncomingNotification(entry.data);
+          toast.update(entry.toastId, {
+            avatarUrl: entry.notification.avatarUrl,
+            avatarStatus: profileData.profilePictureStatus || '',
+            avatarFallback: entry.notification.avatarFallback,
+          });
+
+          if (!entry.systemShown && entry.notification.avatarUrl) {
+            if (entry.systemTimer) clearTimeout(entry.systemTimer);
+            entry.systemTimer = null;
+            entry.systemShown = showSystemNotification(entry);
+          }
+        }
+      };
+
       socket.on(eventName, handler);
-      handlers.push({ eventName, handler });
+      socket.on(profileEventName, profileHandler);
+      handlers.push(
+        { eventName, handler },
+        { eventName: profileEventName, handler: profileHandler },
+      );
     });
 
     socketCleanup = () => {
@@ -211,6 +322,7 @@ export function useGlobalNotifications() {
     if (refreshTimer) clearTimeout(refreshTimer);
     setupGeneration++;
     recentNotifications.clear();
+    for (const key of activeNotifications.keys()) clearActiveNotification(key);
 
     window.removeEventListener('deviceChanged', scheduleListenerRefresh);
     window.removeEventListener('device:changed', scheduleListenerRefresh);

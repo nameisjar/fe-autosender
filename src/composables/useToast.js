@@ -32,11 +32,17 @@ export function useToast() {
     return show(message, 'info', duration, options);
   };
 
+  const update = (id, patch = {}) => {
+    if (!toastInstance || id == null) return false;
+    return toastInstance.updateToast?.(id, patch) ?? false;
+  };
+
   return {
     show,
     success,
     error,
     warning,
-    info
+    info,
+    update,
   };
 }
