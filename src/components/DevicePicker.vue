@@ -36,9 +36,11 @@
             class="device-status-compact"
             :class="{ online: selectedDevice.isConnected, reconnecting: selectedDevice.isReconnecting }"
           >
-            ● {{ selectedDevice.connectionLabel }}
+            <span class="connection-dot" aria-hidden="true"></span>
+            <span v-if="!isSidebar">{{ selectedDevice.connectionLabel }}</span>
+            <span v-else class="sr-only">{{ selectedDevice.connectionLabel }}</span>
             <span v-if="selectedDeviceHealth?.isPaused" class="paused-indicator">
-              • Dijeda
+              Dijeda
             </span>
           </div>
           <button
@@ -61,8 +63,7 @@
             >
               <path d="M3 12h4l2.2-5 4.1 10 2.2-5H21" />
             </svg>
-            <span v-if="isSidebar" class="health-label">{{ healthTriggerPresentation.label }}</span>
-            <span v-else class="sr-only">{{ healthTriggerPresentation.label }}</span>
+            <span class="sr-only">{{ healthTriggerPresentation.label }}</span>
           </button>
         </div>
       </div>
@@ -637,17 +638,37 @@ defineExpose({
 }
 
 .device-status-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12px;
   color: #dc2626;
   font-weight: 500;
+}
+
+.connection-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ef4444;
 }
 
 .device-status-compact.online {
   color: #059669;
 }
 
+.device-status-compact.online .connection-dot {
+  background: #10b981;
+}
+
 .device-status-compact.reconnecting {
   color: #d97706;
+}
+
+.device-status-compact.reconnecting .connection-dot {
+  background: #f59e0b;
+  animation: device-status-pulse 1.2s ease-in-out infinite;
 }
 
 .btn-change-compact {
@@ -818,37 +839,49 @@ defineExpose({
   text-decoration: none;
 }
 
-.health-label {
-  font-size: 10px;
-  line-height: 1;
-}
-
 .device-picker--sidebar .device-info-compact {
-  gap: 8px;
-  padding: 9px;
-  background: var(--theme-surface-soft);
+  gap: 7px;
+  padding: 5px 3px;
+  border-color: transparent;
+  background: transparent;
 }
 
 .device-picker--sidebar .device-avatar-compact {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
 }
 
-.device-picker--sidebar .device-name-compact,
+.device-picker--sidebar .device-avatar-compact svg {
+  width: 16px;
+  height: 16px;
+}
+
+.device-picker--sidebar .device-info-text {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.device-picker--sidebar .device-name-compact {
+  font-size: 13px;
+}
+
 .device-picker--sidebar .device-phone-inline {
-  font-size: 12px;
+  display: none;
 }
 
 .device-picker--sidebar .device-meta-row {
-  gap: 5px;
-  margin-top: 2px;
+  flex-shrink: 0;
+  gap: 4px;
+  margin-top: 0;
 }
 
 .device-picker--sidebar .health-icon-button {
-  width: auto;
-  height: 23px;
-  gap: 3px;
-  padding: 0 6px;
+  width: 25px;
+  height: 25px;
+  padding: 0;
   border-radius: 6px;
 }
 
@@ -864,6 +897,8 @@ defineExpose({
   padding: 0;
   align-items: center;
   justify-content: center;
+  border-color: transparent;
+  background: transparent;
 }
 
 .device-item-compact.online {

@@ -34,8 +34,7 @@
       </button>
     </div>
 
-    <section class="sidebar-active-device" aria-labelledby="active-device-label">
-      <div id="active-device-label" class="sidebar-active-device-label">Device aktif</div>
+    <section class="sidebar-active-device" aria-label="Device aktif">
       <DevicePicker variant="sidebar" @navigate="$emit('close')" />
     </section>
 
@@ -379,25 +378,6 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="theme-setting" aria-label="Pilih tema tampilan">
-        <div class="theme-setting-label">Tampilan</div>
-        <div class="theme-options" role="group" aria-label="Tema tampilan">
-          <button
-            v-for="option in themeOptions"
-            :key="option.value"
-            type="button"
-            class="theme-option"
-            :class="{ active: theme === option.value }"
-            :aria-pressed="theme === option.value"
-            :title="option.description"
-            @click="setTheme(option.value)"
-          >
-            <span class="theme-option-icon" aria-hidden="true">{{ option.icon }}</span>
-            <span>{{ option.label }}</span>
-          </button>
-        </div>
-      </div>
-
       <div class="user-info" v-if="me">
         <div class="avatar">
           <img
@@ -410,39 +390,66 @@
         </div>
         <div class="user-details">
           <div class="user-name">{{ me.firstName }}</div>
-          <div class="user-role">
-            <span v-if="me.privilege?.name === 'cs'">Tutor</span>
-            <span v-else-if="me.privilege?.name === 'super admin'">Admin</span>
-            <span v-else>User</span>
-          </div>
         </div>
       </div>
-      <button
-        class="logout-btn"
-        type="button"
-        :disabled="isLoggingOut"
-        :aria-busy="isLoggingOut"
-        @click="logout"
-      >
-        <svg v-if="!isLoggingOut" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M16 17L21 12L16 7M21 12H9"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <span v-else class="logout-button-spinner" aria-hidden="true"></span>
-        <span>{{ isLoggingOut ? "Keluar..." : "Logout" }}</span>
-      </button>
+
+      <div class="footer-actions">
+        <div ref="themeMenuRoot" class="theme-menu">
+          <button
+            type="button"
+            class="footer-icon-btn"
+            :class="{ active: showThemeMenu }"
+            :aria-expanded="showThemeMenu"
+            :aria-label="`Tema saat ini: ${currentThemeLabel}`"
+            :title="`Tema: ${currentThemeLabel}`"
+            @click="showThemeMenu = !showThemeMenu"
+          >
+            <svg v-if="theme === 'light'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <svg v-else-if="theme === 'dark'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5 8.5 8.5 0 1 0 20.5 14.3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
+              <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" />
+            </svg>
+          </button>
+
+          <div v-if="showThemeMenu" class="theme-popover" role="menu" aria-label="Pilih tema tampilan">
+            <button
+              v-for="option in themeOptions"
+              :key="option.value"
+              type="button"
+              role="menuitemradio"
+              :aria-checked="theme === option.value"
+              :class="{ active: theme === option.value }"
+              @click="selectTheme(option.value)"
+            >
+              <span>{{ option.label }}</span>
+              <svg v-if="theme === option.value" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button
+          class="footer-icon-btn logout-btn"
+          type="button"
+          :disabled="isLoggingOut"
+          :aria-busy="isLoggingOut"
+          aria-label="Logout"
+          title="Logout"
+          @click="logout"
+        >
+          <svg v-if="!isLoggingOut" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span v-else class="logout-button-spinner" aria-hidden="true"></span>
+        </button>
+      </div>
     </div>
   </aside>
 
@@ -476,10 +483,29 @@ const { theme, setTheme } = useTheme();
 const toast = useToast();
 const { unreadByDevice, setUnreadCount } = useInboxUnread();
 const themeOptions = [
-  { value: "light", label: "Terang", icon: "☀", description: "Selalu gunakan tema terang" },
-  { value: "dark", label: "Gelap", icon: "☾", description: "Selalu gunakan tema gelap" },
-  { value: "system", label: "Auto", icon: "◐", description: "Ikuti tema perangkat" },
+  { value: "light", label: "Terang" },
+  { value: "dark", label: "Gelap" },
+  { value: "system", label: "Otomatis" },
 ];
+const themeMenuRoot = ref(null);
+const showThemeMenu = ref(false);
+const currentThemeLabel = computed(
+  () => themeOptions.find((option) => option.value === theme.value)?.label || "Otomatis"
+);
+
+function selectTheme(value) {
+  setTheme(value);
+  showThemeMenu.value = false;
+}
+
+function handleSidebarPointerDown(event) {
+  if (!showThemeMenu.value) return;
+  if (!themeMenuRoot.value?.contains(event.target)) showThemeMenu.value = false;
+}
+
+function handleSidebarKeydown(event) {
+  if (event.key === "Escape") showThemeMenu.value = false;
+}
 
 // 🆕 Gunakan useDevices untuk mendapatkan data devices (shared state)
 const { devices, selectedDeviceId, loadDevices } = useDevices();
@@ -497,6 +523,8 @@ let retryCount = 0;
 let retryInterval = null;
 
 onMounted(async () => {
+  document.addEventListener("pointerdown", handleSidebarPointerDown);
+  document.addEventListener("keydown", handleSidebarKeydown);
   await auth.fetchMe();
 
   // First check device status before fetching profile
@@ -726,6 +754,8 @@ const handleDevicesLoaded = () => {
 
 // Cleanup
 onUnmounted(() => {
+  document.removeEventListener("pointerdown", handleSidebarPointerDown);
+  document.removeEventListener("keydown", handleSidebarKeydown);
   window.removeEventListener("storage", handleStorageChange);
   window.removeEventListener("deviceChanged", handleDeviceChange);
   window.removeEventListener("device:changed", handleDeviceChangedCanonical);
@@ -775,7 +805,7 @@ aside {
 }
 
 .sidebar-header {
-  padding: 20px;
+  padding: 16px;
   border-bottom: 1px solid var(--theme-border);
   display: flex;
   align-items: center;
@@ -805,18 +835,9 @@ aside {
 .sidebar-active-device {
   position: relative;
   z-index: 20;
-  padding: 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--theme-border);
   background: var(--theme-surface);
-}
-
-.sidebar-active-device-label {
-  margin: 0 4px 7px;
-  color: var(--theme-text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.55px;
-  text-transform: uppercase;
 }
 
 .close-btn {
@@ -947,83 +968,27 @@ nav a.router-link-active .nav-badge {
 
 /* Sidebar Footer */
 .sidebar-footer {
-  padding: 16px;
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
   border-top: 1px solid var(--theme-border);
   background: var(--theme-surface-soft);
-}
-
-.theme-setting {
-  margin-bottom: 12px;
-}
-
-.theme-setting-label {
-  margin-bottom: 7px;
-  color: var(--theme-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.theme-options {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--theme-border);
-  border-radius: 10px;
-  background: var(--theme-surface);
-}
-
-.theme-option {
-  display: flex;
-  min-width: 0;
-  padding: 7px 4px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--theme-text-muted);
-  cursor: pointer;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  font: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  transition: 150ms ease;
-}
-
-.theme-option:hover {
-  background: var(--theme-surface-hover);
-  color: var(--theme-text);
-}
-
-.theme-option.active {
-  border-color: rgba(59, 130, 246, 0.32);
-  background: var(--theme-accent-soft);
-  color: var(--theme-accent);
-  box-shadow: 0 1px 4px var(--theme-shadow);
-}
-
-.theme-option-icon {
-  font-size: 15px;
-  line-height: 1;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--theme-surface);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  border: 1px solid var(--theme-border);
+  min-width: 0;
+  flex: 1;
+  gap: 9px;
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
@@ -1031,7 +996,7 @@ nav a.router-link-active .nav-badge {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
   overflow: hidden;
@@ -1061,31 +1026,50 @@ nav a.router-link-active .nav-badge {
   text-overflow: ellipsis;
 }
 
-.user-role {
-  font-size: 12px;
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.theme-menu {
+  position: relative;
+}
+
+.footer-icon-btn {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
   color: var(--theme-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.footer-icon-btn:hover,
+.footer-icon-btn.active {
+  background: var(--theme-surface-hover);
+  color: var(--theme-accent);
+}
+
+.footer-icon-btn svg {
+  width: 17px;
+  height: 17px;
 }
 
 .logout-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-border);
-  border-radius: 10px;
   color: #ef4444;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 14px;
 }
 
 .logout-btn:hover {
   background: var(--theme-danger-soft);
   border-color: var(--theme-danger-border);
+  color: #ef4444;
 }
 
 .logout-btn:disabled {
@@ -1093,9 +1077,49 @@ nav a.router-link-active .nav-badge {
   opacity: 0.8;
 }
 
-.logout-btn svg {
-  width: 18px;
-  height: 18px;
+.theme-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 60;
+  width: 150px;
+  padding: 5px;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface);
+  box-shadow: 0 14px 30px var(--theme-shadow);
+}
+
+.theme-popover button {
+  display: flex;
+  width: 100%;
+  padding: 8px 9px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.theme-popover button:hover {
+  background: var(--theme-surface-hover);
+  color: var(--theme-text);
+}
+
+.theme-popover button.active {
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  font-weight: 600;
+}
+
+.theme-popover svg {
+  width: 15px;
+  height: 15px;
 }
 
 .logout-button-spinner {
