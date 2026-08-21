@@ -18,7 +18,7 @@
     </div>
 
     <!-- Main Form -->
-    <form @submit.prevent="submit" class="reminder-form">
+    <form @submit.prevent="submit" class="reminder-form" novalidate>
       <!-- Card 1: Basic Info -->
       <div class="card">
         <div class="card-header">
@@ -37,11 +37,17 @@
                 Nama Broadcast <span class="required">*</span>
               </label>
               <input
+                ref="nameInput"
                 v-model.trim="form.name"
                 placeholder="Contoh: Pengingat kelas mingguan"
                 required
                 class="form-input"
+                :class="{ 'has-error': !!nameError }"
+                :aria-invalid="!!nameError"
+                aria-describedby="recurring-name-error"
+                @blur="nameTouched = true"
               />
+              <p v-if="nameError" id="recurring-name-error" class="field-error">{{ nameError }}</p>
             </div>
           </div>
 
@@ -226,22 +232,6 @@
           </div>
         </div>
 
-        <div v-if="validationError" class="alert alert-error">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="7" x2="12" y2="14" />
-            <circle cx="12" cy="17" r="0.6" />
-          </svg>
-
-          {{ validationError }}
-        </div>
-
         <div v-if="msg" class="alert alert-success">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12" />
@@ -261,7 +251,7 @@
 
       <!-- Submit Button -->
       <div class="form-actions">
-        <button type="submit" class="btn-submit" :disabled="loading || !!validationError">
+        <button type="submit" class="btn-submit" :disabled="loading">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
@@ -309,6 +299,14 @@ const mediaFile = ref(null);
 const loading = ref(false);
 const msg = ref("");
 const err = ref("");
+const nameInput = ref(null);
+const submitAttempted = ref(false);
+const nameTouched = ref(false);
+const nameError = computed(() =>
+  (submitAttempted.value || nameTouched.value) && !form.value.name.trim()
+    ? "Nama wajib diisi"
+    : ""
+);
 
 function selectTemplate(template) {
   form.value.message = template.message || "";
@@ -350,10 +348,13 @@ async function submit() {
   // 🔒 Extra safety: Prevent double submit
   if (loading.value) return;
   
+  submitAttempted.value = true;
+  nameTouched.value = true;
   msg.value = "";
   err.value = "";
   if (validationError.value) {
-    toast.error(validationError.value);
+    if (nameError.value) nameInput.value?.focus();
+    else toast.error(validationError.value);
     return;
   }
 
@@ -408,6 +409,8 @@ async function submit() {
     form.value.endDate = "";
     recipientsPicker.value?.resetRecipients();
     mediaFile.value = null;
+    submitAttempted.value = false;
+    nameTouched.value = false;
   } catch (e) {
     toast.error(
       e?.response?.data?.message ||
@@ -1044,5 +1047,17 @@ watch(selectedDeviceId, (deviceId, previousDeviceId) => {
     min-width: 0;
     font-size: 16px;
   }
+}
+
+.form-input.has-error {
+  border-color: var(--theme-danger-border);
+  box-shadow: 0 0 0 3px var(--theme-danger-soft);
+}
+
+.field-error {
+  margin: 6px 0 0;
+  color: var(--theme-danger-text);
+  font-size: 12px;
+  font-weight: 500;
 }
 </style>

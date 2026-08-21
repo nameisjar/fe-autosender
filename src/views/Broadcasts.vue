@@ -15,7 +15,7 @@
     </div>
 
     <!-- Main Form -->
-    <form @submit.prevent="submit" class="broadcast-form">
+    <form @submit.prevent="submit" class="broadcast-form" novalidate>
       <!-- Card 1: Basic Info -->
       <div class="card">
         <div class="card-header">
@@ -34,11 +34,17 @@
                 Nama Broadcast <span class="required">*</span>
               </label>
               <input
+                ref="nameInput"
                 v-model.trim="form.name"
                 placeholder="Contoh: Extra Class (Fulan)"
                 required
                 class="form-input"
+                :class="{ 'has-error': !!nameError }"
+                :aria-invalid="!!nameError"
+                aria-describedby="broadcast-name-error"
+                @blur="nameTouched = true"
               />
+              <p v-if="nameError" id="broadcast-name-error" class="field-error">{{ nameError }}</p>
             </div>
 
             <div class="form-group">
@@ -100,22 +106,7 @@
       </div>
 
       <!-- Alerts -->
-      <div v-if="validationError || msg || err" class="alert-section">
-        <div v-if="validationError" class="alert alert-error">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="7" x2="12" y2="14" />
-            <circle cx="12" cy="17" r="0.6" />
-          </svg>
-
-          {{ validationError }}
-        </div>
+      <div v-if="msg || err" class="alert-section">
         <div v-if="msg" class="alert alert-success">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12" />
@@ -134,7 +125,7 @@
 
       <!-- Submit Button -->
       <div class="form-actions">
-        <button type="submit" class="btn-submit" :disabled="loading || !!validationError">
+        <button type="submit" class="btn-submit" :disabled="loading">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -187,6 +178,14 @@ const mediaFile = ref(null);
 const loading = ref(false);
 const msg = ref("");
 const err = ref("");
+const nameInput = ref(null);
+const submitAttempted = ref(false);
+const nameTouched = ref(false);
+const nameError = computed(() =>
+  (submitAttempted.value || nameTouched.value) && !form.value.name.trim()
+    ? "Nama wajib diisi"
+    : ""
+);
 
 const validationError = computed(() => {
   if (!selectedDeviceId.value) return "Pilih device terlebih dahulu";
@@ -210,10 +209,13 @@ async function submit() {
   // 🔒 Extra safety: Prevent double submit
   if (loading.value) return;
   
+  submitAttempted.value = true;
+  nameTouched.value = true;
   msg.value = "";
   err.value = "";
   if (validationError.value) {
-    toast.error(validationError.value);
+    if (nameError.value) nameInput.value?.focus();
+    else toast.error(validationError.value);
     return;
   }
 
@@ -271,6 +273,8 @@ async function submit() {
     form.value.schedule = "";
     recipientsPicker.value?.resetRecipients();
     mediaFile.value = null;
+    submitAttempted.value = false;
+    nameTouched.value = false;
   } catch (e) {
     console.error("Broadcast error:", e);
 
@@ -727,5 +731,17 @@ watch(selectedDeviceId, (deviceId, previousDeviceId) => {
     flex-direction: column;
     gap: 4px;
   }
+}
+
+.form-input.has-error {
+  border-color: var(--theme-danger-border);
+  box-shadow: 0 0 0 3px var(--theme-danger-soft);
+}
+
+.field-error {
+  margin: 6px 0 0;
+  color: var(--theme-danger-text);
+  font-size: 12px;
+  font-weight: 500;
 }
 </style>
