@@ -80,4 +80,33 @@ describe('ToastContainer', () => {
       .toBe('/profile/niko-updated.jpg');
     wrapper.unmount();
   });
+
+  it('keeps a background-tab toast until the page becomes visible', async () => {
+    vi.useFakeTimers();
+    let visibilityState = 'hidden';
+    const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get')
+      .mockImplementation(() => visibilityState);
+    const wrapper = mountToastContainer();
+
+    wrapper.vm.addToast({
+      message: 'Pesan saat tab tidak aktif',
+      type: 'info',
+      duration: 5000,
+    });
+    await wrapper.vm.$nextTick();
+
+    vi.advanceTimersByTime(10_000);
+    await wrapper.vm.$nextTick();
+    expect(document.body.querySelector('.toast')).not.toBeNull();
+
+    visibilityState = 'visible';
+    document.dispatchEvent(new Event('visibilitychange'));
+    vi.advanceTimersByTime(5000);
+    await wrapper.vm.$nextTick();
+    expect(document.body.querySelector('.toast')).toBeNull();
+
+    wrapper.unmount();
+    visibilitySpy.mockRestore();
+    vi.useRealTimers();
+  });
 });

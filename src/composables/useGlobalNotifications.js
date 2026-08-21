@@ -4,10 +4,7 @@ import { useToast } from './useToast.js';
 import { userApi } from '../api/http.js';
 import { useRouter } from 'vue-router';
 import { useInboxUnread } from './useInboxUnread.js';
-import {
-  buildIncomingNotification,
-  shouldShowSystemNotification,
-} from '../utils/incomingNotification.js';
+import { buildIncomingNotification } from '../utils/incomingNotification.js';
 import { mediaUrl } from '../utils/mediaUrl.js';
 
 const NOTIFICATION_DEDUP_TTL_MS = 10 * 60 * 1000;
@@ -123,10 +120,6 @@ export function useGlobalNotifications() {
 
   const showSystemNotification = ({ data, device, notification, openInboxMessage }) => {
     if (!('Notification' in window) || window.Notification.permission !== 'granted') return false;
-    if (!shouldShowSystemNotification({
-      visibilityState: document.visibilityState,
-      hasFocus: document.hasFocus(),
-    })) return false;
 
     try {
       const systemNotification = new window.Notification(notification.title, {

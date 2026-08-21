@@ -57,11 +57,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import CachedProfileImage from './CachedProfileImage.vue';
 
 const toasts = ref([]);
 const timers = ref({});
+
+const scheduleRemoval = (id, delay) => {
+  if (timers.value[id]) clearTimeout(timers.value[id]);
+  timers.value[id] = setTimeout(() => removeToast(id), delay);
+};
 
 const addToast = (toast) => {
   const id = Date.now() + Math.random();
@@ -81,10 +86,13 @@ const addToast = (toast) => {
     avatarFallback: toast.avatarFallback || '',
   });
 
-  // Auto dismiss
-  timers.value[id] = setTimeout(() => {
-    removeToast(id);
-  }, duration);
+  // A toast received in the background must remain available until the user
+  // returns to the page. Its full countdown starts once the tab is visible.
+  if (document.visibilityState === 'visible') {
+    scheduleRemoval(id, duration);
+  } else {
+    timers.value[id] = null;
+  }
 
   return id;
 };
@@ -136,17 +144,32 @@ const removeToast = (id) => {
 const pauseTimer = (id) => {
   if (timers.value[id]) {
     clearTimeout(timers.value[id]);
+    timers.value[id] = null;
   }
 };
 
-const resumeTimer = (id) => {
+const resumeTimer = (id, delay = 1000) => {
   const toast = toasts.value.find(t => t.id === id);
   if (toast) {
-    timers.value[id] = setTimeout(() => {
-      removeToast(id);
-    }, 1000); // Resume dengan 1 detik sisa
+    scheduleRemoval(id, delay);
   }
 };
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') {
+    toasts.value.forEach(toast => pauseTimer(toast.id));
+    return;
+  }
+  toasts.value.forEach(toast => resumeTimer(toast.id, toast.duration));
+};
+
+onMounted(() => document.addEventListener('visibilitychange', handleVisibilityChange));
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  Object.values(timers.value).forEach(timer => {
+    if (timer) clearTimeout(timer);
+  });
+});
 
 defineExpose({ addToast, updateToast, removeToast });
 </script>

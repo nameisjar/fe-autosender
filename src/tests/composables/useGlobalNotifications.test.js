@@ -239,7 +239,7 @@ describe('useGlobalNotifications', () => {
     wrapper.unmount();
   });
 
-  it('shows a clickable Windows/browser notification only while the tab is inactive', async () => {
+  it('shows clickable Windows/browser notifications whether the tab is active or hidden', async () => {
     const nativeNotifications = [];
     class FakeNotification {
       static permission = 'granted';
@@ -252,8 +252,10 @@ describe('useGlobalNotifications', () => {
       }
     }
     vi.stubGlobal('Notification', FakeNotification);
-    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
-    vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    let visibilityState = 'visible';
+    let hasFocus = true;
+    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibilityState);
+    vi.spyOn(document, 'hasFocus').mockImplementation(() => hasFocus);
     const focusSpy = vi.spyOn(window, 'focus').mockImplementation(() => {});
 
     const wrapper = mount(defineComponent({
@@ -279,6 +281,17 @@ describe('useGlobalNotifications', () => {
       body: 'Pesan latar belakang',
       icon: expect.stringContaining('/inbox-profile/device-1/niko'),
     }));
+
+    visibilityState = 'hidden';
+    hasFocus = false;
+    incomingHandler({
+      id: 'hidden-message-1',
+      from: '628456@s.whatsapp.net',
+      message: 'Pesan saat tab tersembunyi',
+      pushName: 'Alya',
+      profilePicUrl: '/inbox-profile/device-1/alya',
+    });
+    expect(nativeNotifications).toHaveLength(2);
 
     nativeNotifications[0].onclick();
     await flushPromises();

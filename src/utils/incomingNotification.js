@@ -48,7 +48,3 @@ export const buildIncomingNotification = data => {
     avatarFallback: getInitials(title),
   };
 };
-
-export const shouldShowSystemNotification = ({ visibilityState, hasFocus }) => (
-  visibilityState !== 'visible' || !hasFocus
-);

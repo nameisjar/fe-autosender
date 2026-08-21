@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildIncomingNotification,
-  shouldShowSystemNotification,
 } from '../../utils/incomingNotification.js';
 
 describe('incoming notification presentation', () => {
@@ -43,12 +42,4 @@ describe('incoming notification presentation', () => {
     }).title).toBe('+628123456789');
   });
 
-  it('shows native notifications only when the page is not active', () => {
-    expect(shouldShowSystemNotification({ visibilityState: 'hidden', hasFocus: false }))
-      .toBe(true);
-    expect(shouldShowSystemNotification({ visibilityState: 'visible', hasFocus: false }))
-      .toBe(true);
-    expect(shouldShowSystemNotification({ visibilityState: 'visible', hasFocus: true }))
-      .toBe(false);
-  });
 });
