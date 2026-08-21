@@ -419,14 +419,15 @@
             <span class="conversation-opening-spinner" aria-hidden="true"></span>
             <span>Memperbarui...</span>
           </div>
-          <div
-            class="chat-messages"
-            :class="{ 'chat-messages--positioning': !isConversationViewportReady }"
-            ref="chatMessagesContainer"
-            @scroll.passive="handleConversationScroll"
-            @wheel.passive="takeConversationScrollControl"
-            @touchstart.passive="takeConversationScrollControl"
-          >
+          <div class="chat-scroll-region">
+            <div
+              class="chat-messages"
+              :class="{ 'chat-messages--positioning': !isConversationViewportReady }"
+              ref="chatMessagesContainer"
+              @scroll.passive="handleConversationScroll"
+              @wheel.passive="takeConversationScrollControl"
+              @touchstart.passive="takeConversationScrollControl"
+            >
             <div v-if="loadingOlderMessages" class="history-loading" role="status">
               <span class="conversation-opening-spinner" aria-hidden="true"></span>
               <span>Memuat pesan lama...</span>
@@ -831,6 +832,29 @@
             </div>
             </template>
             </section>
+            </div>
+            <Transition name="scroll-latest">
+              <button
+                v-if="showScrollToLatest"
+                type="button"
+                class="btn-scroll-to-latest"
+                title="Ke pesan terbaru"
+                aria-label="Gulir ke pesan terbaru"
+                @click="scrollToLatestConversationMessage"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+            </Transition>
           </div>
           
           <!-- Reply Input -->
@@ -1385,6 +1409,7 @@ const activatedMediaIds = ref(new Set());
 const isInitialBottomPinning = ref(false);
 const isConversationViewportReady = ref(false);
 const conversationUserTookScrollControl = ref(false);
+const showScrollToLatest = ref(false);
 let attachmentDragDepth = 0;
 
 const attachmentKind = computed(() => {
@@ -3366,6 +3391,7 @@ const viewConversation = async (conv, { targetMessageId = '' } = {}) => {
   isPreparingConversation.value = true;
   isConversationViewportReady.value = false;
   conversationUserTookScrollControl.value = false;
+  showScrollToLatest.value = false;
   const snapshot = getConversationSnapshot(conversationFrom);
   selectedConversation.value = {
     ...conv,
@@ -3957,6 +3983,7 @@ const closeConversation = () => {
   conversationTimelineCursor.value = '';
   conversationHasMoreTimeline.value = false;
   isConversationFullscreen.value = false;
+  showScrollToLatest.value = false;
   resetAttachmentDrag();
   closeChatTemplatePicker();
   closeImagePreview();
@@ -4000,6 +4027,14 @@ const isConversationNearBottom = (threshold = 96) => {
   return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
 };
 
+const updateScrollToLatestVisibility = () => {
+  showScrollToLatest.value = Boolean(
+    selectedConversation.value
+    && isConversationViewportReady.value
+    && !isConversationNearBottom(96),
+  );
+};
+
 const releaseInitialBottomPin = () => {
   isInitialBottomPinning.value = false;
   if (bottomPinReleaseTimer) clearTimeout(bottomPinReleaseTimer);
@@ -4021,7 +4056,23 @@ const scrollToBottom = async ({ force = true } = {}) => {
   // Scroll only the chat viewport. scrollIntoView() can also move ancestor
   // scrollers and caused the modal to visibly jump while media was settling.
   container.scrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  showScrollToLatest.value = false;
   return true;
+};
+
+const scrollToLatestConversationMessage = async () => {
+  closeMessagePopups();
+  await nextTick();
+  const container = chatMessagesContainer.value;
+  if (!container) return;
+
+  showScrollToLatest.value = false;
+  const top = Math.max(0, container.scrollHeight - container.clientHeight);
+  if (typeof container.scrollTo === 'function') {
+    container.scrollTo({ top, behavior: 'smooth' });
+  } else {
+    container.scrollTop = top;
+  }
 };
 
 const startInitialBottomPin = async () => {
@@ -4085,6 +4136,7 @@ const loadOlderConversationMessages = async () => {
 
 const handleConversationScroll = event => {
   closeMessagePopups();
+  updateScrollToLatestVisibility();
   if (!isInitialBottomPinning.value && event?.currentTarget?.scrollTop <= 80) {
     void loadOlderConversationMessages();
   }
@@ -6596,6 +6648,14 @@ const handleMediaError = (event, message) => {
   position: relative;
 }
 
+.chat-scroll-region {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -6607,6 +6667,55 @@ const handleMediaError = (event, message) => {
   overflow-anchor: none;
   opacity: 1;
   transition: opacity 120ms ease-out;
+}
+
+.btn-scroll-to-latest {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  z-index: 40;
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--theme-border);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--theme-surface) 94%, transparent);
+  color: var(--theme-text-secondary);
+  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.24);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease,
+    background 160ms ease;
+}
+
+.btn-scroll-to-latest:hover {
+  border-color: var(--theme-accent);
+  background: var(--theme-surface);
+  color: var(--theme-accent);
+  transform: translateY(-2px);
+}
+
+.btn-scroll-to-latest:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--theme-accent) 32%, transparent);
+  outline-offset: 2px;
+}
+
+.btn-scroll-to-latest svg {
+  width: 22px;
+  height: 22px;
+}
+
+.scroll-latest-enter-active,
+.scroll-latest-leave-active {
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.scroll-latest-enter-from,
+.scroll-latest-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.92);
 }
 
 .chat-messages--positioning {
@@ -8550,6 +8659,13 @@ const handleMediaError = (event, message) => {
     scroll-padding-block: 12px;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .btn-scroll-to-latest {
+    right: 14px;
+    bottom: 12px;
+    width: 42px;
+    height: 42px;
   }
 
   .chat-date-separator {
