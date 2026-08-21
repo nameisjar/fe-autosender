@@ -18,7 +18,7 @@
     </div>
 
     <!-- Main Form -->
-    <form @submit.prevent="submit" class="reminder-form" novalidate>
+    <form @submit.prevent="openConfirmation" class="reminder-form" novalidate>
       <!-- Card 1: Basic Info -->
       <div class="card">
         <div class="card-header">
@@ -211,27 +211,7 @@
       </div>
 
       <!-- Info & Alerts -->
-      <div class="info-section">
-        <div class="info-card">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="10" x2="12" y2="16" />
-            <circle cx="12" cy="7" r="0.6" />
-          </svg>
-
-          <div class="info-content">
-            <div class="info-text">
-              Estimasi kirim: <strong>{{ estimatedCount }}</strong> kali
-            </div>
-          </div>
-        </div>
-
+      <div v-if="msg || err" class="info-section">
         <div v-if="msg" class="alert alert-success">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12" />
@@ -261,6 +241,16 @@
         </button>
       </div>
     </form>
+
+    <BroadcastConfirmationModal
+      v-model="showConfirmation"
+      title="Konfirmasi Broadcast Berulang"
+      confirm-label="Konfirmasi Jadwalkan"
+      :items="confirmationItems"
+      :loading="loading"
+      notice="Broadcast akan berjalan otomatis sesuai rentang tanggal dan interval ini."
+      @confirm="confirmSubmit"
+    />
   </div>
 </template>
 
@@ -272,14 +262,20 @@ import { useToast } from "../composables/useToast.js";
 import ChatTemplatePicker from "../components/ChatTemplatePicker.vue";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 import MediaUpload from "../components/MediaUpload.vue";
+import BroadcastConfirmationModal from "../components/BroadcastConfirmationModal.vue";
+import {
+  formatDeviceSummary,
+  formatRecipientSelection,
+} from "../utils/broadcastConfirmation.js";
 import {
   convertToServerTime,
+  formatLocalTime,
   isValidDateTime,
   calculateEstimatedCount,
 } from "../utils/datetime.js";
 
 const toast = useToast();
-const { selectedDeviceId } = useDevices();
+const { selectedDeviceId, selectedDevice } = useDevices();
 
 // Template refs
 const recipientsPicker = ref(null);
@@ -302,6 +298,7 @@ const err = ref("");
 const nameInput = ref(null);
 const submitAttempted = ref(false);
 const nameTouched = ref(false);
+const showConfirmation = ref(false);
 const nameError = computed(() =>
   (submitAttempted.value || nameTouched.value) && !form.value.name.trim()
     ? "Nama wajib diisi"
@@ -344,7 +341,26 @@ const estimatedCount = computed(() => {
   );
 });
 
-async function submit() {
+const recurrenceLabel = computed(() => {
+  const labels = { daily: "hari", weekly: "minggu", monthly: "bulan" };
+  return `Setiap ${form.value.interval || 1} ${labels[form.value.recurrence] || form.value.recurrence}`;
+});
+
+const confirmationItems = computed(() => [
+  { label: "Nama", value: form.value.name },
+  { label: "Device", value: formatDeviceSummary(selectedDevice.value) },
+  {
+    label: "Penerima",
+    value: formatRecipientSelection(recipientsPicker.value?.recipients || []),
+  },
+  { label: "Mulai", value: formatLocalTime(convertToServerTime(form.value.startDate)) },
+  { label: "Selesai", value: formatLocalTime(convertToServerTime(form.value.endDate)) },
+  { label: "Pengulangan", value: recurrenceLabel.value },
+  { label: "Estimasi kirim", value: `${estimatedCount.value} kali` },
+  { label: "Lampiran", value: mediaFile.value?.name || "Tanpa lampiran" },
+]);
+
+function openConfirmation() {
   // 🔒 Extra safety: Prevent double submit
   if (loading.value) return;
   
@@ -357,7 +373,15 @@ async function submit() {
     else toast.error(validationError.value);
     return;
   }
+  if (selectedDevice.value && !selectedDevice.value.isConnected) {
+    toast.error("Device tidak terhubung. Hubungkan kembali WhatsApp atau pilih device lain.");
+    return;
+  }
+  showConfirmation.value = true;
+}
 
+async function confirmSubmit() {
+  if (loading.value) return;
   loading.value = true;
   try {
     const deviceId = selectedDeviceId.value;
@@ -411,6 +435,7 @@ async function submit() {
     mediaFile.value = null;
     submitAttempted.value = false;
     nameTouched.value = false;
+    showConfirmation.value = false;
   } catch (e) {
     toast.error(
       e?.response?.data?.message ||

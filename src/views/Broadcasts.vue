@@ -15,7 +15,7 @@
     </div>
 
     <!-- Main Form -->
-    <form @submit.prevent="submit" class="broadcast-form" novalidate>
+    <form @submit.prevent="openConfirmation" class="broadcast-form" novalidate>
       <!-- Card 1: Basic Info -->
       <div class="card">
         <div class="card-header">
@@ -137,6 +137,16 @@
         </button>
       </div>
     </form>
+
+    <BroadcastConfirmationModal
+      v-model="showConfirmation"
+      :title="form.schedule ? 'Konfirmasi Jadwal Broadcast' : 'Konfirmasi Pengiriman Broadcast'"
+      :confirm-label="form.schedule ? 'Konfirmasi Jadwalkan' : 'Konfirmasi Kirim'"
+      :items="confirmationItems"
+      :loading="loading"
+      notice="Pesan belum diproses sampai Anda menekan tombol konfirmasi."
+      @confirm="confirmSubmit"
+    />
   </div>
 
 </template>
@@ -149,6 +159,11 @@ import { useToast } from "../composables/useToast.js";
 import ChatTemplatePicker from "../components/ChatTemplatePicker.vue";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 import MediaUpload from "../components/MediaUpload.vue";
+import BroadcastConfirmationModal from "../components/BroadcastConfirmationModal.vue";
+import {
+  formatDeviceSummary,
+  formatRecipientSelection,
+} from "../utils/broadcastConfirmation.js";
 import {
   convertToServerTime,
   formatLocalTime,
@@ -181,6 +196,7 @@ const err = ref("");
 const nameInput = ref(null);
 const submitAttempted = ref(false);
 const nameTouched = ref(false);
+const showConfirmation = ref(false);
 const nameError = computed(() =>
   (submitAttempted.value || nameTouched.value) && !form.value.name.trim()
     ? "Nama wajib diisi"
@@ -205,7 +221,24 @@ const validationError = computed(() => {
   return "";
 });
 
-async function submit() {
+const confirmationItems = computed(() => {
+  const recipients = recipientsPicker.value?.recipients || [];
+  return [
+    { label: "Nama", value: form.value.name },
+    { label: "Device", value: formatDeviceSummary(selectedDevice.value) },
+    { label: "Penerima", value: formatRecipientSelection(recipients) },
+    {
+      label: "Waktu",
+      value: form.value.schedule
+        ? formatLocalTime(convertToServerTime(form.value.schedule))
+        : "Kirim sekarang",
+    },
+    { label: "Jeda per pesan", value: `${Number(form.value.delay || 0) / 1000} detik` },
+    { label: "Lampiran", value: mediaFile.value?.name || "Tanpa lampiran" },
+  ];
+});
+
+function openConfirmation() {
   // 🔒 Extra safety: Prevent double submit
   if (loading.value) return;
   
@@ -219,6 +252,18 @@ async function submit() {
     return;
   }
 
+  if (selectedDevice.value && !selectedDevice.value.isConnected) {
+    toast.error(
+      "Device tidak terhubung. Silakan pilih device lain atau hubungkan kembali WhatsApp."
+    );
+    return;
+  }
+
+  showConfirmation.value = true;
+}
+
+async function confirmSubmit() {
+  if (loading.value) return;
   loading.value = true;
   try {
     const deviceId = selectedDeviceId.value;
@@ -275,6 +320,7 @@ async function submit() {
     mediaFile.value = null;
     submitAttempted.value = false;
     nameTouched.value = false;
+    showConfirmation.value = false;
   } catch (e) {
     console.error("Broadcast error:", e);
 
