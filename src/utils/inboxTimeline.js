@@ -53,3 +53,9 @@ export const formatInboxBubbleTime = value => {
     minute: '2-digit',
   });
 };
+
+export const formatInboxReadTime = (value, nowValue = Date.now()) => {
+  const date = asValidDate(value);
+  if (!date) return 'Waktu tidak tersedia';
+  return `${formatInboxDateLabel(date, nowValue)}, ${formatInboxBubbleTime(date)}`;
+};

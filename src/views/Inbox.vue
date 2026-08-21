@@ -699,13 +699,21 @@
                   {{ formatInboxBubbleTime(msg.timestamp) }}
                   
                   <!-- ✅ Read count badge untuk grup messages -->
-                  <span v-if="msg.type === 'outgoing' && msg.isGroup && msg.readCount > 0" class="read-count-badge" :title="`Dibaca oleh ${msg.readCount} orang`">
+                  <button
+                    v-if="msg.type === 'outgoing' && msg.readCount > 0"
+                    type="button"
+                    class="read-count-badge"
+                    :title="`Dibaca oleh ${msg.readCount} orang`"
+                    :aria-label="`Lihat ${msg.readCount} orang yang membaca pesan`"
+                    @pointerdown.stop
+                    @click.stop="openReadReceiptDetails(msg)"
+                  >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                       <circle cx="12" cy="12" r="3"/>
                     </svg>
                     {{ msg.readCount }}
-                  </span>
+                  </button>
                 </div>
               </div>
               <div
@@ -1225,6 +1233,87 @@
 
     <Teleport to="body">
       <div
+        v-if="readReceiptDetails"
+        class="read-receipt-overlay"
+        @click="closeReadReceiptDetails"
+      >
+        <section
+          class="read-receipt-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Daftar orang yang membaca pesan"
+          @click.stop
+        >
+          <header class="read-receipt-header">
+            <div>
+              <h3>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                Dibaca oleh
+              </h3>
+              <p>{{ readReceiptDetails.readers.length || readReceiptDetails.expectedCount }} orang</p>
+            </div>
+            <button
+              type="button"
+              class="read-receipt-close"
+              aria-label="Tutup daftar pembaca"
+              @click="closeReadReceiptDetails"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </header>
+
+          <div v-if="readReceiptDetails.loading" class="read-receipt-state" role="status">
+            <span class="conversation-opening-spinner" aria-hidden="true"></span>
+            Memuat daftar pembaca...
+          </div>
+          <div v-else-if="readReceiptDetails.error" class="read-receipt-state error">
+            <span>{{ readReceiptDetails.error }}</span>
+            <button type="button" @click="reloadReadReceiptDetails">Coba Lagi</button>
+          </div>
+          <div v-else-if="!readReceiptDetails.readers.length" class="read-receipt-state">
+            Data pembaca belum tersedia dari WhatsApp.
+          </div>
+          <ul v-else class="read-receipt-list">
+            <li
+              v-for="reader in readReceiptDetails.readers"
+              :key="reader.readerPhone || reader.readerJid"
+              class="read-receipt-member"
+            >
+              <span class="read-receipt-avatar" aria-hidden="true">
+                {{ getReadReceiptInitial(reader) }}
+                <img
+                  v-if="reader.readerProfilePicUrl"
+                  :src="mediaUrl(reader.readerProfilePicUrl)"
+                  alt=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  @error="$event.currentTarget.style.display = 'none'"
+                />
+              </span>
+              <span class="read-receipt-identity">
+                <strong>{{ getReadReceiptName(reader) }}</strong>
+                <small v-if="formatReadReceiptPhone(reader.readerPhone)">
+                  {{ formatReadReceiptPhone(reader.readerPhone) }}
+                </small>
+              </span>
+              <span class="read-receipt-time">
+                <time :datetime="reader.readAt">{{ formatInboxReadTime(reader.readAt) }}</time>
+                <small v-if="reader.estimated">Waktu perkiraan</small>
+              </span>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
         v-if="imagePreview"
         class="image-preview-overlay"
         role="dialog"
@@ -1277,6 +1366,7 @@ import { getInboxMediaType } from '../utils/inboxMedia.js';
 import {
   formatInboxBubbleTime,
   formatInboxDateLabel,
+  formatInboxReadTime,
   getLocalCalendarKey,
 } from '../utils/inboxTimeline.js';
 import {
@@ -1352,6 +1442,7 @@ const addContactModal = ref({
 });
 const conversationReactions = ref([]);
 const reactionDetails = ref(null);
+const readReceiptDetails = ref(null);
 const reactionProfileRetryVersions = ref({});
 const reactionPickerMessageKey = ref('');
 const reactionPickerAnchor = ref(null);
@@ -1474,6 +1565,7 @@ let socketConnectionCleanup = null;
 let latestLoadRequest = 0;
 let latestTimelineRequest = 0;
 let latestReactionsRequest = 0;
+let latestReadReceiptsRequest = 0;
 let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
 let conversationOpenGeneration = 0;
@@ -1542,6 +1634,9 @@ const cloneSnapshotItems = items => (Array.isArray(items)
   ? items.map(item => ({
       ...item,
       ...(Array.isArray(item?.readBy) ? { readBy: [...item.readBy] } : {}),
+      ...(Array.isArray(item?.readReceipts)
+        ? { readReceipts: item.readReceipts.map(receipt => ({ ...receipt })) }
+        : {}),
       ...(Array.isArray(item?.members) ? { members: [...item.members] } : {}),
     }))
   : []);
@@ -1652,6 +1747,9 @@ const applyMessageStatusEvent = data => {
       ? {
           readCount: Number(data.readCount),
           readBy: Array.isArray(data.readBy) ? data.readBy : currentMessage.readBy || [],
+          readReceipts: Array.isArray(data.readReceipts)
+            ? data.readReceipts
+            : currentMessage.readReceipts || [],
         }
       : {}),
   };
@@ -1862,6 +1960,84 @@ const closeReactionDetails = () => {
   for (const timer of reactionProfileRetryTimers.values()) clearTimeout(timer);
   reactionProfileRetryTimers.clear();
   reactionProfileRetryCounts.clear();
+};
+
+const formatReadReceiptPhone = value => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits ? `+${digits}` : '';
+};
+
+const getReadReceiptName = reader => {
+  return String(reader?.readerDisplayName || '').trim()
+    || formatReadReceiptPhone(reader?.readerPhone)
+    || 'Pengguna WhatsApp';
+};
+
+const getReadReceiptInitial = reader => {
+  return getReadReceiptName(reader).replace(/^\+/, '').charAt(0).toUpperCase() || '?';
+};
+
+const loadReadReceiptDetails = async () => {
+  const details = readReceiptDetails.value;
+  if (!details || !selectedDeviceId.value) return;
+
+  const requestId = ++latestReadReceiptsRequest;
+  readReceiptDetails.value = { ...details, loading: true, error: '' };
+  try {
+    const { data } = await userApi.get(
+      `/devices/${selectedDeviceId.value}/inbox/read-receipts`,
+      {
+        params: {
+          messageId: details.messageId,
+          conversationJid: details.conversationJid,
+        },
+      },
+    );
+    if (
+      requestId !== latestReadReceiptsRequest
+      || readReceiptDetails.value?.messageId !== details.messageId
+    ) return;
+    readReceiptDetails.value = {
+      ...readReceiptDetails.value,
+      loading: false,
+      readers: Array.isArray(data?.readers) ? data.readers : [],
+      expectedCount: Number(data?.readCount) || details.expectedCount,
+    };
+  } catch (error) {
+    if (
+      requestId !== latestReadReceiptsRequest
+      || readReceiptDetails.value?.messageId !== details.messageId
+    ) return;
+    readReceiptDetails.value = {
+      ...readReceiptDetails.value,
+      loading: false,
+      error: error?.response?.data?.message || 'Gagal memuat daftar pembaca',
+    };
+  }
+};
+
+const openReadReceiptDetails = message => {
+  closeMessagePopups();
+  const messageId = String(message?.waMessageId || message?.id || '').trim();
+  if (!messageId || !selectedConversation.value?.from) return;
+  readReceiptDetails.value = {
+    messageId,
+    conversationJid: selectedConversation.value.from,
+    expectedCount: Number(message.readCount) || 0,
+    readers: [],
+    loading: true,
+    error: '',
+  };
+  void loadReadReceiptDetails();
+};
+
+const reloadReadReceiptDetails = () => {
+  void loadReadReceiptDetails();
+};
+
+const closeReadReceiptDetails = () => {
+  latestReadReceiptsRequest += 1;
+  readReceiptDetails.value = null;
 };
 
 const getReactionMemberProfileUrl = member => {
@@ -3334,6 +3510,7 @@ const handleInboxComposerTyping = async (event) => {
     || deleteModal.value.show
     || imagePreview.value
     || reactionDetails.value
+    || readReceiptDetails.value
     || showChatTemplatePicker.value,
   );
   if (!shouldRedirectInboxTyping(event, {
@@ -3768,6 +3945,8 @@ const mapTimelineIncomingMessage = row => ({
 
 const mapTimelineOutgoingMessage = row => {
   const readBy = Array.isArray(row.readBy) ? row.readBy : [];
+  const readReceipts = Array.isArray(row.readReceipts) ? row.readReceipts : [];
+  const readCount = Math.max(readBy.length, readReceipts.length);
   return {
     pkId: row.sourcePkId,
     id: row.id,
@@ -3787,7 +3966,7 @@ const mapTimelineOutgoingMessage = row => {
     quotedMediaType: row.quotedMediaType || '',
     quotedFileName: row.quotedFileName || '',
     status: resolveOutgoingUiStatus(row.status, {
-      readCount: readBy.length,
+      readCount,
       isGroup: Boolean(row.isGroup),
     }),
     deletedForEveryone:
@@ -3796,7 +3975,8 @@ const mapTimelineOutgoingMessage = row => {
     waMessageId: row.waMessageId || null,
     isGroup: Boolean(row.isGroup),
     readBy,
-    readCount: readBy.length,
+    readReceipts,
+    readCount,
   };
 };
 
@@ -3992,6 +4172,7 @@ const closeConversation = () => {
   editingMessage.value = null;
   conversationReactions.value = [];
   closeReactionDetails();
+  closeReadReceiptDetails();
   reactionPickerMessageKey.value = '';
   sendingReactionMessageKey.value = '';
   messageActionMenuKey.value = '';
@@ -4346,6 +4527,7 @@ const sendMediaReply = async () => {
     status: 'sending',
     isGroup,
     readBy: [],
+    readReceipts: [],
     readCount: 0,
     quotedMessageId: activeReply?.targetMessageId || null,
     quotedFromMe: activeReply?.targetFromMe ?? null,
@@ -4544,6 +4726,7 @@ const sendReply = async () => {
     status: 'sending',
     isGroup: selectedConversation.value.isGroup || false,
     readBy: [],
+    readReceipts: [],
     readCount: 0,
     quotedMessageId: activeReply?.targetMessageId || null,
     quotedFromMe: activeReply?.targetFromMe ?? null,
@@ -4662,6 +4845,7 @@ const sendReply = async () => {
           waMessageId: waMessageId,
           isGroup: selectedConversation.value.isGroup || false,
           readBy: [],
+          readReceipts: [],
           readCount: 0,
           quotedMessageId: savedMessage?.quotedMessageId || activeReply?.targetMessageId || null,
           quotedFromMe: savedMessage?.quotedFromMe ?? activeReply?.targetFromMe ?? null,
@@ -5513,6 +5697,12 @@ function handleImagePreviewKeydown(event) {
   if (reactionPickerMessageKey.value || messageActionMenuKey.value) {
     event.preventDefault();
     closeMessagePopups();
+    return;
+  }
+
+  if (readReceiptDetails.value) {
+    event.preventDefault();
+    closeReadReceiptDetails();
     return;
   }
 
@@ -7164,6 +7354,198 @@ const handleMediaError = (event, message) => {
   to { opacity: 1; transform: scale(1); }
 }
 
+.read-receipt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2310;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.68);
+  backdrop-filter: blur(4px);
+}
+
+.read-receipt-dialog {
+  width: min(520px, 100%);
+  max-height: min(620px, calc(100vh - 40px));
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 18px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.32);
+  animation: reaction-details-enter 0.16s ease-out;
+}
+
+.read-receipt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.read-receipt-header h3,
+.read-receipt-header p {
+  margin: 0;
+}
+
+.read-receipt-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.read-receipt-header h3 svg {
+  width: 21px;
+  height: 21px;
+  color: var(--theme-accent);
+}
+
+.read-receipt-header p {
+  margin-top: 4px;
+  color: var(--theme-text-muted);
+  font-size: 13px;
+}
+
+.read-receipt-close {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+
+.read-receipt-close:hover {
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+}
+
+.read-receipt-close svg {
+  width: 19px;
+  height: 19px;
+}
+
+.read-receipt-list {
+  max-height: min(500px, calc(100vh - 150px));
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.read-receipt-member {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.read-receipt-member + .read-receipt-member {
+  border-top: 1px solid var(--theme-border);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.read-receipt-avatar {
+  position: relative;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  font-weight: 800;
+}
+
+.read-receipt-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--theme-surface-soft);
+}
+
+.read-receipt-identity {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.read-receipt-identity strong,
+.read-receipt-identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.read-receipt-identity strong {
+  font-size: 14px;
+}
+
+.read-receipt-identity small {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.read-receipt-time {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.read-receipt-time small {
+  color: var(--theme-text-muted);
+  font-size: 10px;
+}
+
+.read-receipt-state {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 24px;
+  color: var(--theme-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.read-receipt-state.error {
+  flex-direction: column;
+  color: var(--theme-danger-text);
+}
+
+.read-receipt-state button {
+  padding: 7px 11px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+
 .message-reaction-control {
   position: absolute;
   top: 50%;
@@ -7782,6 +8164,16 @@ const handleMediaError = (event, message) => {
   font-size: 10px;
   font-weight: 600;
   margin-left: 6px;
+  border: 0;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.read-count-badge:hover,
+.read-count-badge:focus-visible {
+  background: rgba(255, 255, 255, 0.3);
+  outline: none;
 }
 
 .read-count-badge svg {

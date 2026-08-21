@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatInboxBubbleTime,
   formatInboxDateLabel,
+  formatInboxReadTime,
   getLocalCalendarKey,
 } from '../../utils/inboxTimeline.js';
 
@@ -26,5 +27,11 @@ describe('Inbox timeline dates', () => {
     const value = localDate(2026, 8, 20, 4, 27);
     expect(getLocalCalendarKey(value)).toBe('2026-08-20');
     expect(formatInboxBubbleTime(value)).toMatch(/04[.:]27/);
+  });
+
+  it('formats a reader timestamp with its calendar label and time', () => {
+    const now = localDate(2026, 8, 21, 9, 0);
+    expect(formatInboxReadTime(localDate(2026, 8, 21, 8, 17), now))
+      .toMatch(/Hari ini, 08[.:]17/);
   });
 });
