@@ -1295,6 +1295,7 @@ import {
   resolveChatTemplate,
 } from '../utils/chatTemplate.js';
 import { isWithinMessageEditWindow } from '../utils/messageEdit.js';
+import { getCenteredContainerScrollTop } from '../utils/inboxScroll.js';
 import { useInboxUnread } from '../composables/useInboxUnread.js';
 
 const toast = useToast();
@@ -1452,6 +1453,7 @@ let messageHighlightTimer = null;
 let inboxNavigationGeneration = 0;
 let conversationOpenGeneration = 0;
 let conversationRequestController = null;
+let olderMessagesLoadPromise = null;
 let bottomPinReleaseTimer = null;
 const conversationSnapshotCache = new Map();
 const MAX_CONVERSATION_SNAPSHOTS = 10;
@@ -2085,13 +2087,15 @@ const focusQuotedMessage = async message => {
   if (!quotedMessageId) return;
 
   let target = findQuotedTarget(quotedMessageId);
-  for (
-    let attempt = 0;
-    !target && conversationHasMoreHistory.value && attempt < 8;
-    attempt += 1
-  ) {
-    await loadOlderConversationMessages();
+  const visitedCursors = new Set();
+  while (!target && conversationHasMoreHistory.value) {
+    const cursor = String(conversationTimelineCursor.value || '');
+    if (!cursor || visitedCursors.has(cursor)) break;
+    visitedCursors.add(cursor);
+
+    const progressed = await loadOlderConversationMessages();
     target = findQuotedTarget(quotedMessageId);
+    if (!progressed) break;
   }
 
   if (!target || !(await focusInboxMessage(getMessageDomId(target)))) {
@@ -3642,10 +3646,16 @@ const focusInboxMessage = async messageId => {
     .find(item => item.dataset.messageId === messageId);
   if (!container || !element) return false;
 
-  const centeredTop = element.offsetTop
-    - Math.max(0, (container.clientHeight - element.offsetHeight) / 2);
-  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
-  container.scrollTop = Math.min(maxScrollTop, Math.max(0, centeredTop));
+  const containerRect = container.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  container.scrollTop = getCenteredContainerScrollTop({
+    containerScrollTop: container.scrollTop,
+    containerClientHeight: container.clientHeight,
+    containerScrollHeight: container.scrollHeight,
+    containerTop: containerRect.top,
+    elementTop: elementRect.top,
+    elementHeight: elementRect.height || element.offsetHeight,
+  });
 
   highlightedMessageId.value = messageId;
   if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
@@ -4031,11 +4041,8 @@ const handleConversationMediaLoaded = () => {
 };
 
 const loadOlderConversationMessages = async () => {
-  if (
-    loadingOlderMessages.value
-    || !selectedConversation.value
-    || !conversationHasMoreHistory.value
-  ) return;
+  if (olderMessagesLoadPromise) return olderMessagesLoadPromise;
+  if (!selectedConversation.value || !conversationHasMoreHistory.value) return false;
 
   releaseInitialBottomPin();
 
@@ -4043,26 +4050,37 @@ const loadOlderConversationMessages = async () => {
   const container = chatMessagesContainer.value;
   const previousScrollHeight = container?.scrollHeight || 0;
   const previousScrollTop = container?.scrollTop || 0;
-  loadingOlderMessages.value = true;
+  const previousCursor = String(conversationTimelineCursor.value || '');
+  const previousMessageCount = allMessages.value.length;
 
-  try {
-    await loadConversationTimeline(conversationFrom, {
-      before: conversationTimelineCursor.value,
-      appendOlder: true,
-      signal: conversationRequestController?.signal,
-    });
+  olderMessagesLoadPromise = (async () => {
+    loadingOlderMessages.value = true;
+    try {
+      await loadConversationTimeline(conversationFrom, {
+        before: previousCursor,
+        appendOlder: true,
+        signal: conversationRequestController?.signal,
+      });
 
-    if (
-      container
-      && sameConversationJid(selectedConversation.value?.from, conversationFrom)
-    ) {
-      await nextTick();
-      container.scrollTop = previousScrollTop
-        + Math.max(0, container.scrollHeight - previousScrollHeight);
+      if (!sameConversationJid(selectedConversation.value?.from, conversationFrom)) {
+        return false;
+      }
+
+      if (container) {
+        await nextTick();
+        container.scrollTop = previousScrollTop
+          + Math.max(0, container.scrollHeight - previousScrollHeight);
+      }
+
+      return allMessages.value.length > previousMessageCount
+        || String(conversationTimelineCursor.value || '') !== previousCursor;
+    } finally {
+      loadingOlderMessages.value = false;
+      olderMessagesLoadPromise = null;
     }
-  } finally {
-    loadingOlderMessages.value = false;
-  }
+  })();
+
+  return olderMessagesLoadPromise;
 };
 
 const handleConversationScroll = event => {
