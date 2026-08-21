@@ -1202,6 +1202,17 @@
               v-for="member in activeReactionDetails.members"
               :key="member.reactorJid"
               class="reaction-member"
+              :class="{
+                'reaction-member-removable': isOwnReactionMember(member),
+                'reaction-member-removing': isRemovingOwnReaction(member),
+              }"
+              :role="isOwnReactionMember(member) ? 'button' : undefined"
+              :tabindex="isOwnReactionMember(member) ? 0 : undefined"
+              :aria-label="isOwnReactionMember(member) ? 'Hapus reaction Anda' : undefined"
+              :aria-disabled="isRemovingOwnReaction(member) || undefined"
+              @click="removeOwnReactionFromDetails(member)"
+              @keydown.enter.prevent="removeOwnReactionFromDetails(member)"
+              @keydown.space.prevent="removeOwnReactionFromDetails(member)"
             >
               <span class="reaction-member-avatar" aria-hidden="true">
                 {{ getReactionMemberInitial(member) }}
@@ -1218,7 +1229,10 @@
               </span>
               <span class="reaction-member-identity">
                 <strong>{{ getReactionMemberName(member) }}</strong>
-                <small v-if="getReactionMemberPhone(member)">
+                <small v-if="isOwnReactionMember(member)" class="reaction-member-remove-hint">
+                  {{ isRemovingOwnReaction(member) ? 'Menghapus...' : 'Klik untuk menghapus' }}
+                </small>
+                <small v-else-if="getReactionMemberPhone(member)">
                   {{ getReactionMemberPhone(member) }}
                 </small>
               </span>
@@ -1947,6 +1961,29 @@ const activeReactionDetails = computed(() => {
   ) || null;
 });
 
+const getActiveReactionMessage = () => {
+  if (!reactionDetails.value) return null;
+  return allMessages.value.find(item =>
+    getReactionMessageKey(item) === reactionDetails.value.messageKey
+  ) || null;
+};
+
+const isOwnReactionMember = member => member?.reactorJid === 'me';
+
+const isRemovingOwnReaction = member => Boolean(
+  isOwnReactionMember(member)
+  && reactionDetails.value?.messageKey
+  && sendingReactionMessageKey.value === reactionDetails.value.messageKey,
+);
+
+const removeOwnReactionFromDetails = async member => {
+  if (!isOwnReactionMember(member) || isRemovingOwnReaction(member)) return;
+  const message = getActiveReactionMessage();
+  const emoji = reactionDetails.value?.emoji;
+  if (!message || !emoji) return;
+  await sendReaction(message, emoji, { deferOptimisticUpdate: true });
+};
+
 const openReactionDetails = (message, emoji) => {
   closeMessagePopups();
   reactionDetails.value = {
@@ -2547,9 +2584,13 @@ const handleMessageDoubleClick = (message, event) => {
   void startReplyToMessage(message);
 };
 
-const sendReaction = async (message, selectedEmoji) => {
+const sendReaction = async (
+  message,
+  selectedEmoji,
+  { deferOptimisticUpdate = false } = {},
+) => {
   const targetMessageId = getMessageReactionTargetId(message);
-  if (!targetMessageId || !selectedConversation.value) return;
+  if (!targetMessageId || !selectedConversation.value) return false;
 
   const device = devices.value.find(item => item.id === selectedDeviceId.value);
   if (!device?.isConnected) {
@@ -2558,7 +2599,7 @@ const sendReaction = async (message, selectedEmoji) => {
   }
 
   const messageKey = getReactionMessageKey(message);
-  if (sendingReactionMessageKey.value) return;
+  if (sendingReactionMessageKey.value) return false;
 
   const ownReaction = getOwnReaction(message);
   const emoji = ownReaction?.emoji === selectedEmoji ? '' : selectedEmoji;
@@ -2575,10 +2616,12 @@ const sendReaction = async (message, selectedEmoji) => {
 
   sendingReactionMessageKey.value = messageKey;
   reactionPickerMessageKey.value = '';
-  conversationReactions.value = applyMessageReactionEvent(
-    conversationReactions.value,
-    optimisticEvent,
-  );
+  if (!deferOptimisticUpdate) {
+    conversationReactions.value = applyMessageReactionEvent(
+      conversationReactions.value,
+      optimisticEvent,
+    );
+  }
 
   try {
     const { data } = await deviceApi.post('/messages/reaction', {
@@ -2591,12 +2634,19 @@ const sendReaction = async (message, selectedEmoji) => {
         conversationReactions.value,
         data.reaction,
       );
+    } else if (deferOptimisticUpdate) {
+      conversationReactions.value = applyMessageReactionEvent(
+        conversationReactions.value,
+        optimisticEvent,
+      );
     }
+    return true;
   } catch (error) {
-    conversationReactions.value = previousReactions;
+    if (!deferOptimisticUpdate) conversationReactions.value = previousReactions;
     toast.error(
       error?.response?.data?.message || error?.message || 'Gagal mengirim reaction',
     );
+    return false;
   } finally {
     if (sendingReactionMessageKey.value === messageKey) {
       sendingReactionMessageKey.value = '';
@@ -4666,7 +4716,7 @@ const submitMessageEdit = async () => {
   const device = devices.value.find(item => item.id === selectedDeviceId.value);
   if (!device?.isConnected) {
     toast.error('Device WhatsApp belum terhubung');
-    return;
+    return false;
   }
 
   sendingReply.value = true;
@@ -7352,6 +7402,28 @@ const handleMediaError = (event, message) => {
 @keyframes reaction-details-enter {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
+}
+
+.reaction-member-removable {
+  cursor: pointer;
+  transition: background-color 150ms ease, opacity 150ms ease;
+}
+
+.reaction-member-removable:hover,
+.reaction-member-removable:focus-visible {
+  background: var(--theme-danger-soft);
+  outline: none;
+}
+
+.reaction-member-removing {
+  opacity: 0.65;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.reaction-member-remove-hint {
+  color: var(--theme-danger-text) !important;
+  font-weight: 600;
 }
 
 .read-receipt-overlay {
