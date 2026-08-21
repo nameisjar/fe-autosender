@@ -700,7 +700,7 @@
                   
                   <!-- ✅ Read count badge untuk grup messages -->
                   <button
-                    v-if="msg.type === 'outgoing' && msg.readCount > 0"
+                    v-if="canShowMessageReaders(msg, selectedConversation)"
                     type="button"
                     class="read-count-badge"
                     :title="`Dibaca oleh ${msg.readCount} orang`"
@@ -1423,6 +1423,7 @@ import {
   resolveChatTemplate,
 } from '../utils/chatTemplate.js';
 import { isWithinMessageEditWindow } from '../utils/messageEdit.js';
+import { canShowMessageReaders } from '../utils/messageReadReceipts.js';
 import { getCenteredContainerScrollTop } from '../utils/inboxScroll.js';
 import { useInboxUnread } from '../composables/useInboxUnread.js';
 
@@ -2055,6 +2056,7 @@ const loadReadReceiptDetails = async () => {
 
 const openReadReceiptDetails = message => {
   closeMessagePopups();
+  if (!canShowMessageReaders(message, selectedConversation.value)) return;
   const messageId = String(message?.waMessageId || message?.id || '').trim();
   if (!messageId || !selectedConversation.value?.from) return;
   readReceiptDetails.value = {
