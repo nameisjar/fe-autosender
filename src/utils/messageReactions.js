@@ -1,6 +1,33 @@
 const messageTargetIds = message =>
   [message?.waMessageId, message?.id, message?.tempId].filter(Boolean);
 
+const getReactionPhoneLabel = member => {
+  const suppliedPhone = String(member?.reactorPhone || '').replace(/\D/g, '');
+  if (suppliedPhone) return `+${suppliedPhone}`;
+
+  const jid = String(member?.reactorJid || '').trim().toLowerCase();
+  if (!jid || jid === 'me' || jid.endsWith('@lid') || jid.endsWith('@g.us')) return '';
+  const phone = jid.split('@')[0].split(':')[0].replace(/\D/g, '');
+  return phone ? `+${phone}` : '';
+};
+
+export const resolveReactionMemberIdentity = member => {
+  if (member?.reactorJid === 'me') return { name: 'Anda', phone: '' };
+
+  const displayName = String(member?.reactorDisplayName || '').trim();
+  const phone = getReactionPhoneLabel(member);
+  if (displayName) {
+    const displayDigits = displayName.replace(/\D/g, '');
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phone && displayDigits === phoneDigits) {
+      return { name: phone, phone: '' };
+    }
+    return { name: displayName, phone };
+  }
+
+  return { name: phone || 'Tidak dikenal', phone: '' };
+};
+
 export const getMessageReactionTargetId = message => {
   if (message?.type === 'outgoing') {
     return message?.waMessageId || message?.tempId || message?.id || null;

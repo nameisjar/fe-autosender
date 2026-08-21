@@ -1274,6 +1274,7 @@ import {
   findOwnMessageReaction,
   getMessageReactionTargetId,
   groupMessageReactions,
+  resolveReactionMemberIdentity,
   sameConversationJid,
 } from '../utils/messageReactions.js';
 import {
@@ -1875,16 +1876,11 @@ const handleReactionProfileError = (event, member) => {
 };
 
 const getReactionMemberPhone = member => {
-  if (!member || member.reactorJid === 'me') return '';
-  const phone = String(member.reactorPhone || '').replace(/\D/g, '');
-  return phone ? `+${phone}` : formatWhatsAppIdentity(member.reactorJid);
+  return resolveReactionMemberIdentity(member).phone;
 };
 
 const getReactionMemberName = member => {
-  if (member?.reactorJid === 'me') return 'Anda';
-  return String(member?.reactorDisplayName || '').trim()
-    || getReactionMemberPhone(member)
-    || 'Tidak dikenal';
+  return resolveReactionMemberIdentity(member).name;
 };
 
 const getReactionMemberInitial = member => {
