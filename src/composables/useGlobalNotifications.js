@@ -153,6 +153,24 @@ export function useGlobalNotifications() {
     activeNotifications.delete(key);
   };
 
+  const showInAppToast = entry => {
+    if (entry.toastId != null) return true;
+    entry.toastId = toast.info(entry.notification.description, 6000, {
+      title: entry.notification.title,
+      description: entry.notification.description,
+      avatarUrl: entry.notification.avatarUrl,
+      avatarStatus: entry.data.profilePictureStatus || '',
+      avatarFallback: entry.notification.avatarFallback,
+      onClick: entry.openInboxMessage,
+      ariaLabel: `Buka pesan dari ${entry.notification.title}`,
+    });
+    return entry.toastId != null;
+  };
+
+  const systemNotificationsAvailable = () => (
+    'Notification' in window && window.Notification.permission === 'granted'
+  );
+
   const setupGlobalListener = async () => {
     const socket = getSocket();
     if (!socket) return;
@@ -194,22 +212,14 @@ export function useGlobalNotifications() {
             profilePicUrl: data.groupPicUrl || data.profilePicUrl || '',
           },
         });
-        const toastId = toast.info(notification.description, 6000, {
-          title: notification.title,
-          description: notification.description,
-          avatarUrl: notification.avatarUrl,
-          avatarStatus: data.profilePictureStatus || '',
-          avatarFallback: notification.avatarFallback,
-          onClick: openInboxMessage,
-          ariaLabel: `Buka pesan dari ${notification.title}`,
-        });
         const notificationKey = `${sessionId}:${data.id || data.from || Date.now()}`;
         const entry = {
           data,
           device,
           notification,
           openInboxMessage,
-          toastId,
+          toastId: null,
+          preferSystemNotification: systemNotificationsAvailable(),
           systemShown: false,
           systemTimer: null,
           expiryTimer: null,
@@ -219,12 +229,24 @@ export function useGlobalNotifications() {
           () => clearActiveNotification(notificationKey),
           ACTIVE_NOTIFICATION_TTL_MS,
         );
-        if (notification.avatarUrl) {
+
+        const preferSystemNotification = entry.preferSystemNotification;
+        if (!preferSystemNotification) showInAppToast(entry);
+
+        if (preferSystemNotification && notification.avatarUrl) {
           entry.systemShown = showSystemNotification(entry);
-        } else {
+          if (!entry.systemShown) {
+            entry.preferSystemNotification = false;
+            showInAppToast(entry);
+          }
+        } else if (preferSystemNotification) {
           entry.systemTimer = setTimeout(() => {
             entry.systemTimer = null;
             entry.systemShown = showSystemNotification(entry);
+            if (!entry.systemShown) {
+              entry.preferSystemNotification = false;
+              showInAppToast(entry);
+            }
           }, SYSTEM_NOTIFICATION_AVATAR_WAIT_MS);
         }
         void playNotificationSound();
@@ -243,16 +265,26 @@ export function useGlobalNotifications() {
         for (const [, entry] of matchingEntries) {
           entry.data = { ...entry.data, ...profileData };
           entry.notification = buildIncomingNotification(entry.data);
-          toast.update(entry.toastId, {
-            avatarUrl: entry.notification.avatarUrl,
-            avatarStatus: profileData.profilePictureStatus || '',
-            avatarFallback: entry.notification.avatarFallback,
-          });
+          if (entry.toastId != null) {
+            toast.update(entry.toastId, {
+              avatarUrl: entry.notification.avatarUrl,
+              avatarStatus: profileData.profilePictureStatus || '',
+              avatarFallback: entry.notification.avatarFallback,
+            });
+          }
 
-          if (!entry.systemShown && entry.notification.avatarUrl) {
+          if (
+            !entry.systemShown
+            && entry.preferSystemNotification
+            && entry.notification.avatarUrl
+          ) {
             if (entry.systemTimer) clearTimeout(entry.systemTimer);
             entry.systemTimer = null;
             entry.systemShown = showSystemNotification(entry);
+            if (!entry.systemShown) {
+              entry.preferSystemNotification = false;
+              showInAppToast(entry);
+            }
           }
         }
       };

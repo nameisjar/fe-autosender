@@ -276,6 +276,7 @@ describe('useGlobalNotifications', () => {
     });
 
     expect(nativeNotifications).toHaveLength(1);
+    expect(notificationHarness.info).not.toHaveBeenCalled();
     expect(nativeNotifications[0].title).toBe('Niko Algonova');
     expect(nativeNotifications[0].options).toEqual(expect.objectContaining({
       body: 'Pesan latar belakang',
@@ -292,6 +293,7 @@ describe('useGlobalNotifications', () => {
       profilePicUrl: '/inbox-profile/device-1/alya',
     });
     expect(nativeNotifications).toHaveLength(2);
+    expect(notificationHarness.info).not.toHaveBeenCalled();
 
     nativeNotifications[0].onclick();
     await flushPromises();
@@ -300,6 +302,41 @@ describe('useGlobalNotifications', () => {
       name: 'inbox',
     }));
     expect(nativeNotifications[0].close).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('falls back to an in-app toast when a system notification cannot be created', async () => {
+    class FailingNotification {
+      static permission = 'granted';
+
+      constructor() {
+        throw new Error('System notification unavailable');
+      }
+    }
+    vi.stubGlobal('Notification', FailingNotification);
+
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+    await flushPromises();
+
+    const [incomingHandler] = socketHarness.listeners.get('incoming:session-1');
+    incomingHandler({
+      id: 'fallback-message-1',
+      from: '628123@s.whatsapp.net',
+      message: 'Gunakan toast',
+      pushName: 'Niko',
+      profilePicUrl: '/inbox-profile/device-1/niko',
+    });
+
+    expect(notificationHarness.info).toHaveBeenCalledWith(
+      'Gunakan toast',
+      6000,
+      expect.objectContaining({ title: 'Niko' }),
+    );
     wrapper.unmount();
   });
 
