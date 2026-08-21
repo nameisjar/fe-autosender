@@ -19,42 +19,6 @@
 
     <!-- Main Form -->
     <form @submit.prevent="submit" class="reminder-form">
-      <!-- Card 0: Device Selection -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-            </svg>
-            Pilih Device WhatsApp
-          </h3>
-          <button
-            type="button"
-            class="btn-refresh-header"
-            @click="devicePicker?.loadDevices()"
-            :disabled="devicePicker?.loading"
-            title="Refresh device list"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              :class="{ spinning: devicePicker?.loading }"
-            >
-              <path
-                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-              />
-            </svg>
-            {{ devicePicker?.loading ? "Loading..." : "Refresh" }}
-          </button>
-        </div>
-        <div class="card-body">
-          <DevicePicker ref="devicePicker" @device-changed="onDeviceChanged" />
-        </div>
-      </div>
-
       <!-- Card 1: Basic Info -->
       <div class="card">
         <div class="card-header">
@@ -311,12 +275,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { deviceApi } from "../api/http.js";
+import { useDevices } from "../composables/useDevices.js";
 import { useToast } from "../composables/useToast.js";
 import ChatTemplatePicker from "../components/ChatTemplatePicker.vue";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
-import DevicePicker from "../components/DevicePicker.vue";
 import MediaUpload from "../components/MediaUpload.vue";
 import {
   convertToServerTime,
@@ -325,9 +289,9 @@ import {
 } from "../utils/datetime.js";
 
 const toast = useToast();
+const { selectedDeviceId } = useDevices();
 
 // Template refs
-const devicePicker = ref(null);
 const recipientsPicker = ref(null);
 
 const form = ref({
@@ -352,7 +316,7 @@ function selectTemplate(template) {
 }
 
 const validationError = computed(() => {
-  if (!devicePicker.value?.selectedDeviceId) return "Pilih device terlebih dahulu";
+  if (!selectedDeviceId.value) return "Pilih device terlebih dahulu";
   if (!form.value.name) return "Nama wajib diisi";
   if (!form.value.message) return "Pesan wajib diisi";
   if (!form.value.startDate || !form.value.endDate) return "Rentang tanggal wajib diisi";
@@ -395,7 +359,7 @@ async function submit() {
 
   loading.value = true;
   try {
-    const deviceId = devicePicker.value?.selectedDeviceId;
+    const deviceId = selectedDeviceId.value;
     if (!deviceId) {
       toast.error("Device tidak ditemukan atau belum login WhatsApp");
       loading.value = false;
@@ -456,12 +420,10 @@ async function submit() {
   }
 }
 
-function onDeviceChanged() {
+watch(selectedDeviceId, (deviceId, previousDeviceId) => {
+  if (!previousDeviceId || String(deviceId) === String(previousDeviceId)) return;
   recipientsPicker.value?.resetRecipients();
-  toast.success(
-    "Device berhasil diganti. Data kontak, grup, dan label telah di-refresh."
-  );
-}
+});
 </script>
 
 <style scoped>

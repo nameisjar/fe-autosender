@@ -34,6 +34,11 @@
       </button>
     </div>
 
+    <section class="sidebar-active-device" aria-labelledby="active-device-label">
+      <div id="active-device-label" class="sidebar-active-device-label">Device aktif</div>
+      <DevicePicker variant="sidebar" @navigate="$emit('close')" />
+    </section>
+
     <nav>
       <div class="nav-section">
         <span class="nav-label">MENU UTAMA</span>
@@ -453,6 +458,7 @@ import { listenToDeviceStatus } from "../../api/socket.js";
 import { useTheme } from "../../composables/useTheme.js";
 import { useToast } from "../../composables/useToast.js";
 import { useInboxUnread } from "../../composables/useInboxUnread.js";
+import DevicePicker from "../DevicePicker.vue";
 
 const props = defineProps({
   isOpen: {
@@ -476,10 +482,9 @@ const themeOptions = [
 ];
 
 // 🆕 Gunakan useDevices untuk mendapatkan data devices (shared state)
-const { devices, selectedDevice, loadDevices } = useDevices();
+const { devices, selectedDeviceId, loadDevices } = useDevices();
 
 const profilePictureUrl = ref(null);
-const selectedDeviceId = ref(localStorage.getItem("device_selected_id"));
 const isFetchingProfile = ref(false);
 const currentDeviceStatus = ref(null);
 const initialLoadDone = ref(false);
@@ -795,6 +800,23 @@ aside {
   font-weight: 700;
   color: #3b82f6;
   letter-spacing: -0.5px;
+}
+
+.sidebar-active-device {
+  position: relative;
+  z-index: 20;
+  padding: 12px;
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+}
+
+.sidebar-active-device-label {
+  margin: 0 4px 7px;
+  color: var(--theme-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
 }
 
 .close-btn {

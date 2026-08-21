@@ -1,8 +1,12 @@
 // filepath: d:\Doc\autosender\fe-autosender\src\components\DevicePicker.vue
 <template>
-  <div class="device-picker">
+  <div ref="pickerRoot" class="device-picker" :class="`device-picker--${variant}`">
     <!-- Device Info Compact (ketika device sudah dipilih) -->
-    <div v-if="selectedDevice && !showDeviceList" class="device-info-compact">
+    <div
+      v-if="selectedDevice && (!showDeviceList || isSidebar)"
+      class="device-info-compact"
+      :class="{ 'is-menu-open': showDeviceList }"
+    >
       <div
         class="device-avatar-compact"
         :class="{ online: selectedDevice.isConnected, reconnecting: selectedDevice.isReconnecting }"
@@ -57,21 +61,39 @@
             >
               <path d="M3 12h4l2.2-5 4.1 10 2.2-5H21" />
             </svg>
-            <span class="sr-only">{{ healthTriggerPresentation.label }}</span>
+            <span v-if="isSidebar" class="health-label">{{ healthTriggerPresentation.label }}</span>
+            <span v-else class="sr-only">{{ healthTriggerPresentation.label }}</span>
           </button>
         </div>
       </div>
       <button
         type="button"
         class="btn-change-compact"
-        @click="showDeviceList = true"
+        :aria-expanded="showDeviceList"
+        aria-label="Ganti device aktif"
+        @click="toggleDeviceList"
       >
-        Ganti
+        <span v-if="!isSidebar">Ganti</span>
+        <svg v-else viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
       </button>
     </div>
 
     <!-- Device List Compact (ketika belum ada device atau sedang memilih) -->
-    <div v-if="!selectedDevice || showDeviceList" class="device-list-compact">
+    <div
+      v-if="!selectedDevice || showDeviceList"
+      class="device-list-compact"
+      :class="{ 'device-list-compact--dropdown': isSidebar && selectedDevice }"
+    >
+      <div v-if="isSidebar" class="device-list-toolbar">
+        <strong>Pilih device</strong>
+        <button type="button" :disabled="loading" aria-label="Muat ulang device" @click="refresh">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
       <div v-if="loading" class="device-loading">
         <div class="spinner-small"></div>
         <span>Memuat devices...</span>
@@ -85,7 +107,12 @@
         :key="device.id"
         type="button"
         class="device-item-compact"
-        :class="{ online: device.isConnected, reconnecting: device.isReconnecting, paused: device.health?.isPaused }"
+        :class="{
+          online: device.isConnected,
+          reconnecting: device.isReconnecting,
+          paused: device.health?.isPaused,
+          selected: String(device.id) === String(selectedDeviceId),
+        }"
         @click="handleSelectDevice(device.id)"
       >
         <span class="device-item-label">
@@ -104,6 +131,15 @@
         </span>
         <span class="status-dot" :class="{ online: device.isConnected, reconnecting: device.isReconnecting }"></span>
       </button>
+      <router-link
+        v-if="isSidebar"
+        class="manage-devices-link"
+        to="/add-device"
+        @click="handleManageDevices"
+      >
+        Kelola device dan health
+        <span aria-hidden="true">&rarr;</span>
+      </router-link>
     </div>
 
     <!-- 🆕 Health Modal -->
@@ -251,13 +287,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useDevices } from "../composables/useDevices.js";
 import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 
-const emit = defineEmits(["device-changed"]);
+const props = defineProps({
+  variant: {
+    type: String,
+    default: "default",
+    validator: (value) => ["default", "sidebar"].includes(value),
+  },
+});
+
+const emit = defineEmits(["device-changed", "navigate"]);
 const router = useRouter();
+const pickerRoot = ref(null);
+const isSidebar = computed(() => props.variant === "sidebar");
 
 // Device management dari composable
 const {
@@ -277,6 +323,24 @@ const {
 } = useDevices();
 
 const showDeviceList = ref(false);
+
+function toggleDeviceList() {
+  showDeviceList.value = !showDeviceList.value;
+}
+
+function handleDocumentPointerDown(event) {
+  if (!showDeviceList.value || !isSidebar.value) return;
+  if (!pickerRoot.value?.contains(event.target)) showDeviceList.value = false;
+}
+
+function handleDocumentKeydown(event) {
+  if (event.key === "Escape") showDeviceList.value = false;
+}
+
+function handleManageDevices() {
+  showDeviceList.value = false;
+  emit("navigate");
+}
 
 // 🆕 Health modal state
 const showHealthModal = ref(false);
@@ -323,7 +387,7 @@ function handleSelectDevice(deviceId) {
   showDeviceList.value = false;
   
   // Emit event jika device berubah (hanya di sini, tidak di watch)
-  if (oldDeviceId && oldDeviceId !== deviceId) {
+  if (String(oldDeviceId || "") !== String(deviceId)) {
     emit("device-changed", deviceId);
   }
   
@@ -463,7 +527,7 @@ watch(showHealthModal, async (isOpen) => {
 
 // Refresh devices
 async function refresh() {
-  await loadDevices();
+  await loadDevices({ force: true });
   // 🆕 Also refresh health for selected device
   if (selectedDeviceId.value) {
     fetchDeviceHealth(selectedDeviceId.value);
@@ -472,11 +536,18 @@ async function refresh() {
 
 // Load devices saat mount
 onMounted(async () => {
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
+  document.addEventListener("keydown", handleDocumentKeydown);
   await loadDevices();
   // 🆕 Fetch health for selected device
   if (selectedDeviceId.value) {
     fetchDeviceHealth(selectedDeviceId.value);
   }
+});
+
+onUnmounted(() => {
+  document.removeEventListener("pointerdown", handleDocumentPointerDown);
+  document.removeEventListener("keydown", handleDocumentKeydown);
 });
 
 // Expose untuk parent component
@@ -495,6 +566,7 @@ defineExpose({
 <style scoped>
 .device-picker {
   width: 100%;
+  position: relative;
 }
 
 /* Device Info Compact */
@@ -596,11 +668,75 @@ defineExpose({
   border-color: var(--theme-border-strong);
 }
 
+.btn-change-compact svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.is-menu-open .btn-change-compact svg {
+  transform: rotate(180deg);
+}
+
 /* Device List Compact */
 .device-list-compact {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.device-list-compact--dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 40;
+  max-height: min(360px, calc(100vh - 150px));
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface);
+  box-shadow: 0 16px 32px var(--theme-shadow);
+}
+
+.device-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 6px;
+  color: var(--theme-text);
+  font-size: 12px;
+}
+
+.device-list-toolbar button {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.device-list-toolbar button:hover {
+  background: var(--theme-surface-hover);
+  color: var(--theme-text);
+}
+
+.device-list-toolbar button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.device-list-toolbar svg {
+  width: 16px;
+  height: 16px;
 }
 
 .device-loading {
@@ -662,6 +798,72 @@ defineExpose({
 .device-item-compact:hover {
   background: var(--theme-surface-soft);
   border-color: #3b82f6;
+}
+
+.device-item-compact.selected {
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-accent);
+}
+
+.manage-devices-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding: 9px 8px 3px;
+  border-top: 1px solid var(--theme-border);
+  color: var(--theme-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.health-label {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.device-picker--sidebar .device-info-compact {
+  gap: 8px;
+  padding: 9px;
+  background: var(--theme-surface-soft);
+}
+
+.device-picker--sidebar .device-avatar-compact {
+  width: 34px;
+  height: 34px;
+}
+
+.device-picker--sidebar .device-name-compact,
+.device-picker--sidebar .device-phone-inline {
+  font-size: 12px;
+}
+
+.device-picker--sidebar .device-meta-row {
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.device-picker--sidebar .health-icon-button {
+  width: auto;
+  height: 23px;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: 6px;
+}
+
+.device-picker--sidebar .health-detail-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.device-picker--sidebar .btn-change-compact {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
 }
 
 .device-item-compact.online {

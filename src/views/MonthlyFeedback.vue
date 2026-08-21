@@ -40,47 +40,6 @@
       <div class="form-layout">
         <!-- Left Column -->
         <div class="form-column">
-          <!-- Device Selection (Compact) -->
-          <div class="card card-compact">
-            <div class="card-header card-header-compact">
-              <h3 class="card-title">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                </svg>
-                Device WhatsApp
-              </h3>
-              <button
-                type="button"
-                class="btn-refresh-header"
-                @click="devicePicker?.loadDevices()"
-                :disabled="devicePicker?.loading"
-                title="Refresh device list"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  :class="{ spinning: devicePicker?.loading }"
-                >
-                  <path
-                    d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                  />
-                </svg>
-                {{ devicePicker?.loading ? "Loading..." : "Refresh" }}
-              </button>
-            </div>
-            <div class="card-body card-body-compact">
-              <DevicePicker ref="devicePicker" @device-changed="onDeviceChanged" />
-            </div>
-          </div>
-
           <!-- Student & Course Info -->
           <div class="card card-compact">
             <div class="card-header card-header-compact">
@@ -839,17 +798,15 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { userApi, deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
+import { useDevices } from "../composables/useDevices.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
 import { getImagesAsBase64 } from "../utils/images.js";
 import { normalizePhoneNumber, isValidPhoneNumber } from "../utils/phone.js";
 import html2pdf from "html2pdf.js";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
-import DevicePicker from "../components/DevicePicker.vue";
 
 const toast = useToast();
-
-// Template ref for DevicePicker
-const devicePicker = ref(null);
+const { selectedDeviceId } = useDevices();
 
 // Template ref for RecipientsPicker
 const recipientsPicker = ref(null);
@@ -1082,7 +1039,7 @@ import { debounce } from "../utils/debounce";
 const syncContactFirstNames = debounce(async () => {
   if (!recipients.value || recipients.value.length === 0) return;
   
-  const deviceId = devicePicker.value?.selectedDeviceId;
+  const deviceId = selectedDeviceId.value;
   if (!deviceId) return;
   
   // Filter recipient yang belum ada firstName dan bukan label/group
@@ -1424,7 +1381,7 @@ const isPreviewValid = computed(() => {
 
 // Validasi untuk Kirim PDF: wajib ada penerima dengan nama + device
 const isFormValid = computed(() => {
-  const deviceId = devicePicker.value?.selectedDeviceId;
+  const deviceId = selectedDeviceId.value;
 
   // Cek apakah semua recipient memiliki nama (dari kontak ATAU nama default)
   const allRecipientsHaveNames =
@@ -1518,7 +1475,7 @@ const handleSubmit = async () => {
 const handleGenerateAndSend = async () => {
   if (!previewData.value) return;
 
-  const deviceId = devicePicker.value?.selectedDeviceId;
+  const deviceId = selectedDeviceId.value;
   if (!deviceId) {
     error.value = "Silakan pilih device WhatsApp terlebih dahulu";
     toast.error("Silakan pilih device WhatsApp terlebih dahulu");
@@ -1800,15 +1757,13 @@ const handleDownloadPDF = async () => {
   }
 };
 
-const onDeviceChanged = () => {
+watch(selectedDeviceId, (deviceId, previousDeviceId) => {
+  if (!previousDeviceId || String(deviceId) === String(previousDeviceId)) return;
   recipientsPicker.value?.resetRecipients();
   // 🆕 Reset juga recipientContactMap
   recipientContactMap.value = {};
   form.value.studentName = "";
-  toast.success(
-    "Device berhasil diganti. Data kontak, grup, dan label telah di-refresh."
-  );
-};
+});
 
 onMounted(async () => {
   loadSavedData();
