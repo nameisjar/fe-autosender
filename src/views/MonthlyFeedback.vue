@@ -214,9 +214,9 @@
         </div>
 
         <!-- Right Column - Full Height Comments -->
-        <div class="form-column">
+        <div class="form-column form-column-comments">
           <!-- Tutor Comment (Full Height) -->
-          <div class="card card-compact card-full-height">
+          <div class="card card-compact card-full-height comments-card">
             <div class="card-header card-header-compact">
               <h3>Pilih Komentar</h3>
               <span class="selected-count-badge"
@@ -226,103 +226,32 @@
             <div class="card-body card-body-compact">
               <!-- 🆕 Checkbox Komentar -->
               <div class="comment-checkboxes">
-                <!-- Kehadiran -->
-                <div class="comment-category">
-                  <h4 class="category-title">Kehadiran</h4>
-                  <div
-                    v-for="comment in commentCategories.kehadiran"
-                    :key="comment.id"
-                    class="comment-item"
-                    :class="{ selected: form.selectedComments.includes(comment.id) }"
+                <div
+                  v-for="category in feedbackCommentSelects"
+                  :key="category.key"
+                  class="comment-category comment-select-group"
+                  :class="{ 'has-selection': selectedCategoryCommentId(category.key) }"
+                >
+                  <label class="comment-select-label" :for="`comment-select-${category.key}`">
+                    {{ category.label }}
+                  </label>
+                  <select
+                    :id="`comment-select-${category.key}`"
+                    class="form-select comment-template-select"
+                    :value="selectedCategoryCommentId(category.key)"
+                    :title="selectedCategoryCommentText(category.key) || 'Tidak ada komentar'"
+                    @change="selectCategoryComment(category.key, $event)"
                   >
-                    <label class="checkbox-label">
-                      <input
-                        type="checkbox"
-                        :id="comment.id"
-                        :value="comment.id"
-                        :checked="form.selectedComments.includes(comment.id)"
-                        @change="toggleComment(comment.id)"
-                        :disabled="
-                          !form.selectedComments.includes(comment.id) &&
-                          form.selectedComments.length >= 3
-                        "
-                      />
-                      <span class="checkbox-text"
-                        >{{
-                          replaceNameInComment(
-                            comment.text,
-                            formattedStudentName
-                          ).substring(0, 100)
-                        }}...</span
-                      >
-                    </label>
-                  </div>
-                </div>
-
-                <!-- Keterlibatan & Kesulitan -->
-                <div class="comment-category">
-                  <h4 class="category-title">Keterlibatan & Kesulitan</h4>
-                  <div
-                    v-for="comment in commentCategories.keterlibatan"
-                    :key="comment.id"
-                    class="comment-item"
-                    :class="{ selected: form.selectedComments.includes(comment.id) }"
-                  >
-                    <label class="checkbox-label">
-                      <input
-                        type="checkbox"
-                        :id="comment.id"
-                        :value="comment.id"
-                        :checked="form.selectedComments.includes(comment.id)"
-                        @change="toggleComment(comment.id)"
-                        :disabled="
-                          !form.selectedComments.includes(comment.id) &&
-                          form.selectedComments.length >= 3
-                        "
-                      />
-                      <span class="checkbox-text"
-                        >{{
-                          replaceNameInComment(
-                            comment.text,
-                            formattedStudentName
-                          ).substring(0, 100)
-                        }}...</span
-                      >
-                    </label>
-                  </div>
-                </div>
-
-                <!-- Penyelesaian Tugas -->
-                <div class="comment-category">
-                  <h4 class="category-title">Penyelesaian Tugas</h4>
-                  <div
-                    v-for="comment in commentCategories.penyelesaian"
-                    :key="comment.id"
-                    class="comment-item"
-                    :class="{ selected: form.selectedComments.includes(comment.id) }"
-                  >
-                    <label class="checkbox-label">
-                      <input
-                        type="checkbox"
-                        :id="comment.id"
-                        :value="comment.id"
-                        :checked="form.selectedComments.includes(comment.id)"
-                        @change="toggleComment(comment.id)"
-                        :disabled="
-                          !form.selectedComments.includes(comment.id) &&
-                          form.selectedComments.length >= 3
-                        "
-                      />
-                      <span class="checkbox-text"
-                        >{{
-                          replaceNameInComment(
-                            comment.text,
-                            formattedStudentName
-                          ).substring(0, 100)
-                        }}...</span
-                      >
-                    </label>
-                  </div>
+                    <option value="">Tidak ada komentar (opsional)</option>
+                    <option
+                      v-for="(comment, index) in commentCategories[category.key]"
+                      :key="comment.id"
+                      :value="comment.id"
+                    >
+                      {{ index + 1 }} —
+                      {{ replaceNameInComment(comment.text, formattedStudentName) }}
+                    </option>
+                  </select>
                 </div>
 
                 <!-- Custom -->
@@ -924,7 +853,9 @@ const loadSavedData = () => {
 
     if (savedSelectedComments) {
       try {
-        form.value.selectedComments = JSON.parse(savedSelectedComments);
+        form.value.selectedComments = normalizeSelectedCommentsForDropdowns(
+          JSON.parse(savedSelectedComments)
+        );
       } catch (e) {}
     }
 
@@ -974,6 +905,8 @@ const saveDataToStorage = () => {
         STORAGE_KEYS.SELECTED_COMMENTS,
         JSON.stringify(form.value.selectedComments)
       );
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.SELECTED_COMMENTS);
     }
 
     const customComments = commentCategories.value.custom
@@ -1091,6 +1024,12 @@ watch(() => form.value.reportBy, saveDataToStorage);
 watch(() => form.value.rating, saveDataToStorage);
 watch(() => form.value.selectedComments, saveDataToStorage, { deep: true });
 
+const feedbackCommentSelects = Object.freeze([
+  { key: "kehadiran", label: "Kehadiran" },
+  { key: "keterlibatan", label: "Keterlibatan & Kesulitan" },
+  { key: "penyelesaian", label: "Penyelesaian Tugas" },
+]);
+
 const commentCategories = ref({
   kehadiran: [
     {
@@ -1176,6 +1115,75 @@ const commentCategories = ref({
     },
   ],
 });
+
+const normalizeSelectedCommentsForDropdowns = (commentIds) => {
+  if (!Array.isArray(commentIds)) return [];
+
+  const categoryByCommentId = new Map();
+  feedbackCommentSelects.forEach(({ key }) => {
+    (commentCategories.value[key] || []).forEach((comment) => {
+      categoryByCommentId.set(comment.id, key);
+    });
+  });
+
+  const customCommentIds = new Set(
+    commentCategories.value.custom.map((comment) => comment.id)
+  );
+  const selectedCategories = new Set();
+  const normalized = [];
+
+  for (const commentId of commentIds) {
+    const categoryKey = categoryByCommentId.get(commentId);
+    if (categoryKey) {
+      if (selectedCategories.has(categoryKey)) continue;
+      selectedCategories.add(categoryKey);
+    } else if (!customCommentIds.has(commentId)) {
+      continue;
+    }
+
+    normalized.push(commentId);
+    if (normalized.length === 3) break;
+  }
+
+  return normalized;
+};
+
+const selectedCategoryCommentId = (categoryKey) => {
+  const categoryComments = commentCategories.value[categoryKey] || [];
+  return categoryComments.find((comment) => (
+    form.value.selectedComments.includes(comment.id)
+  ))?.id || "";
+};
+
+const selectedCategoryCommentText = (categoryKey) => {
+  const categoryComments = commentCategories.value[categoryKey] || [];
+  const selectedComment = categoryComments.find((comment) => (
+    form.value.selectedComments.includes(comment.id)
+  ));
+  return selectedComment
+    ? replaceNameInComment(selectedComment.text, formattedStudentName.value)
+    : "";
+};
+
+const selectCategoryComment = (categoryKey, event) => {
+  const categoryComments = commentCategories.value[categoryKey] || [];
+  const categoryIds = new Set(categoryComments.map((comment) => comment.id));
+  const currentId = selectedCategoryCommentId(categoryKey);
+  const nextId = String(event?.target?.value || "");
+  const selectionsOutsideCategory = form.value.selectedComments.filter(
+    (commentId) => !categoryIds.has(commentId),
+  );
+
+  if (nextId && selectionsOutsideCategory.length >= 3) {
+    if (event?.target) event.target.value = currentId;
+    toast.warning("Maksimal 3 komentar dapat dipilih");
+    return;
+  }
+
+  form.value.selectedComments = nextId
+    ? [...selectionsOutsideCategory, nextId]
+    : selectionsOutsideCategory;
+};
 
 const replaceNameInComment = (text, studentName) => {
   const formattedName = toTitleCase(studentName);
@@ -2690,37 +2698,53 @@ onMounted(async () => {
 /* Two Column Layout */
 .form-layout {
   display: grid;
-  grid-template-columns: 38fr 62fr;
-  gap: 20px;
+  grid-template-columns: minmax(340px, 0.78fr) minmax(0, 1.22fr);
+  gap: 24px;
   align-items: stretch;
 }
 
 .form-column {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  min-width: 0;
+  gap: 20px;
 }
 
-/* Make left column cards fill height proportionally */
+/* Left-side cards form an independent stack. Distributing them against the
+   taller comment panel created a large empty gap between cards. */
 .form-column:first-child {
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
-/* Full Height Card for Comments */
+/* Keep the long comment catalogue compact and scroll it independently. */
+.form-column-comments {
+  position: relative;
+  align-self: stretch;
+  min-height: 0;
+  overflow: visible;
+}
+
 .card-full-height {
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  height: auto;
+  min-height: 0;
+  max-height: none;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .card-full-height .card-body-compact {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .card-full-height .comment-checkboxes {
   flex: 1;
+  min-height: 0;
   max-height: none;
 }
 
@@ -2931,6 +2955,8 @@ onMounted(async () => {
 .comment-checkboxes {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background: var(--theme-surface-soft);
   border: 1px solid var(--theme-border);
   border-radius: 8px;
@@ -2943,6 +2969,47 @@ onMounted(async () => {
 
 .comment-category:last-child {
   margin-bottom: 0;
+}
+
+.comment-select-group {
+  padding: 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.comment-select-group.has-selection {
+  border-color: #3b82f6;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.12);
+}
+
+.comment-select-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--theme-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+}
+
+.comment-template-select {
+  width: 100%;
+  min-height: 44px;
+  padding-right: 38px;
+  overflow: hidden;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-select-group.has-selection .comment-template-select {
+  border-color: #3b82f6;
+  color: var(--theme-text);
+  font-weight: 600;
 }
 
 .category-title {
@@ -3000,9 +3067,28 @@ onMounted(async () => {
 
 .checkbox-text {
   flex: 1;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-size: 12px;
   color: var(--theme-text-secondary);
   line-height: 1.5;
+}
+
+.comment-checkboxes::-webkit-scrollbar {
+  width: 8px;
+}
+
+.comment-checkboxes::-webkit-scrollbar-thumb {
+  background: var(--theme-border-strong);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.comment-checkboxes::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .comment-item.selected .checkbox-text {
@@ -3445,6 +3531,30 @@ onMounted(async () => {
 }
 
 /* Responsive */
+@media (max-width: 1100px) {
+  .form-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-column-comments {
+    position: static;
+    overflow: visible;
+  }
+
+  .card-full-height {
+    position: static;
+    inset: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .card-full-height .comment-checkboxes {
+    min-height: 360px;
+    max-height: 560px;
+  }
+}
+
 @media (max-width: 768px) {
   .wrapper {
     padding: 0 16px;
@@ -3473,8 +3583,9 @@ onMounted(async () => {
     font-size: 28px;
   }
 
-  .comment-checkboxes {
-    max-height: 300px;
+  .card-full-height .comment-checkboxes {
+    min-height: 280px;
+    max-height: 360px;
   }
 
   .results-summary {
