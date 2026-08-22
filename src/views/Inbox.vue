@@ -143,21 +143,8 @@
             <!-- Fallback avatar circle -->
             <div
               class="avatar-circle"
-              :style="{ backgroundColor: getAvatarFallbackColor(conv) }"
             >
-              <span v-if="conv.contact">
-                {{ getInitials(conv.contact.firstName, conv.contact.lastName) }}
-              </span>
-              <span v-else-if="conv.isGroup && conv.groupName">
-                {{ getInitials(conv.groupName) }}
-              </span>
-              <span v-else-if="conv.pushName">
-                {{ getInitials(conv.pushName) }}
-              </span>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+              <DefaultAvatar :kind="conv.isGroup ? 'group' : 'personal'" />
             </div>
             <div v-if="conv.isGroup" class="group-badge" title="Pesan Grup">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -317,21 +304,8 @@
               />
               <div
                 class="avatar-circle"
-                :style="{ backgroundColor: getAvatarFallbackColor(selectedConversation) }"
               >
-                <span v-if="selectedConversation.contact">
-                  {{ getInitials(selectedConversation.contact.firstName, selectedConversation.contact.lastName) }}
-                </span>
-                <span v-else-if="selectedConversation.isGroup && selectedConversation.groupName">
-                  {{ getInitials(selectedConversation.groupName) }}
-                </span>
-                <span v-else-if="selectedConversation.pushName">
-                  {{ getInitials(selectedConversation.pushName) }}
-                </span>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
+                <DefaultAvatar :kind="selectedConversation.isGroup ? 'group' : 'personal'" />
               </div>
             </div>
             <div class="modal-identity">
@@ -492,7 +466,7 @@
                 class="group-sender-avatar"
                 :title="getGroupSenderPrimaryLabel(msg)"
               >
-                <span>{{ getGroupSenderInitial(msg) }}</span>
+                <DefaultAvatar kind="personal" />
                 <img
                   v-if="getGroupSenderProfileUrl(msg)"
                   :key="getGroupSenderProfileUrl(msg)"
@@ -1340,7 +1314,7 @@
               <div v-if="option.voters.length" class="poll-results-voters">
                 <div v-for="(voter, index) in option.voters" :key="`${option.id}-${voter.name}-${index}`" class="poll-result-voter">
                   <span class="poll-result-avatar">
-                    <span>{{ voter.isMe ? 'A' : getInitials(voter.name) }}</span>
+                    <DefaultAvatar kind="personal" />
                     <img
                       v-if="voter.profilePicUrl"
                       :key="getPollVoterProfileUrl(voter)"
@@ -1542,7 +1516,7 @@
               @keydown.space.prevent="removeOwnReactionFromDetails(member)"
             >
               <span class="reaction-member-avatar" aria-hidden="true">
-                {{ getReactionMemberInitial(member) }}
+                <DefaultAvatar kind="personal" />
                 <img
                   v-if="getReactionMemberProfileUrl(member)"
                   :key="getReactionMemberProfileUrl(member)"
@@ -1627,7 +1601,7 @@
               class="read-receipt-member"
             >
               <span class="read-receipt-avatar" aria-hidden="true">
-                {{ getReadReceiptInitial(reader) }}
+                <DefaultAvatar kind="personal" />
                 <img
                   v-if="reader.readerProfilePicUrl"
                   :src="mediaUrl(reader.readerProfilePicUrl)"
@@ -1716,6 +1690,7 @@ import {
 } from '../utils/inboxComposer.js';
 import { getDeviceStatusLabel } from '../utils/deviceStatus.js';
 import CachedProfileImage from '../components/CachedProfileImage.vue';
+import DefaultAvatar from '../components/DefaultAvatar.vue';
 import { getContactLabelNames } from '../utils/contactLabels.js';
 import {
   MEDIA_ACCEPT,
@@ -2371,10 +2346,6 @@ const getReadReceiptName = reader => {
     || 'Pengguna WhatsApp';
 };
 
-const getReadReceiptInitial = reader => {
-  return getReadReceiptName(reader).replace(/^\+/, '').charAt(0).toUpperCase() || '?';
-};
-
 const loadReadReceiptDetails = async () => {
   const details = readReceiptDetails.value;
   if (!details || !selectedDeviceId.value) return;
@@ -2483,11 +2454,6 @@ const getReactionMemberPhone = member => {
 
 const getReactionMemberName = member => {
   return resolveReactionMemberIdentity(member).name;
-};
-
-const getReactionMemberInitial = member => {
-  const name = getReactionMemberName(member);
-  return name === 'Anda' ? 'A' : name.replace(/^\+/, '').charAt(0).toUpperCase() || '?';
 };
 
 const getOwnReaction = message =>
@@ -6046,22 +6012,6 @@ const getInitials = (firstName, lastName) => {
   return f + l || '?';
 };
 
-const getRandomColor = (seed) => {
-  const colors = [
-    '#4f46e5', '#7c3aed', '#db2777', '#dc2626',
-    '#ea580c', '#16a34a', '#0891b2', '#2563eb',
-  ];
-  const hash = seed ? seed.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : 0;
-  return colors[hash % colors.length];
-};
-
-const getAvatarFallbackColor = (conversation) => {
-  // Group profile pictures can contain transparent pixels. Keep their backing
-  // layer neutral so a random red/magenta contact color never bleeds through.
-  if (conversation?.isGroup || conversation?.from?.includes('@g.us')) return '#1e3a8a';
-  return conversation?.contact?.colorCode || getRandomColor(conversation?.from);
-};
-
 // Get sender name with fallback priority: groupName (for groups) > contact > pushName > formatted phone/id
 const getSenderName = (conv) => {
   // For group messages, show group name first
@@ -6353,13 +6303,6 @@ const getGroupSenderProfileUrl = message => {
   const version = senderProfileRetryVersions.value[key] || 0;
   const separator = source.includes('?') ? '&' : '?';
   return `${mediaUrl(source)}${separator}senderProfileRetry=${version}`;
-};
-
-const getGroupSenderInitial = message => {
-  const label = String(
-    getGroupSenderPrimaryLabel(message) || '?',
-  ).trim();
-  return label.replace(/^\+/, '').charAt(0).toUpperCase() || '?';
 };
 
 const handleGroupSenderProfileLoad = message => {
@@ -7015,8 +6958,10 @@ const handleMediaError = (event, message) => {
 }
 
 .avatar-circle {
+  position: relative;
   width: 48px;
   height: 48px;
+  overflow: hidden;
   border-radius: 50%;
   display: flex;
   align-items: center;

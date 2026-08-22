@@ -141,7 +141,9 @@ export function useGlobalNotifications() {
       if (registration?.showNotification) {
         await registration.showNotification(notification.title, {
           body: notification.description,
-          icon: absoluteNotificationIcon(notification.avatarUrl),
+          icon: absoluteNotificationIcon(
+            notification.avatarUrl || notification.defaultAvatarUrl,
+          ),
           tag: `inbox:${device?.id || 'device'}:${data.from || data.id || 'message'}`,
           renotify: true,
           data: {
@@ -157,7 +159,9 @@ export function useGlobalNotifications() {
 
       const systemNotification = new window.Notification(notification.title, {
         body: notification.description,
-        icon: absoluteNotificationIcon(notification.avatarUrl),
+        icon: absoluteNotificationIcon(
+          notification.avatarUrl || notification.defaultAvatarUrl,
+        ),
         tag: `inbox:${device?.id || 'device'}:${data.from || data.id || 'message'}`,
         renotify: true,
         data: {
@@ -194,6 +198,7 @@ export function useGlobalNotifications() {
       avatarUrl: entry.notification.avatarUrl,
       avatarStatus: entry.data.profilePictureStatus || '',
       avatarFallback: entry.notification.avatarFallback,
+      avatarKind: entry.notification.avatarKind,
       onClick: () => entry.openInboxMessage({ reply: false }),
       ariaLabel: `Buka pesan dari ${entry.notification.title}`,
     });
@@ -312,6 +317,7 @@ export function useGlobalNotifications() {
               avatarUrl: entry.notification.avatarUrl,
               avatarStatus: profileData.profilePictureStatus || '',
               avatarFallback: entry.notification.avatarFallback,
+              avatarKind: entry.notification.avatarKind,
             });
           }
 

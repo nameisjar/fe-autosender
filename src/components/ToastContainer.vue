@@ -16,7 +16,7 @@
           @mouseleave="resumeTimer(toast.id)"
         >
           <div v-if="isRichToast(toast)" class="toast-avatar">
-            <span>{{ toast.avatarFallback || '?' }}</span>
+            <DefaultAvatar :kind="toast.avatarKind" />
             <CachedProfileImage
               v-if="toast.avatarUrl"
               :src="toast.avatarUrl"
@@ -59,6 +59,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
 import CachedProfileImage from './CachedProfileImage.vue';
+import DefaultAvatar from './DefaultAvatar.vue';
 
 const toasts = ref([]);
 const timers = ref({});
@@ -84,6 +85,7 @@ const addToast = (toast) => {
     avatarUrl: toast.avatarUrl || '',
     avatarStatus: toast.avatarStatus || '',
     avatarFallback: toast.avatarFallback || '',
+    avatarKind: toast.avatarKind === 'group' ? 'group' : 'personal',
   });
 
   // A toast received in the background must remain available until the user
@@ -113,6 +115,7 @@ const updateToast = (id, patch = {}) => {
     'avatarUrl',
     'avatarStatus',
     'avatarFallback',
+    'avatarKind',
     'ariaLabel',
   ]) {
     if (patch[key] !== undefined) toast[key] = patch[key];
@@ -297,6 +300,7 @@ defineExpose({ addToast, updateToast, removeToast });
 .toast-avatar img {
   position: absolute;
   inset: 0;
+  z-index: 2;
   width: 100%;
   height: 100%;
   object-fit: cover;

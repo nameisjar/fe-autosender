@@ -440,6 +440,7 @@ describe('useGlobalNotifications', () => {
       avatarUrl: '/inbox-profile/device-1/628123',
       avatarStatus: 'available',
       avatarFallback: 'N',
+      avatarKind: 'personal',
     });
     wrapper.unmount();
   });

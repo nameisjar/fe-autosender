@@ -39,7 +39,23 @@ describe('incoming notification presentation', () => {
     expect(buildIncomingNotification({
       from: '628123456789:7@s.whatsapp.net',
       message: 'Halo',
-    }).title).toBe('+628123456789');
+    })).toEqual(expect.objectContaining({
+      title: '+628123456789',
+      avatarKind: 'personal',
+      defaultAvatarUrl: '/default-avatar-personal.svg',
+    }));
+  });
+
+  it('uses the group default avatar when WhatsApp has no group photo', () => {
+    expect(buildIncomingNotification({
+      from: '120363001@g.us',
+      groupName: 'Kelas A',
+      message: 'Halo grup',
+    })).toEqual(expect.objectContaining({
+      avatarUrl: '',
+      avatarKind: 'group',
+      defaultAvatarUrl: '/default-avatar-group.svg',
+    }));
   });
 
   it('uses the poll question instead of a generic message placeholder', () => {

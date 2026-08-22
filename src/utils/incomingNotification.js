@@ -43,6 +43,7 @@ export const buildIncomingNotification = data => {
   ).slice(0, 100);
   const description = isGroup ? `${senderName}: ${preview}` : preview;
   const avatarUrl = cleanText(isGroup ? data?.groupPicUrl : data?.profilePicUrl);
+  const avatarKind = isGroup ? 'group' : 'personal';
 
   return {
     isGroup,
@@ -51,6 +52,8 @@ export const buildIncomingNotification = data => {
     preview,
     description,
     avatarUrl,
+    avatarKind,
+    defaultAvatarUrl: `/default-avatar-${avatarKind}.svg`,
     avatarFallback: getInitials(title),
   };
 };

@@ -263,15 +263,7 @@
                       :status="contact.profilePictureStatus"
                       :alt="`Foto profil ${contact.firstName}`"
                     />
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
+                    <DefaultAvatar kind="personal" />
                   </div>
                   <div class="contact-name-text">
                     <span class="name-full"
@@ -620,10 +612,7 @@
                 :status="contactToDelete.profilePictureStatus"
                 :alt="`Foto profil ${contactToDelete.firstName}`"
               />
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+              <DefaultAvatar kind="personal" />
             </div>
             <div class="preview-info">
               <div class="preview-name">
@@ -856,6 +845,7 @@ import { useToast } from "../composables/useToast.js";
 import { useDevices } from "../composables/useDevices.js";
 import { cache } from "../utils/cache.js";
 import CachedProfileImage from "../components/CachedProfileImage.vue";
+import DefaultAvatar from "../components/DefaultAvatar.vue";
 import { getDeviceStatusLabel } from "../utils/deviceStatus.js";
 
 const toast = useToast();
