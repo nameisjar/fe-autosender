@@ -1934,6 +1934,7 @@ const meta = ref({
 let searchTimer;
 let socketCleanup = null;
 let socketConnectionCleanup = null;
+let missingGroupNameRefreshTimer = null;
 let latestLoadRequest = 0;
 let latestTimelineRequest = 0;
 let latestReactionsRequest = 0;
@@ -3437,6 +3438,9 @@ const conversations = computed(() => {
     if (!conversation.pushName && outgoing.pushName) {
       conversation.pushName = outgoing.pushName;
     }
+    if (!conversation.groupName && outgoing.groupName) {
+      conversation.groupName = outgoing.groupName;
+    }
     if (
       new Date(normalizedMessage.receivedAt) >
       new Date(conversation.latestMessage.receivedAt)
@@ -3674,6 +3678,36 @@ const applyOutgoingEditedMessage = data => {
   return changed;
 };
 
+const findKnownGroupName = conversationJid => {
+  if (!conversationJid) return '';
+  if (
+    sameConversationJid(selectedConversation.value?.from, conversationJid) &&
+    selectedConversation.value?.groupName
+  ) {
+    return selectedConversation.value.groupName;
+  }
+
+  const incoming = messages.value.find(message =>
+    sameConversationJid(message.from, conversationJid) && message.groupName
+  );
+  if (incoming?.groupName) return incoming.groupName;
+
+  const outgoing = outgoingConversationSummaries.value.find(message =>
+    sameConversationJid(message.to, conversationJid) && message.groupName
+  );
+  return outgoing?.groupName || '';
+};
+
+const scheduleMissingGroupNameRefresh = conversationJid => {
+  if (!conversationJid?.includes('@g.us') || missingGroupNameRefreshTimer) return;
+  const deviceId = selectedDeviceId.value;
+  missingGroupNameRefreshTimer = window.setTimeout(() => {
+    missingGroupNameRefreshTimer = null;
+    if (deviceId !== selectedDeviceId.value || findKnownGroupName(conversationJid)) return;
+    void loadMessages();
+  }, 350);
+};
+
 const setupSocketListener = () => {
   // Cleanup previous listener
   if (socketCleanup) {
@@ -3728,7 +3762,16 @@ const setupSocketListener = () => {
       }
       
       const isOpenConversation = selectedConversation.value?.from === data.from;
-      const incomingMessage = data;
+      const isGroupMessage = Boolean(data?.isGroup || data?.from?.includes('@g.us'));
+      const knownGroupName = isGroupMessage
+        ? (data.groupName || findKnownGroupName(data.from))
+        : '';
+      const incomingMessage = knownGroupName
+        ? { ...data, groupName: knownGroupName }
+        : data;
+      if (isGroupMessage && !knownGroupName) {
+        scheduleMissingGroupNameRefresh(data.from);
+      }
 
       // Add to messages list
       messages.value.unshift(incomingMessage);
@@ -3769,6 +3812,10 @@ const setupSocketListener = () => {
         ? outgoingConversationSummaries.value[existingIndex]
         : null;
       const isSameMessage = existing?.id === data.id;
+      const isGroupMessage = Boolean(data.isGroup || data.to.includes('@g.us'));
+      const knownGroupName = isGroupMessage
+        ? (data.groupName || existing?.groupName || findKnownGroupName(data.to))
+        : null;
       const normalized = {
         ...existing,
         ...data,
@@ -3777,7 +3824,12 @@ const setupSocketListener = () => {
           ? (Number(existing.messageCount) || 1) + (isSameMessage ? 0 : 1)
           : 1,
         contact: data.contact || existing?.contact || null,
+        groupName: knownGroupName,
       };
+
+      if (isGroupMessage && !knownGroupName) {
+        scheduleMissingGroupNameRefresh(data.to);
+      }
 
       if (existingIndex >= 0) {
         outgoingConversationSummaries.value.splice(existingIndex, 1);
@@ -6461,6 +6513,8 @@ onUnmounted(() => {
   releaseInitialBottomPin();
   clearStatusReconciliationTimers();
   clearPendingMessageStatusEvents();
+  if (missingGroupNameRefreshTimer) clearTimeout(missingGroupNameRefreshTimer);
+  missingGroupNameRefreshTimer = null;
   conversationRequestController?.abort();
   conversationRequestController = null;
   window.removeEventListener('keydown', handleImagePreviewKeydown);
