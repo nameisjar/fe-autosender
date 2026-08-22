@@ -42,4 +42,20 @@ describe('incoming notification presentation', () => {
     }).title).toBe('+628123456789');
   });
 
+  it('uses the poll question instead of a generic message placeholder', () => {
+    expect(buildIncomingNotification({
+      from: '628123456789@s.whatsapp.net',
+      message: '[Pesan]',
+      pollData: {
+        question: 'Pilih jadwal kelas',
+        selectableOptionsCount: 1,
+        totalVotes: 0,
+        options: [
+          { id: 'pagi', name: 'Pagi', voteCount: 0 },
+          { id: 'malam', name: 'Malam', voteCount: 0 },
+        ],
+      },
+    }).description).toBe('📊 Polling: Pilih jadwal kelas');
+  });
+
 });

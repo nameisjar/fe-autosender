@@ -650,6 +650,82 @@
                   <em>Pesan ini telah dihapus</em>
                 </div>
 
+                <article v-else-if="getMessagePoll(msg)" class="message-poll-card">
+                  <header class="message-poll-header">
+                    <span class="message-poll-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19V9" />
+                        <path d="M10 19V5" />
+                        <path d="M16 19v-7" />
+                        <path d="M22 19V3" />
+                      </svg>
+                    </span>
+                    <span>
+                      <small>Polling</small>
+                      <strong>{{ getMessagePoll(msg).question }}</strong>
+                    </span>
+                  </header>
+                  <div class="message-poll-options">
+                    <button
+                      v-for="option in getMessagePoll(msg).options"
+                      :key="option.id"
+                      type="button"
+                      class="message-poll-option"
+                      :class="{ selected: isPollOptionSelected(msg, option.id) }"
+                      :disabled="!canVoteOnPoll(msg) || isSendingPollVote(msg)"
+                      @click.stop="togglePollOption(msg, option.id)"
+                    >
+                      <span
+                        class="message-poll-choice"
+                        :class="{ multiple: getMessagePoll(msg).selectableOptionsCount > 1 }"
+                        aria-hidden="true"
+                      >
+                        <svg v-if="isPollOptionSelected(msg, option.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </span>
+                      <div class="message-poll-option-copy">
+                        <span>{{ option.name }}</span>
+                        <strong>{{ option.voteCount }}</strong>
+                      </div>
+                      <span class="message-poll-progress" aria-hidden="true">
+                        <span
+                          :style="{
+                            width: `${getMessagePollPercentage(getMessagePoll(msg), option)}%`,
+                          }"
+                        ></span>
+                      </span>
+                    </button>
+                  </div>
+                  <footer class="message-poll-footer">
+                    <div class="message-poll-meta">
+                      <span>{{ getMessagePoll(msg).totalVotes }} suara</span>
+                      <span>
+                        {{ getMessagePoll(msg).selectableOptionsCount > 1
+                          ? `Pilih hingga ${getMessagePoll(msg).selectableOptionsCount} opsi`
+                          : 'Pilih satu opsi' }}
+                      </span>
+                    </div>
+                    <div class="message-poll-actions">
+                      <button
+                        v-if="getMessagePoll(msg).totalVotes > 0"
+                        type="button"
+                        @click.stop="openPollVoterDetails(msg)"
+                      >
+                        Lihat hasil
+                      </button>
+                      <span
+                        v-if="isSendingPollVote(msg) || isPollVoteQueued(msg)"
+                        class="message-poll-auto-status"
+                        role="status"
+                      >
+                        <span class="message-poll-auto-spinner" aria-hidden="true"></span>
+                        {{ isSendingPollVote(msg) ? 'Mengirim...' : 'Menyiapkan...' }}
+                      </span>
+                    </div>
+                  </footer>
+                </article>
+
                 <!-- Message text -->
                 <div v-else-if="getVisibleMessageText(msg)" class="bubble-text">
                   {{ getVisibleMessageText(msg) }}
@@ -911,14 +987,19 @@
                 @change="handleAttachmentChange"
               />
               <button
+                ref="composerMoreButton"
                 type="button"
-                class="btn-attachment"
+                class="btn-attachment btn-composer-more"
+                :class="{ active: showComposerMoreMenu }"
                 :disabled="sendingReply || Boolean(editingMessage)"
-                title="Lampirkan gambar, video, audio, atau dokumen"
-                @click="attachmentInput?.click()"
+                title="Tambah lampiran atau polling"
+                aria-label="Tambah lampiran atau polling"
+                :aria-expanded="showComposerMoreMenu"
+                @click="toggleComposerMoreMenu"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
               </button>
               <button
@@ -967,6 +1048,54 @@
       </div>
     </div>
     </Transition>
+
+    <Teleport to="body">
+      <div
+        v-if="showComposerMoreMenu"
+        class="composer-more-menu-backdrop"
+        role="presentation"
+        @click="closeComposerMoreMenu"
+      >
+        <section
+          class="composer-more-menu"
+          :style="composerMoreMenuStyle"
+          role="menu"
+          aria-label="Pilihan tambahan pesan"
+          @click.stop
+        >
+          <button type="button" role="menuitem" @click="openAttachmentPicker">
+            <span class="composer-more-menu-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </span>
+            <span>
+              <strong>Upload dokumen</strong>
+              <small>Gambar, video, audio, atau file</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            :disabled="Boolean(selectedAttachment)"
+            @click="openPollComposer"
+          >
+            <span class="composer-more-menu-icon poll" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 20V10" />
+                <path d="M12 20V4" />
+                <path d="M19 20v-7" />
+                <path d="M3 20h18" />
+              </svg>
+            </span>
+            <span>
+              <strong>Buat polling</strong>
+              <small>Kirim pertanyaan dengan beberapa opsi</small>
+            </span>
+          </button>
+        </section>
+      </div>
+    </Teleport>
 
     <Teleport to="body">
       <div
@@ -1036,6 +1165,204 @@
           <footer class="chat-template-picker-footer">
             <router-link to="/chat-templates" @click="closeChatTemplatePicker">Kelola Custom Template Chat</router-link>
           </footer>
+        </section>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="showPollComposer"
+        class="poll-composer-backdrop"
+        role="presentation"
+        @click.self="closePollComposer"
+      >
+        <form
+          class="poll-composer-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="poll-composer-title"
+          @submit.prevent="submitMessagePoll"
+          @keydown.esc.prevent="closePollComposer"
+        >
+          <header class="poll-composer-header">
+            <div class="poll-composer-heading">
+              <span class="poll-composer-heading-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 20V10" />
+                  <path d="M12 20V4" />
+                  <path d="M19 20v-7" />
+                  <path d="M3 20h18" />
+                </svg>
+              </span>
+              <div>
+                <h3 id="poll-composer-title">Buat Polling</h3>
+                <p>Polling akan dikirim ke {{ selectedConversation?.isGroup ? 'grup' : 'kontak' }} ini.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="poll-composer-close"
+              aria-label="Tutup pembuat polling"
+              :disabled="sendingPoll"
+              @click="closePollComposer"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </header>
+
+          <div class="poll-composer-body">
+            <label class="poll-composer-field">
+              <span>Pertanyaan <strong>*</strong></span>
+              <textarea
+                v-model="pollDraft.question"
+                :maxlength="POLL_QUESTION_MAX_LENGTH"
+                rows="3"
+                autofocus
+                placeholder="Contoh: Pilih jadwal kelas"
+                @input="pollComposerAttempted = false"
+              ></textarea>
+              <small>{{ pollDraft.question.length }}/{{ POLL_QUESTION_MAX_LENGTH }} karakter</small>
+            </label>
+
+            <fieldset class="poll-composer-options">
+              <legend>Pilihan jawaban <strong>*</strong></legend>
+              <div
+                v-for="(_, index) in pollDraft.options"
+                :key="`poll-option-${index}`"
+                class="poll-composer-option-row"
+              >
+                <span>{{ index + 1 }}</span>
+                <input
+                  v-model="pollDraft.options[index]"
+                  type="text"
+                  :maxlength="POLL_OPTION_MAX_LENGTH"
+                  :placeholder="`Pilihan ${index + 1}`"
+                  autocomplete="off"
+                  @input="pollComposerAttempted = false"
+                />
+                <button
+                  type="button"
+                  :disabled="pollDraft.options.length <= POLL_MIN_OPTIONS"
+                  :aria-label="`Hapus pilihan ${index + 1}`"
+                  title="Hapus pilihan"
+                  @click="removePollOption(index)"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4h8v2" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                v-if="pollDraft.options.length < POLL_MAX_OPTIONS"
+                type="button"
+                class="poll-composer-add-option"
+                @click="addPollOption"
+              >
+                <span aria-hidden="true">+</span>
+                Tambah pilihan
+              </button>
+            </fieldset>
+
+            <label class="poll-composer-multiple">
+              <span>
+                <strong>Izinkan beberapa jawaban</strong>
+                <small>Penerima dapat memilih lebih dari satu pilihan.</small>
+              </span>
+              <input v-model="pollDraft.allowMultiple" type="checkbox" />
+              <span class="poll-composer-switch" aria-hidden="true"></span>
+            </label>
+
+            <p v-if="pollComposerAttempted && !pollDraftValidation.valid" class="poll-composer-error">
+              {{ pollDraftValidation.error }}
+            </p>
+          </div>
+
+          <footer class="poll-composer-actions">
+            <button type="button" class="poll-composer-cancel" :disabled="sendingPoll" @click="closePollComposer">
+              Batal
+            </button>
+            <button type="submit" class="poll-composer-submit" :disabled="sendingPoll">
+              <svg v-if="sendingPoll" class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+              {{ sendingPoll ? 'Mengirim...' : 'Kirim Polling' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="activePollVoterDetails"
+        class="poll-results-backdrop"
+        @click="closePollVoterDetails"
+      >
+        <section
+          class="poll-results-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="poll-results-title"
+          @click.stop
+        >
+          <header class="poll-results-header">
+            <div>
+              <span>Hasil Polling</span>
+              <h3 id="poll-results-title">{{ activePollVoterDetails.poll.question }}</h3>
+              <p>{{ activePollVoterDetails.poll.totalVotes }} orang memberikan suara</p>
+            </div>
+            <button type="button" aria-label="Tutup hasil polling" @click="closePollVoterDetails">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </header>
+          <div class="poll-results-body">
+            <section
+              v-for="option in activePollVoterDetails.poll.options"
+              :key="option.id"
+              class="poll-results-option"
+            >
+              <header>
+                <span>{{ option.name }}</span>
+                <strong>{{ option.voteCount }} suara</strong>
+              </header>
+              <div v-if="option.voters.length" class="poll-results-voters">
+                <div v-for="(voter, index) in option.voters" :key="`${option.id}-${voter.name}-${index}`" class="poll-result-voter">
+                  <span class="poll-result-avatar">
+                    <span>{{ voter.isMe ? 'A' : getInitials(voter.name) }}</span>
+                    <img
+                      v-if="voter.profilePicUrl"
+                      :key="getPollVoterProfileUrl(voter)"
+                      :src="getPollVoterProfileUrl(voter)"
+                      :alt="`Foto profil ${voter.name}`"
+                      @load="handlePollVoterProfileLoad(voter)"
+                      @error="handlePollVoterProfileError($event, voter)"
+                    />
+                  </span>
+                  <span class="poll-result-identity">
+                    <strong>{{ voter.name }}</strong>
+                    <small v-if="voter.phone && voter.phone !== voter.name">{{ voter.phone }}</small>
+                  </span>
+                  <time v-if="voter.votedAt">{{ formatPollVoteTime(voter.votedAt) }}</time>
+                </div>
+              </div>
+              <p v-if="option.voteCount > option.voters.length" class="poll-results-unavailable">
+                {{ option.voteCount - option.voters.length }} identitas vote lama tidak tersedia.
+              </p>
+              <p v-else-if="option.voteCount === 0" class="poll-results-empty">Belum ada yang memilih.</p>
+            </section>
+          </div>
         </section>
       </div>
     </Teleport>
@@ -1425,6 +1752,23 @@ import {
 import { isWithinMessageEditWindow } from '../utils/messageEdit.js';
 import { canShowMessageReaders } from '../utils/messageReadReceipts.js';
 import { getCenteredContainerScrollTop } from '../utils/inboxScroll.js';
+import {
+  arePollVoteSelectionsEqual,
+  getNextPollVoteSelection,
+  getPollOptionPercentage,
+  getPollPreview,
+  normalizeMessagePoll,
+} from '../utils/messagePoll.js';
+import {
+  POLL_MAX_OPTIONS,
+  POLL_MIN_OPTIONS,
+  POLL_OPTION_MAX_LENGTH,
+  POLL_QUESTION_MAX_LENGTH,
+  buildOutgoingMessagePoll,
+  createMessagePollDraft,
+  createOptimisticMessagePoll,
+  validateMessagePollDraft,
+} from '../utils/messagePollComposer.js';
 import { useInboxUnread } from '../composables/useInboxUnread.js';
 
 const toast = useToast();
@@ -1458,6 +1802,11 @@ const addContactModal = ref({
 const conversationReactions = ref([]);
 const reactionDetails = ref(null);
 const readReceiptDetails = ref(null);
+const pollVoterDetails = ref(null);
+const pollVoteSelections = ref({});
+const sendingPollVoteKeys = ref(new Set());
+const pollVoteQueuedKeys = ref(new Set());
+const pollProfileRetryVersions = ref({});
 const reactionProfileRetryVersions = ref({});
 const reactionPickerMessageKey = ref('');
 const reactionPickerAnchor = ref(null);
@@ -1494,17 +1843,24 @@ const editingMessage = ref(null);
 const sentMessages = ref([]);
 const sentMessagesConversationJid = ref('');
 const replyTextarea = ref(null);
+const composerMoreButton = ref(null);
 const chatTemplateButton = ref(null);
 const chatMessagesContainer = ref(null);
 const attachmentInput = ref(null);
 const selectedAttachment = ref(null);
 const attachmentPreviewUrl = ref('');
 const isDraggingAttachment = ref(false);
+const showComposerMoreMenu = ref(false);
+const composerMoreMenuStyle = ref({});
 const showChatTemplatePicker = ref(false);
 const chatTemplateSearch = ref('');
 const chatTemplatePickerError = ref('');
 const chatTemplatePickerStyle = ref({});
 const pendingChatTemplate = ref(null);
+const showPollComposer = ref(false);
+const sendingPoll = ref(false);
+const pollComposerAttempted = ref(false);
+const pollDraft = ref(createMessagePollDraft());
 const {
   chatTemplates,
   loadingChatTemplates,
@@ -1542,6 +1898,7 @@ const filteredChatTemplates = computed(() => {
 });
 
 const hasUnresolvedStudentVariable = computed(() => hasStudentVariable(replyText.value));
+const pollDraftValidation = computed(() => validateMessagePollDraft(pollDraft.value));
 const composerContext = computed(() => {
   if (editingMessage.value) {
     return {
@@ -1591,6 +1948,8 @@ const conversationSnapshotCache = new Map();
 const MAX_CONVERSATION_SNAPSHOTS = 10;
 const reactionProfileRetryCounts = new Map();
 const reactionProfileRetryTimers = new Map();
+const pollProfileRetryCounts = new Map();
+const pollProfileRetryTimers = new Map();
 const senderProfileRetryCounts = new Map();
 const senderProfileRetryTimers = new Map();
 const statusReconciliationTimers = new Map();
@@ -2194,6 +2553,7 @@ const canEditMessage = message => Boolean(
   message?.type === 'outgoing'
   && getMessageReactionTargetId(message)
   && !message?.mediaPath
+  && !normalizeMessagePoll(message?.pollData)
   && !isDeletedForEveryone(message)
   && isWithinMessageEditWindow(
     message?.timestamp,
@@ -2202,8 +2562,220 @@ const canEditMessage = message => Boolean(
   && ['submitted', 'server_ack', 'delivery_ack', 'read', 'played'].includes(message?.status)
 );
 
+const getMessagePoll = message => normalizeMessagePoll(message?.pollData);
+const getMessagePollPercentage = (poll, option) => getPollOptionPercentage(poll, option);
+const getPollMessageKey = message => String(getMessageReactionTargetId(message) || '');
+
+const getPollVoteSelection = message => {
+  const key = getPollMessageKey(message);
+  if (!key) return [];
+  if (Object.prototype.hasOwnProperty.call(pollVoteSelections.value, key)) {
+    return pollVoteSelections.value[key];
+  }
+  return getMessagePoll(message)?.mySelectedOptionIds || [];
+};
+
+const isPollOptionSelected = (message, optionId) =>
+  getPollVoteSelection(message).includes(optionId);
+
+const canVoteOnPoll = message => Boolean(
+  getPollMessageKey(message)
+  && getMessagePoll(message)
+  && !isDeletedForEveryone(message)
+  && !['sending', 'error'].includes(String(message?.status || ''))
+);
+
+const isSendingPollVote = message =>
+  Boolean(getPollMessageKey(message) && sendingPollVoteKeys.value.has(getPollMessageKey(message)));
+
+const isPollVoteQueued = message =>
+  Boolean(getPollMessageKey(message) && pollVoteQueuedKeys.value.has(getPollMessageKey(message)));
+
+const pollVoteTimers = new Map();
+const MULTI_POLL_AUTO_SEND_DELAY_MS = 650;
+
+const setPollVoteKeyState = (stateRef, key, active) => {
+  const next = new Set(stateRef.value);
+  if (active) next.add(key);
+  else next.delete(key);
+  stateRef.value = next;
+};
+
+const clearQueuedPollVote = key => {
+  const timer = pollVoteTimers.get(key);
+  if (timer) clearTimeout(timer);
+  pollVoteTimers.delete(key);
+  setPollVoteKeyState(pollVoteQueuedKeys, key, false);
+};
+
+const togglePollOption = (message, optionId) => {
+  if (!canVoteOnPoll(message) || isSendingPollVote(message)) return;
+  const poll = getMessagePoll(message);
+  const key = getPollMessageKey(message);
+  const current = [...getPollVoteSelection(message)];
+  const next = getNextPollVoteSelection(poll, current, optionId);
+  if (arePollVoteSelectionsEqual(current, next)) return;
+
+  pollVoteSelections.value = { ...pollVoteSelections.value, [key]: next };
+
+  clearQueuedPollVote(key);
+  if (arePollVoteSelectionsEqual(next, poll.mySelectedOptionIds)) {
+    const nextSelections = { ...pollVoteSelections.value };
+    delete nextSelections[key];
+    pollVoteSelections.value = nextSelections;
+    return;
+  }
+
+  if (poll.selectableOptionsCount === 1) {
+    void submitPollVote(message, next);
+    return;
+  }
+
+  setPollVoteKeyState(pollVoteQueuedKeys, key, true);
+  const timer = setTimeout(() => {
+    pollVoteTimers.delete(key);
+    setPollVoteKeyState(pollVoteQueuedKeys, key, false);
+    void submitPollVote(message, [...getPollVoteSelection(message)]);
+  }, MULTI_POLL_AUTO_SEND_DELAY_MS);
+  pollVoteTimers.set(key, timer);
+};
+
+const applyPollDataToMessages = (targetMessageId, pollData, targetFromMe) => {
+  const normalized = normalizeMessagePoll(pollData);
+  if (!targetMessageId || !normalized) return false;
+  let changed = false;
+  if (targetFromMe) {
+    sentMessages.value = sentMessages.value.map(message => {
+      if (!getOutgoingMessageIdentityValues(message).includes(targetMessageId)) return message;
+      changed = true;
+      return { ...message, pollData: normalized };
+    });
+  } else {
+    const patchIncoming = message => {
+      if (String(message?.id || '') !== targetMessageId) return message;
+      changed = true;
+      return { ...message, pollData: normalized };
+    };
+    messages.value = messages.value.map(patchIncoming);
+    if (selectedConversation.value?.messages) {
+      selectedConversation.value.messages = selectedConversation.value.messages.map(patchIncoming);
+    }
+  }
+  if (changed && selectedConversation.value?.from) {
+    cacheConversationSnapshot(selectedConversation.value.from, {
+      sentMessages: sentMessages.value,
+      incomingMessages: selectedConversation.value.messages,
+    });
+  }
+  return changed;
+};
+
+const activePollVoterDetails = computed(() => {
+  const targetMessageId = String(pollVoterDetails.value?.targetMessageId || '');
+  if (!targetMessageId) return null;
+  const message = allMessages.value.find(item => (
+    item.type === 'outgoing'
+      ? getOutgoingMessageIdentityValues(item).includes(targetMessageId)
+      : String(item.id || '') === targetMessageId
+  ));
+  const poll = getMessagePoll(message);
+  return poll ? { message, poll } : null;
+});
+
+const openPollVoterDetails = message => {
+  const targetMessageId = getPollMessageKey(message);
+  if (!targetMessageId) return;
+  pollVoterDetails.value = { targetMessageId };
+};
+
+const closePollVoterDetails = () => {
+  pollVoterDetails.value = null;
+  pollProfileRetryTimers.forEach(timer => clearTimeout(timer));
+  pollProfileRetryTimers.clear();
+  pollProfileRetryCounts.clear();
+};
+
+const formatPollVoteTime = value => formatInboxReadTime(value);
+
+const getPollVoterProfileKey = voter => (
+  String(voter?.phone || voter?.profilePicUrl || voter?.name || '')
+);
+
+const getPollVoterProfileUrl = voter => {
+  const source = String(voter?.profilePicUrl || '').trim();
+  if (!source) return '';
+  const key = getPollVoterProfileKey(voter);
+  const version = pollProfileRetryVersions.value[key] || 0;
+  const separator = source.includes('?') ? '&' : '?';
+  return `${mediaUrl(source)}${separator}profileRetry=${version}`;
+};
+
+const handlePollVoterProfileLoad = voter => {
+  const key = getPollVoterProfileKey(voter);
+  const timer = pollProfileRetryTimers.get(key);
+  if (timer) clearTimeout(timer);
+  pollProfileRetryTimers.delete(key);
+  pollProfileRetryCounts.delete(key);
+};
+
+const handlePollVoterProfileError = (event, voter) => {
+  if (event?.currentTarget) event.currentTarget.style.visibility = 'hidden';
+  const key = getPollVoterProfileKey(voter);
+  if (!key || voter?.profileStatus === 'unavailable') return;
+
+  const attempt = pollProfileRetryCounts.get(key) || 0;
+  const retryDelays = [1200, 2500, 5000, 9000];
+  if (attempt >= retryDelays.length || pollProfileRetryTimers.has(key)) return;
+
+  pollProfileRetryCounts.set(key, attempt + 1);
+  const timer = setTimeout(() => {
+    pollProfileRetryTimers.delete(key);
+    pollProfileRetryVersions.value = {
+      ...pollProfileRetryVersions.value,
+      [key]: (pollProfileRetryVersions.value[key] || 0) + 1,
+    };
+  }, retryDelays[attempt]);
+  pollProfileRetryTimers.set(key, timer);
+};
+
+const submitPollVote = async (message, selectedOptionIds = getPollVoteSelection(message)) => {
+  const targetMessageId = getPollMessageKey(message);
+  if (
+    !targetMessageId
+    || !canVoteOnPoll(message)
+    || sendingPollVoteKeys.value.has(targetMessageId)
+  ) return;
+
+  clearQueuedPollVote(targetMessageId);
+  setPollVoteKeyState(sendingPollVoteKeys, targetMessageId, true);
+  try {
+    const { data } = await deviceApi.post('/messages/poll-vote', {
+      targetMessageId,
+      selectedOptionIds,
+    });
+    const pollData = normalizeMessagePoll(data?.pollData);
+    if (!pollData) throw new Error('Hasil polling tidak tersedia');
+    applyPollDataToMessages(targetMessageId, pollData, message.type === 'outgoing');
+    const nextSelections = { ...pollVoteSelections.value };
+    delete nextSelections[targetMessageId];
+    pollVoteSelections.value = nextSelections;
+  } catch (error) {
+    const nextSelections = { ...pollVoteSelections.value };
+    delete nextSelections[targetMessageId];
+    pollVoteSelections.value = nextSelections;
+    toast.error(
+      error?.response?.data?.message
+      || error?.message
+      || 'Gagal mengirim vote polling',
+    );
+  } finally {
+    setPollVoteKeyState(sendingPollVoteKeys, targetMessageId, false);
+  }
+};
+
 const messageActionText = message => String(
-  message?.type === 'incoming' ? message?.message : message?.text,
+  getPollPreview(message?.pollData)
+  || (message?.type === 'incoming' ? message?.message : message?.text),
 ).trim() || '[Pesan]';
 
 const getQuotedSenderIdentity = message => {
@@ -3145,6 +3717,7 @@ const setupSocketListener = () => {
     const outgoingMessageEditedEventName = `outgoing:${sessionId}:message-edited`;
     const statusEventName = `device:${selectedDeviceId.value}:message-status`;
     const reactionEventName = `reaction:${sessionId}`;
+    const pollEventName = `poll:${sessionId}`;
     const deletedMessageEventName = `message-deleted:${sessionId}`;
     
     const handleIncoming = (data) => {
@@ -3355,6 +3928,13 @@ const setupSocketListener = () => {
       }
     };
 
+    const handlePollUpdate = data => {
+      const targetMessageId = String(data?.targetMessageId || '');
+      const pollData = normalizeMessagePoll(data?.pollData);
+      if (!targetMessageId || !pollData) return;
+      applyPollDataToMessages(targetMessageId, pollData, Boolean(data.targetFromMe));
+    };
+
     const handleDeletedMessage = data => {
       removeDeletedMessageFromState(data);
       void loadMessages();
@@ -3369,6 +3949,7 @@ const setupSocketListener = () => {
     socket.on(outgoingMessageEditedEventName, handleOutgoingMessageEdited);
     socket.on(statusEventName, handleMessageStatus);
     socket.on(reactionEventName, handleReaction);
+    socket.on(pollEventName, handlePollUpdate);
     socket.on(deletedMessageEventName, handleDeletedMessage);
     
     socketCleanup = () => {
@@ -3380,6 +3961,7 @@ const setupSocketListener = () => {
       socket.off(outgoingMessageEditedEventName, handleOutgoingMessageEdited);
       socket.off(statusEventName, handleMessageStatus);
       socket.off(reactionEventName, handleReaction);
+      socket.off(pollEventName, handlePollUpdate);
       socket.off(deletedMessageEventName, handleDeletedMessage);
     };
   } catch (e) {
@@ -3459,6 +4041,40 @@ const scheduleReplyInputFocus = () => {
   });
 };
 
+const updateComposerMoreMenuPosition = () => {
+  if (!showComposerMoreMenu.value || !composerMoreButton.value || typeof window === 'undefined') {
+    return;
+  }
+  const rect = composerMoreButton.value.getBoundingClientRect();
+  const width = Math.min(292, window.innerWidth - 24);
+  composerMoreMenuStyle.value = {
+    width: `${width}px`,
+    left: `${Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))}px`,
+    bottom: `${Math.max(12, window.innerHeight - rect.top + 8)}px`,
+  };
+};
+
+const closeComposerMoreMenu = () => {
+  showComposerMoreMenu.value = false;
+};
+
+const toggleComposerMoreMenu = async () => {
+  if (showComposerMoreMenu.value) {
+    closeComposerMoreMenu();
+    return;
+  }
+  closeChatTemplatePicker();
+  showComposerMoreMenu.value = true;
+  await nextTick();
+  updateComposerMoreMenuPosition();
+};
+
+const openAttachmentPicker = async () => {
+  closeComposerMoreMenu();
+  await nextTick();
+  attachmentInput.value?.click();
+};
+
 const updateChatTemplatePickerPosition = () => {
   if (!showChatTemplatePicker.value || !chatTemplateButton.value || typeof window === 'undefined') return;
   const rect = chatTemplateButton.value.getBoundingClientRect();
@@ -3493,11 +4109,47 @@ const toggleChatTemplatePicker = async () => {
     closeChatTemplatePicker();
     return;
   }
+  closeComposerMoreMenu();
   showChatTemplatePicker.value = true;
   pendingChatTemplate.value = null;
   await nextTick();
   updateChatTemplatePickerPosition();
   void loadInboxChatTemplates(false);
+};
+
+const openPollComposer = () => {
+  closeComposerMoreMenu();
+  if (!selectedConversation.value || sendingReply.value) return;
+  if (editingMessage.value) {
+    toast.warning('Selesaikan atau batalkan edit pesan terlebih dahulu');
+    return;
+  }
+  if (selectedAttachment.value) {
+    toast.warning('Hapus lampiran sebelum membuat polling');
+    return;
+  }
+  closeChatTemplatePicker();
+  pollDraft.value = createMessagePollDraft();
+  pollComposerAttempted.value = false;
+  showPollComposer.value = true;
+};
+
+const closePollComposer = () => {
+  if (sendingPoll.value) return;
+  showPollComposer.value = false;
+  pollComposerAttempted.value = false;
+};
+
+const addPollOption = () => {
+  if (pollDraft.value.options.length >= POLL_MAX_OPTIONS) return;
+  pollDraft.value.options.push('');
+  pollComposerAttempted.value = false;
+};
+
+const removePollOption = index => {
+  if (pollDraft.value.options.length <= POLL_MIN_OPTIONS) return;
+  pollDraft.value.options.splice(index, 1);
+  pollComposerAttempted.value = false;
 };
 
 const resolvedSelectedTemplate = (template) => {
@@ -3560,10 +4212,12 @@ const handleInboxComposerTyping = async (event) => {
   const blocked = Boolean(
     addContactModal.value.show
     || deleteModal.value.show
+    || showPollComposer.value
     || imagePreview.value
     || reactionDetails.value
     || readReceiptDetails.value
-    || showChatTemplatePicker.value,
+    || showChatTemplatePicker.value
+    || showComposerMoreMenu.value,
   );
   if (!shouldRedirectInboxTyping(event, {
     conversationOpen: Boolean(selectedConversation.value),
@@ -3700,6 +4354,7 @@ const getInboxNavigationTarget = () => {
   const displayName = String(route.query.displayName || '');
   const isGroup = String(route.query.isGroup || '') === 'true';
   const profilePicUrl = String(route.query.profilePicUrl || '');
+  const shouldReply = String(route.query.notificationAction || '') === 'reply';
   const requestedReturnRoute = String(route.query.returnTo || '');
   const returnTo = ['contacts', 'groups'].includes(requestedReturnRoute)
     ? requestedReturnRoute
@@ -3713,6 +4368,7 @@ const getInboxNavigationTarget = () => {
     displayName,
     isGroup,
     profilePicUrl,
+    shouldReply,
     returnTo,
   };
 };
@@ -3726,6 +4382,7 @@ const clearInboxNavigationQuery = () => {
   delete query.displayName;
   delete query.isGroup;
   delete query.profilePicUrl;
+  delete query.notificationAction;
   delete query.returnTo;
   return router.replace({ name: 'inbox', query });
 };
@@ -3960,6 +4617,11 @@ const openInboxNavigationTarget = async ({ reload = true } = {}) => {
     await viewConversation(conversation, { targetMessageId: target.messageId });
     if (generation !== inboxNavigationGeneration) return;
 
+    if (target.shouldReply && target.messageId) {
+      const replyTarget = findQuotedTarget(target.messageId);
+      if (replyTarget) await startReplyToMessage(replyTarget);
+    }
+
     await clearInboxNavigationQuery();
   } finally {
     if (generation === inboxNavigationGeneration) {
@@ -3993,6 +4655,7 @@ const mapTimelineIncomingMessage = row => ({
   senderContact: row.senderContact || null,
   senderProfilePicUrl: row.senderProfilePicUrl || null,
   senderProfileStatus: row.senderProfileStatus || 'unavailable',
+  pollData: normalizeMessagePoll(row.pollData),
 });
 
 const mapTimelineOutgoingMessage = row => {
@@ -4029,6 +4692,7 @@ const mapTimelineOutgoingMessage = row => {
     readBy,
     readReceipts,
     readCount,
+    pollData: normalizeMessagePoll(row.pollData),
   };
 };
 
@@ -4217,6 +4881,7 @@ const closeConversation = () => {
   isConversationFullscreen.value = false;
   showScrollToLatest.value = false;
   resetAttachmentDrag();
+  closeComposerMoreMenu();
   closeChatTemplatePicker();
   closeImagePreview();
   clearAttachment();
@@ -4742,6 +5407,174 @@ const submitMessageEdit = async () => {
   }
 };
 
+const submitMessagePoll = async () => {
+  if (sendingPoll.value || !selectedConversation.value) return;
+
+  pollComposerAttempted.value = true;
+  if (!pollDraftValidation.value.valid) return;
+
+  const device = devices.value.find(item => item.id === selectedDeviceId.value);
+  if (!device) {
+    toast.error('Device tidak ditemukan');
+    return;
+  }
+  if (!device.isConnected) {
+    toast.error('Device WhatsApp belum terhubung');
+    return;
+  }
+
+  const draft = {
+    question: pollDraft.value.question,
+    options: [...pollDraft.value.options],
+    allowMultiple: pollDraft.value.allowMultiple,
+  };
+  const pollData = createOptimisticMessagePoll(draft);
+  const pollPayload = buildOutgoingMessagePoll(draft);
+  if (!pollData) return;
+
+  const messageText = getPollPreview(pollData);
+  const tempId = createOutgoingMessageId();
+  const activeReply = replyingToMessage.value ? { ...replyingToMessage.value } : null;
+  const recipient = selectedConversation.value.from;
+  const isGroup = selectedConversation.value.isGroup || recipient.includes('@g.us');
+  const optimisticMessage = {
+    tempId,
+    text: messageText,
+    timestamp: new Date().toISOString(),
+    status: 'sending',
+    isGroup,
+    pollData,
+    readBy: [],
+    readReceipts: [],
+    readCount: 0,
+    quotedMessageId: activeReply?.targetMessageId || null,
+    quotedFromMe: activeReply?.targetFromMe ?? null,
+    quotedText: activeReply?.text || '',
+    quotedSender: activeReply?.senderLabel || null,
+    quotedSenderPhone: activeReply?.senderPhone || '',
+    quotedMediaPath: activeReply?.mediaPath || '',
+    quotedMediaType: activeReply?.mediaType || '',
+    quotedFileName: activeReply?.fileName || '',
+  };
+
+  sentMessages.value.push(optimisticMessage);
+  replyingToMessage.value = null;
+  showPollComposer.value = false;
+  sendingPoll.value = true;
+  setTimeout(() => scrollToBottom(), 50);
+
+  try {
+    const response = await deviceApi.post('/messages/send', [
+      {
+        recipient,
+        type: isGroup ? 'group' : 'number',
+        message: pollPayload,
+        delay: 0,
+        options: { messageId: tempId },
+        ...(activeReply
+          ? {
+              replyTo: {
+                targetMessageId: activeReply.targetMessageId,
+                targetFromMe: activeReply.targetFromMe,
+              },
+            }
+          : {}),
+      },
+    ]);
+
+    const errors = response?.data?.errors || [];
+    if (errors.length > 0) {
+      throw confirmedOutgoingError(errors[0]?.error || 'Gagal mengirim polling');
+    }
+    const resultEntry = response?.data?.results?.[0];
+    if (!resultEntry) throw new Error('Tidak ada hasil dari pengiriman polling');
+
+    const savedMessage = resultEntry.message || resultEntry.outgoingMessage || null;
+    const waMessageId = savedMessage?.waMessageId
+      || savedMessage?.id
+      || resultEntry?.result?.key?.id
+      || tempId;
+    const databaseStatus = savedMessage?.status || resultEntry?.status;
+    const messageTimestamp = resultEntry?.result?.messageTimestamp;
+    const responsePollData = normalizeMessagePoll(savedMessage?.pollData) || pollData;
+    const msgIndex = sentMessages.value.findIndex(message => (
+      message.tempId === tempId
+      || message.tempId === waMessageId
+      || message.waMessageId === waMessageId
+    ));
+    let responseUiStatus = normalizeOutgoingUiStatus(databaseStatus) || 'sending';
+
+    if (msgIndex >= 0) {
+      responseUiStatus = mergeOutgoingResponseStatus(
+        sentMessages.value[msgIndex].status,
+        databaseStatus,
+      );
+      sentMessages.value[msgIndex] = {
+        ...sentMessages.value[msgIndex],
+        pkId: savedMessage?.pkId || sentMessages.value[msgIndex].pkId,
+        id: savedMessage?.id || waMessageId,
+        tempId: waMessageId,
+        waMessageId,
+        status: responseUiStatus,
+        pollData: responsePollData,
+        timestamp: messageTimestamp
+          ? new Date(Number(messageTimestamp) * 1000).toISOString()
+          : sentMessages.value[msgIndex].timestamp,
+      };
+      sentMessages.value = [...sentMessages.value];
+      flushPendingMessageStatusEvents();
+    }
+
+    const existingSummaryIndex = outgoingConversationSummaries.value.findIndex(
+      message => message.to === recipient,
+    );
+    const existingSummary = existingSummaryIndex >= 0
+      ? outgoingConversationSummaries.value[existingSummaryIndex]
+      : null;
+    responseUiStatus = mergeOutgoingResponseStatus(
+      existingSummary?.status || responseUiStatus,
+      responseUiStatus,
+    );
+    const summary = {
+      ...existingSummary,
+      id: waMessageId,
+      waMessageId,
+      to: recipient,
+      message: messageText,
+      createdAt: messageTimestamp
+        ? new Date(Number(messageTimestamp) * 1000).toISOString()
+        : new Date().toISOString(),
+      status: responseUiStatus,
+      isGroup,
+      contact: selectedConversation.value.contact || existingSummary?.contact || null,
+      messageCount:
+        (Number(existingSummary?.messageCount) || 0)
+        + (existingSummary?.id === waMessageId ? 0 : 1),
+    };
+    if (existingSummaryIndex >= 0) outgoingConversationSummaries.value.splice(existingSummaryIndex, 1);
+    outgoingConversationSummaries.value.unshift(summary);
+    scheduleConversationStatusReconciliation(recipient);
+    setTimeout(() => scrollToBottom(), 50);
+  } catch (error) {
+    const failureConfirmed = isConfirmedOutgoingFailure(error);
+    const msgIndex = sentMessages.value.findIndex(message => message.tempId === tempId);
+    if (msgIndex >= 0) {
+      sentMessages.value[msgIndex].status = failureConfirmed ? 'error' : 'sending';
+      sentMessages.value = [...sentMessages.value];
+    }
+    const errorMessage = getOutgoingFailureMessage(error, 'Gagal mengirim polling');
+    if (failureConfirmed) {
+      toast.error(errorMessage);
+    } else {
+      toast.warning('Status pengiriman polling belum terkonfirmasi. Sistem akan memeriksanya kembali.');
+      scheduleConversationStatusReconciliation(recipient);
+    }
+  } finally {
+    sendingPoll.value = false;
+    pollComposerAttempted.value = false;
+  }
+};
+
 // Send reply message
 const sendReply = async () => {
   if (sendingReply.value || !selectedConversation.value) {
@@ -4770,7 +5603,7 @@ const sendReply = async () => {
   const activeReply = replyingToMessage.value
     ? { ...replyingToMessage.value }
     : null;
-  
+
   const optimisticMessage = {
     tempId,
     text: messageText,
@@ -4789,12 +5622,12 @@ const sendReply = async () => {
     quotedMediaType: activeReply?.mediaType || '',
     quotedFileName: activeReply?.fileName || '',
   };
-  
+
   sentMessages.value.push(optimisticMessage);
   replyText.value = '';
   replyingToMessage.value = null;
   setTimeout(() => scrollToBottom(), 50);
-  
+
   sendingReply.value = true;
 
   try {
@@ -4810,7 +5643,7 @@ const sendReply = async () => {
     const recipient = selectedConversation.value.from;
     const isGroup = selectedConversation.value.isGroup || recipient.includes('@g.us');
     const recipientFormatted = recipient;
-    
+
     const response = await deviceApi.post('/messages/send', [
       {
         recipient: recipientFormatted,
@@ -4835,11 +5668,11 @@ const sendReply = async () => {
     }
 
     const results = response?.data?.results || [];
-    
+
     if (results.length === 0) {
       throw new Error('Tidak ada hasil dari pengiriman pesan');
     }
-    
+
     const resultEntry = results[0];
     const savedMessage = resultEntry?.message || resultEntry?.outgoingMessage || null;
     const databaseStatus = savedMessage?.status || resultEntry?.status;
@@ -4858,7 +5691,7 @@ const sendReply = async () => {
       m.waMessageId === waMessageId
     );
     let responseUiStatus = normalizeOutgoingUiStatus(databaseStatus) || 'sending';
-    
+
     if (msgIndex !== -1) {
       responseUiStatus = mergeOutgoingResponseStatus(
         sentMessages.value[msgIndex].status,
@@ -4882,7 +5715,7 @@ const sendReply = async () => {
         quotedMediaType: sentMessages.value[msgIndex].quotedMediaType || '',
         quotedFileName: sentMessages.value[msgIndex].quotedFileName || '',
       };
-      
+
       sentMessages.value = [...sentMessages.value];
       flushPendingMessageStatusEvents();
     } else {
@@ -4908,13 +5741,13 @@ const sendReply = async () => {
           quotedMediaType: activeReply?.mediaType || '',
           quotedFileName: activeReply?.fileName || '',
         };
-        
+
         sentMessages.value.push(newMessage);
         sentMessages.value = [...sentMessages.value];
         flushPendingMessageStatusEvents();
       }
     }
-    
+
     const existingSummaryIndex = outgoingConversationSummaries.value.findIndex(
       message => message.to === recipient,
     );
@@ -5552,6 +6385,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleInboxComposerTyping, true);
   window.addEventListener('pointerdown', handleMessagePopupPointerDown);
   window.addEventListener('resize', updateMessageActionMenuPosition);
+  window.addEventListener('resize', updateComposerMoreMenuPosition);
   window.addEventListener('resize', updateChatTemplatePickerPosition);
 
   // Connect socket and setup listeners
@@ -5608,6 +6442,7 @@ watch(
     route.query.conversation,
     route.query.contactId,
     route.query.message,
+    route.query.notificationAction,
     route.query.returnTo,
   ],
   ([deviceId, conversationJid]) => {
@@ -5632,11 +6467,15 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleInboxComposerTyping, true);
   window.removeEventListener('pointerdown', handleMessagePopupPointerDown);
   window.removeEventListener('resize', updateMessageActionMenuPosition);
+  window.removeEventListener('resize', updateComposerMoreMenuPosition);
   window.removeEventListener('resize', updateChatTemplatePickerPosition);
+  pollVoteTimers.forEach(timer => clearTimeout(timer));
+  pollVoteTimers.clear();
   if (messageHighlightTimer) clearTimeout(messageHighlightTimer);
   inboxNavigationGeneration++;
   conversationOpenGeneration++;
   closeReactionDetails();
+  closePollVoterDetails();
   clearMessageLongPress();
   resetMessageSwipe();
   senderProfileRetryTimers.forEach(timer => clearTimeout(timer));
@@ -5701,6 +6540,7 @@ const getMediaFileName = (message) => {
 };
 
 const getVisibleMessageText = (message) => {
+  if (getMessagePoll(message)) return '';
   const text = message?.type === 'incoming' ? message?.message : message?.text;
   if (!text) return '';
   if (
@@ -5776,7 +6616,8 @@ const handlePreviewImageError = () => {
 };
 
 const getMessagePreview = (message) => {
-  const preview = isStickerMessage(message)
+  const preview = getPollPreview(message?.pollData)
+    || (isStickerMessage(message)
     ? 'Stiker'
     : isImageMedia(message)
       ? 'Gambar'
@@ -5786,7 +6627,7 @@ const getMessagePreview = (message) => {
           ? 'Audio'
           : isDocumentMedia(message)
             ? `Dokumen: ${getMediaFileName(message)}`
-            : truncateMessage(message?.message || '', 100);
+            : truncateMessage(message?.message || '', 100));
   return message?.isOutgoing ? `Anda: ${preview}` : preview;
 };
 
@@ -7889,6 +8730,465 @@ const handleMediaError = (event, message) => {
   word-break: break-word;
 }
 
+.message-poll-card {
+  width: min(360px, 64vw);
+  color: var(--theme-text);
+}
+
+.message-poll-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.message-poll-header > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.message-poll-header small {
+  color: var(--theme-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.message-poll-header strong {
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.message-poll-icon {
+  flex: 0 0 32px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+}
+
+.message-poll-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.message-poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.message-poll-option {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 11px;
+  background: var(--theme-surface-soft);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.message-poll-option:hover:not(:disabled),
+.message-poll-option.selected {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+}
+
+.message-poll-option:disabled {
+  cursor: default;
+}
+
+.message-poll-choice {
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--theme-border-strong);
+  border-radius: 50%;
+  color: #ffffff;
+}
+
+.message-poll-choice.multiple {
+  border-radius: 5px;
+}
+
+.message-poll-option.selected .message-poll-choice {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+}
+
+.message-poll-choice svg {
+  width: 12px;
+  height: 12px;
+}
+
+.message-poll-option-copy {
+  grid-column: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.message-poll-option-copy span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.message-poll-option-copy strong {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.message-poll-progress {
+  grid-column: 2;
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--theme-border);
+}
+
+.message-poll-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--theme-accent);
+  transition: width 220ms ease;
+}
+
+.message-poll-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 13px;
+  color: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+.message-poll-meta,
+.message-poll-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.message-poll-actions {
+  justify-content: flex-end;
+}
+
+.message-poll-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 9px;
+  background: var(--theme-surface);
+  color: var(--theme-accent);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.message-poll-actions .message-poll-submit-vote {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+  color: #ffffff;
+}
+
+.message-poll-auto-status {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.message-poll-auto-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+.message-poll-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-bubble.outgoing .message-poll-card,
+.chat-bubble.outgoing .message-poll-header small,
+.chat-bubble.outgoing .message-poll-footer {
+  color: #fff;
+}
+
+.chat-bubble.outgoing .message-poll-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.chat-bubble.outgoing .message-poll-progress {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.chat-bubble.outgoing .message-poll-progress > span {
+  background: #fff;
+}
+
+.chat-bubble.outgoing .message-poll-auto-status {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.chat-bubble.outgoing .message-poll-option {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-bubble.outgoing .message-poll-option:hover:not(:disabled),
+.chat-bubble.outgoing .message-poll-option.selected {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.chat-bubble.outgoing .message-poll-choice {
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.chat-bubble.outgoing .message-poll-option.selected .message-poll-choice {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #2563eb;
+}
+
+.chat-bubble.outgoing .message-poll-actions button {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.chat-bubble.outgoing .message-poll-actions .message-poll-submit-vote {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #2563eb;
+}
+
+.poll-results-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2450;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.poll-results-dialog {
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100dvh - 40px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 19px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: 0 28px 70px rgba(2, 6, 23, 0.46);
+}
+
+.poll-results-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 19px 20px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.poll-results-header span {
+  color: var(--theme-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.poll-results-header h3,
+.poll-results-header p {
+  margin: 0;
+}
+
+.poll-results-header h3 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.poll-results-header p {
+  margin-top: 5px;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.poll-results-header > button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.poll-results-header > button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.poll-results-body {
+  min-height: 0;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.poll-results-option {
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 13px;
+  background: var(--theme-surface-soft);
+}
+
+.poll-results-option > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--theme-border);
+  font-size: 13px;
+}
+
+.poll-results-option > header strong {
+  flex: 0 0 auto;
+  color: var(--theme-accent);
+  font-size: 12px;
+}
+
+.poll-results-voters {
+  display: grid;
+}
+
+.poll-result-voter {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.poll-result-voter:last-child {
+  border-bottom: 0;
+}
+
+.poll-result-avatar {
+  width: 34px;
+  height: 34px;
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.poll-result-avatar > span {
+  grid-area: 1 / 1;
+}
+
+.poll-result-avatar img {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.poll-result-identity {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.poll-result-identity strong,
+.poll-result-identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poll-result-identity strong {
+  font-size: 12px;
+}
+
+.poll-result-identity small,
+.poll-result-voter time {
+  color: var(--theme-text-muted);
+  font-size: 10px;
+}
+
+.poll-results-unavailable,
+.poll-results-empty {
+  margin: 0;
+  padding: 10px 13px;
+  color: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 640px) {
+  .poll-results-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .poll-results-dialog {
+    width: 100%;
+    max-height: 88dvh;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
 .deleted-message-notice {
   display: flex;
   align-items: center;
@@ -8344,6 +9644,103 @@ const handleMediaError = (event, message) => {
   height: 20px;
 }
 
+.btn-composer-more.active {
+  border-color: #3b82f6;
+  background: var(--theme-info-soft);
+  color: #2563eb;
+}
+
+.btn-composer-more svg {
+  transition: transform 160ms ease;
+}
+
+.btn-composer-more.active svg {
+  transform: rotate(45deg);
+}
+
+.composer-more-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2250;
+  background: transparent;
+}
+
+.composer-more-menu {
+  position: fixed;
+  z-index: 2251;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--theme-border);
+  border-radius: 14px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.3);
+}
+
+.composer-more-menu > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.composer-more-menu > button:hover:not(:disabled) {
+  background: var(--theme-surface-hover);
+}
+
+.composer-more-menu > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.composer-more-menu-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--theme-info-soft);
+  color: var(--theme-accent);
+}
+
+.composer-more-menu-icon.poll {
+  background: rgba(139, 92, 246, 0.13);
+  color: #8b5cf6;
+}
+
+.composer-more-menu-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.composer-more-menu > button > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.composer-more-menu strong {
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.composer-more-menu small {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .composer-message-context {
   min-width: 0;
   display: flex;
@@ -8413,6 +9810,12 @@ const handleMediaError = (event, message) => {
 }
 
 .btn-chat-template.active {
+  border-color: #3b82f6;
+  background: var(--theme-info-soft);
+  color: #2563eb;
+}
+
+.btn-poll-composer.active {
   border-color: #3b82f6;
   background: var(--theme-info-soft);
   color: #2563eb;
@@ -8629,6 +10032,372 @@ const handleMediaError = (event, message) => {
   background: var(--theme-surface-soft);
   text-align: center;
   font-size: 12px;
+}
+
+.poll-composer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2400;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.68);
+  backdrop-filter: blur(4px);
+}
+
+.poll-composer-dialog {
+  width: min(620px, 100%);
+  max-height: min(760px, calc(100dvh - 40px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 20px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: 0 28px 70px rgba(2, 6, 23, 0.46);
+}
+
+.poll-composer-header,
+.poll-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.poll-composer-header {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.poll-composer-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.poll-composer-heading-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--theme-info-soft);
+  color: var(--theme-accent);
+}
+
+.poll-composer-heading-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.poll-composer-heading h3,
+.poll-composer-heading p {
+  margin: 0;
+}
+
+.poll-composer-heading h3 {
+  font-size: 18px;
+}
+
+.poll-composer-heading p {
+  margin-top: 4px;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.poll-composer-close {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.poll-composer-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.poll-composer-body {
+  min-height: 0;
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.poll-composer-field {
+  display: grid;
+  gap: 8px;
+}
+
+.poll-composer-field > span,
+.poll-composer-options legend {
+  color: var(--theme-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.poll-composer-field strong,
+.poll-composer-options strong {
+  color: var(--theme-danger-text);
+}
+
+.poll-composer-field textarea,
+.poll-composer-option-row input {
+  width: 100%;
+  border: 1px solid var(--theme-border);
+  border-radius: 11px;
+  outline: 0;
+  background: var(--theme-input);
+  color: var(--theme-text);
+  font: inherit;
+}
+
+.poll-composer-field textarea {
+  min-height: 88px;
+  padding: 12px 13px;
+  resize: vertical;
+}
+
+.poll-composer-field textarea:focus,
+.poll-composer-option-row input:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px var(--theme-accent-soft);
+}
+
+.poll-composer-field small {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.poll-composer-options {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.poll-composer-options legend {
+  margin-bottom: 10px;
+}
+
+.poll-composer-option-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 9px;
+}
+
+.poll-composer-option-row > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.poll-composer-option-row input {
+  height: 42px;
+  padding: 0 12px;
+}
+
+.poll-composer-option-row button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface-soft);
+  color: var(--theme-danger-text);
+  cursor: pointer;
+}
+
+.poll-composer-option-row button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.poll-composer-option-row button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.poll-composer-add-option {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--theme-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.poll-composer-add-option:hover {
+  background: var(--theme-accent-soft);
+}
+
+.poll-composer-add-option span {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.poll-composer-multiple {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  background: var(--theme-surface-soft);
+  cursor: pointer;
+}
+
+.poll-composer-multiple > span:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.poll-composer-multiple strong {
+  font-size: 13px;
+}
+
+.poll-composer-multiple small {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+.poll-composer-multiple input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.poll-composer-switch {
+  width: 42px;
+  height: 24px;
+  flex: 0 0 42px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--theme-border-strong);
+  transition: background 160ms ease;
+}
+
+.poll-composer-switch::after {
+  content: '';
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
+  transition: transform 160ms ease;
+}
+
+.poll-composer-multiple input:checked + .poll-composer-switch {
+  background: var(--theme-accent);
+}
+
+.poll-composer-multiple input:checked + .poll-composer-switch::after {
+  transform: translateX(18px);
+}
+
+.poll-composer-error {
+  margin: -4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--theme-danger-border);
+  border-radius: 10px;
+  background: var(--theme-danger-soft);
+  color: var(--theme-danger-text);
+  font-size: 12px;
+}
+
+.poll-composer-actions {
+  justify-content: flex-end;
+  border-top: 1px solid var(--theme-border);
+  background: var(--theme-surface-soft);
+}
+
+.poll-composer-actions button {
+  min-height: 42px;
+  padding: 0 17px;
+  border-radius: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.poll-composer-cancel {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.poll-composer-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.poll-composer-submit svg {
+  width: 17px;
+  height: 17px;
+}
+
+.poll-composer-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .poll-composer-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .poll-composer-dialog {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .poll-composer-header,
+  .poll-composer-body,
+  .poll-composer-actions {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .poll-composer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+  }
 }
 
 .attachment-preview {

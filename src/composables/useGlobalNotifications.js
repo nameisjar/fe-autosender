@@ -118,10 +118,43 @@ export function useGlobalNotifications() {
     }
   };
 
-  const showSystemNotification = ({ data, device, notification, openInboxMessage }) => {
+  const showSystemNotification = async ({
+    data,
+    device,
+    notification,
+    openInboxMessage,
+    inboxQuery,
+  }) => {
     if (!('Notification' in window) || window.Notification.permission !== 'granted') return false;
 
     try {
+      const navigationUrl = new URL('/inbox', window.location.origin);
+      Object.entries(inboxQuery).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          navigationUrl.searchParams.set(key, String(value));
+        }
+      });
+      const registration = await (
+        window.__inboxNotificationServiceWorker
+        || navigator.serviceWorker?.getRegistration?.()
+      );
+      if (registration?.showNotification) {
+        await registration.showNotification(notification.title, {
+          body: notification.description,
+          icon: absoluteNotificationIcon(notification.avatarUrl),
+          tag: `inbox:${device?.id || 'device'}:${data.from || data.id || 'message'}`,
+          renotify: true,
+          data: {
+            url: navigationUrl.href,
+            deviceId: device?.id || '',
+            conversationJid: data.from || '',
+            messageId: data.id || '',
+          },
+          actions: [{ action: 'reply', title: 'Balas' }],
+        });
+        return true;
+      }
+
       const systemNotification = new window.Notification(notification.title, {
         body: notification.description,
         icon: absoluteNotificationIcon(notification.avatarUrl),
@@ -136,7 +169,7 @@ export function useGlobalNotifications() {
       systemNotification.onclick = () => {
         window.focus();
         systemNotification.close();
-        void openInboxMessage();
+        void openInboxMessage({ reply: false });
       };
       return true;
     } catch (_) {
@@ -161,7 +194,7 @@ export function useGlobalNotifications() {
       avatarUrl: entry.notification.avatarUrl,
       avatarStatus: entry.data.profilePictureStatus || '',
       avatarFallback: entry.notification.avatarFallback,
-      onClick: entry.openInboxMessage,
+      onClick: () => entry.openInboxMessage({ reply: false }),
       ariaLabel: `Buka pesan dari ${entry.notification.title}`,
     });
     return entry.toastId != null;
@@ -201,15 +234,19 @@ export function useGlobalNotifications() {
         incrementUnreadCount(device?.id, 1);
 
         const notification = buildIncomingNotification(data);
-        const openInboxMessage = () => router.push({
+        const inboxQuery = {
+          device: device?.id || '',
+          conversation: data.from || '',
+          message: data.id || '',
+          displayName: notification.title,
+          isGroup: String(notification.isGroup),
+          profilePicUrl: data.groupPicUrl || data.profilePicUrl || '',
+        };
+        const openInboxMessage = ({ reply = false } = {}) => router.push({
           name: 'inbox',
           query: {
-            device: device?.id || '',
-            conversation: data.from || '',
-            message: data.id || '',
-            displayName: notification.title,
-            isGroup: String(notification.isGroup),
-            profilePicUrl: data.groupPicUrl || data.profilePicUrl || '',
+            ...inboxQuery,
+            ...(reply ? { notificationAction: 'reply' } : {}),
           },
         });
         const notificationKey = `${sessionId}:${data.id || data.from || Date.now()}`;
@@ -218,6 +255,7 @@ export function useGlobalNotifications() {
           device,
           notification,
           openInboxMessage,
+          inboxQuery,
           toastId: null,
           preferSystemNotification: systemNotificationsAvailable(),
           systemShown: false,
@@ -234,19 +272,23 @@ export function useGlobalNotifications() {
         if (!preferSystemNotification) showInAppToast(entry);
 
         if (preferSystemNotification && notification.avatarUrl) {
-          entry.systemShown = showSystemNotification(entry);
-          if (!entry.systemShown) {
-            entry.preferSystemNotification = false;
-            showInAppToast(entry);
-          }
-        } else if (preferSystemNotification) {
-          entry.systemTimer = setTimeout(() => {
-            entry.systemTimer = null;
-            entry.systemShown = showSystemNotification(entry);
-            if (!entry.systemShown) {
+          void showSystemNotification(entry).then(shown => {
+            entry.systemShown = shown;
+            if (!shown) {
               entry.preferSystemNotification = false;
               showInAppToast(entry);
             }
+          });
+        } else if (preferSystemNotification) {
+          entry.systemTimer = setTimeout(() => {
+            entry.systemTimer = null;
+            void showSystemNotification(entry).then(shown => {
+              entry.systemShown = shown;
+              if (!shown) {
+                entry.preferSystemNotification = false;
+                showInAppToast(entry);
+              }
+            });
           }, SYSTEM_NOTIFICATION_AVATAR_WAIT_MS);
         }
         void playNotificationSound();
@@ -280,11 +322,13 @@ export function useGlobalNotifications() {
           ) {
             if (entry.systemTimer) clearTimeout(entry.systemTimer);
             entry.systemTimer = null;
-            entry.systemShown = showSystemNotification(entry);
-            if (!entry.systemShown) {
-              entry.preferSystemNotification = false;
-              showInAppToast(entry);
-            }
+            void showSystemNotification(entry).then(shown => {
+              entry.systemShown = shown;
+              if (!shown) {
+                entry.preferSystemNotification = false;
+                showInAppToast(entry);
+              }
+            });
           }
         }
       };
@@ -316,6 +360,18 @@ export function useGlobalNotifications() {
     if (document.visibilityState === 'visible') scheduleListenerRefresh();
   };
 
+  const handleServiceWorkerNavigation = event => {
+    if (event?.data?.type !== 'inbox-notification-navigation' || !event.data.url) return;
+    try {
+      const url = new URL(event.data.url, window.location.origin);
+      if (url.origin !== window.location.origin) return;
+      void router.push({
+        path: url.pathname,
+        query: Object.fromEntries(url.searchParams.entries()),
+      });
+    } catch (_) {}
+  };
+
   onMounted(async () => {
     // Register lifecycle events even on the login page. App.vue remains
     // mounted after login, so returning before this point would permanently
@@ -329,6 +385,7 @@ export function useGlobalNotifications() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('pointerdown', unlockNotificationSound);
     document.addEventListener('keydown', unlockNotificationSound);
+    navigator.serviceWorker?.addEventListener?.('message', handleServiceWorkerNavigation);
 
     if (!localStorage.getItem('token')) return;
 
@@ -358,6 +415,7 @@ export function useGlobalNotifications() {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     document.removeEventListener('pointerdown', unlockNotificationSound);
     document.removeEventListener('keydown', unlockNotificationSound);
+    navigator.serviceWorker?.removeEventListener?.('message', handleServiceWorkerNavigation);
 
     if (audioContext && audioContext.state !== 'closed') {
       void audioContext.close().catch(() => {});

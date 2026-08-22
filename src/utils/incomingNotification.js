@@ -1,3 +1,5 @@
+import { getPollPreview } from './messagePoll.js';
+
 const cleanText = value => String(value || '').trim();
 
 export const formatNotificationPhone = jid => {
@@ -34,7 +36,11 @@ export const buildIncomingNotification = data => {
     || conversationPhone
     || (isGroup ? 'Anggota grup' : 'Kontak WhatsApp');
   const title = isGroup ? groupName : senderName;
-  const preview = cleanText(data?.message).slice(0, 100) || 'Media/File';
+  const preview = (
+    getPollPreview(data?.pollData)
+    || cleanText(data?.message)
+    || 'Media/File'
+  ).slice(0, 100);
   const description = isGroup ? `${senderName}: ${preview}` : preview;
   const avatarUrl = cleanText(isGroup ? data?.groupPicUrl : data?.profilePicUrl);
 

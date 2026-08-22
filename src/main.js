@@ -7,6 +7,12 @@ import './styles/theme.css';
 
 initializeTheme();
 
+if ('serviceWorker' in navigator) {
+    window.__inboxNotificationServiceWorker = navigator.serviceWorker
+        .register('/inbox-notification-sw.js')
+        .catch(() => null);
+}
+
 const app = createApp(App);
 app.use(createPinia());
 app.use(router);

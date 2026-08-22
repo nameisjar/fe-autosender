@@ -73,6 +73,7 @@ describe('useGlobalNotifications', () => {
   });
 
   afterEach(() => {
+    delete window.__inboxNotificationServiceWorker;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -274,6 +275,7 @@ describe('useGlobalNotifications', () => {
       contact: { firstName: 'Niko', lastName: 'Algonova' },
       profilePicUrl: '/inbox-profile/device-1/niko',
     });
+    await flushPromises();
 
     expect(nativeNotifications).toHaveLength(1);
     expect(notificationHarness.info).not.toHaveBeenCalled();
@@ -292,6 +294,7 @@ describe('useGlobalNotifications', () => {
       pushName: 'Alya',
       profilePicUrl: '/inbox-profile/device-1/alya',
     });
+    await flushPromises();
     expect(nativeNotifications).toHaveLength(2);
     expect(notificationHarness.info).not.toHaveBeenCalled();
 
@@ -331,12 +334,54 @@ describe('useGlobalNotifications', () => {
       pushName: 'Niko',
       profilePicUrl: '/inbox-profile/device-1/niko',
     });
+    await flushPromises();
 
     expect(notificationHarness.info).toHaveBeenCalledWith(
       'Gunakan toast',
       6000,
       expect.objectContaining({ title: 'Niko' }),
     );
+    wrapper.unmount();
+  });
+
+  it('adds a Reply action to persistent browser notifications', async () => {
+    class FakeNotification {
+      static permission = 'granted';
+    }
+    vi.stubGlobal('Notification', FakeNotification);
+    const showNotification = vi.fn().mockResolvedValue(undefined);
+    window.__inboxNotificationServiceWorker = Promise.resolve({ showNotification });
+
+    const wrapper = mount(defineComponent({
+      setup() {
+        useGlobalNotifications();
+        return () => h('div');
+      },
+    }));
+    await flushPromises();
+
+    const [incomingHandler] = socketHarness.listeners.get('incoming:session-1');
+    incomingHandler({
+      id: 'reply-message-1',
+      from: '628123@s.whatsapp.net',
+      message: 'Tolong dibalas',
+      pushName: 'Niko',
+      profilePicUrl: '/inbox-profile/device-1/niko',
+    });
+    await flushPromises();
+
+    expect(showNotification).toHaveBeenCalledWith(
+      'Niko',
+      expect.objectContaining({
+        body: 'Tolong dibalas',
+        actions: [{ action: 'reply', title: 'Balas' }],
+        data: expect.objectContaining({
+          messageId: 'reply-message-1',
+          url: expect.stringContaining('message=reply-message-1'),
+        }),
+      }),
+    );
+    expect(notificationHarness.info).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 
