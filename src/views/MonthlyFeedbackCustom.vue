@@ -238,12 +238,6 @@
               </td>
               <td>
                 <div class="row-actions">
-                  <button class="icon-btn" type="button" title="Atur komentar" @click="openCommentModal(student)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
-                      <path d="M8 9h8M8 13h5" />
-                    </svg>
-                  </button>
                   <button class="icon-btn" type="button" title="Preview PDF" :disabled="rowErrors(student).length > 0" @click="openPreview(student)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />

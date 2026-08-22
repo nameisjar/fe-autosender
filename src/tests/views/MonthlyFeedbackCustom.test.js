@@ -105,6 +105,7 @@ describe("MonthlyFeedbackCustom view", () => {
     expect(headers.indexOf("Komentar") + 1).toBe(headers.indexOf("Link YouTube"));
     expect(headers).not.toContain("Komentar Custom");
     expect(headers).not.toContain("Link Referral");
+    expect(wrapper.find('button[title="Atur komentar"]').exists()).toBe(false);
 
     wrapper.unmount();
   });
