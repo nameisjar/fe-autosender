@@ -3309,6 +3309,7 @@ const conversations = computed(() => {
         groupName: msg.groupName, // Add groupName for group messages
         groupPicUrl: msg.groupPicUrl, // Add group picture URL
         profilePicUrl: msg.profilePicUrl, // Add profile picture URL for personal chat
+        recipientPhone: msg.recipientPhone || null,
         isGroup: msg.isGroup || msg.from?.includes('@g.us'),
         messages: [],
         latestMessage: msg,
@@ -3358,6 +3359,10 @@ const conversations = computed(() => {
     if (msg.profilePicUrl && !grouped[key].profilePicUrl) {
       grouped[key].profilePicUrl = msg.profilePicUrl;
     }
+
+    if (msg.recipientPhone && !grouped[key].recipientPhone) {
+      grouped[key].recipientPhone = msg.recipientPhone;
+    }
     
     // Keep track of latest message
     if (new Date(msg.receivedAt) > new Date(grouped[key].latestMessage.receivedAt)) {
@@ -3387,6 +3392,7 @@ const conversations = computed(() => {
         groupName: outgoing.groupName || null,
         groupPicUrl: outgoing.groupPicUrl || null,
         profilePicUrl: outgoing.profilePicUrl || null,
+        recipientPhone: outgoing.recipientPhone || null,
         isGroup: outgoing.isGroup || key.includes('@g.us'),
         messages: [],
         latestMessage: normalizedMessage,
@@ -3406,6 +3412,9 @@ const conversations = computed(() => {
     }
     if (!conversation.groupName && outgoing.groupName) {
       conversation.groupName = outgoing.groupName;
+    }
+    if (!conversation.recipientPhone && outgoing.recipientPhone) {
+      conversation.recipientPhone = outgoing.recipientPhone;
     }
     if (
       new Date(normalizedMessage.receivedAt) >
@@ -6075,7 +6084,7 @@ const getConversationPhone = (conversation) => {
     return String(conversation.contact.phone);
   }
 
-  return formatWhatsAppIdentity(conversation.from);
+  return formatWhatsAppIdentity(conversation.recipientPhone || conversation.from);
 };
 
 const getConversationLabels = (conversation) => getContactLabelNames(conversation?.contact);
@@ -6083,7 +6092,8 @@ const getConversationLabels = (conversation) => getContactLabelNames(conversatio
 const normalizeInboxContactPhone = (conversation) => {
   if (!conversation || conversation.isGroup) return '';
 
-  const source = conversation.contact?.phone || conversation.from || '';
+  const source =
+    conversation.contact?.phone || conversation.recipientPhone || conversation.from || '';
   const raw = String(source).trim();
   if (!raw || raw.includes('@lid')) return '';
 
