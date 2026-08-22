@@ -124,7 +124,7 @@
       <div class="panel-heading table-heading">
         <div>
           <h2>Data Feedback Siswa</h2>
-          <p>Komentar bersifat opsional. Pilihan 1–5 adalah nomor komentar, bukan skor.</p>
+          <p>Komentar bersifat opsional. Pilih maksimal 3 komentar untuk setiap siswa.</p>
         </div>
         <div class="validation-summary" :class="{ valid: students.length && invalidCount === 0 }">
           <button
@@ -160,10 +160,7 @@
               <th>Course</th>
               <th>Bulan</th>
               <th>Rating</th>
-              <th>Kehadiran</th>
-              <th>Keterlibatan</th>
-              <th>Penyelesaian Tugas</th>
-              <th>Komentar Custom</th>
+              <th>Komentar</th>
               <th>Link YouTube</th>
               <th>Status</th>
               <th>Aksi</th>
@@ -205,10 +202,20 @@
                   <option v-for="rating in 5" :key="rating" :value="rating">{{ rating }} bintang</option>
                 </select>
               </td>
-              <td><CommentSelect v-model="student.attendance" :options="commentCategories.kehadiran" :student-name="student.studentName" /></td>
-              <td><CommentSelect v-model="student.engagement" :options="commentCategories.keterlibatan" :student-name="student.studentName" /></td>
-              <td><CommentSelect v-model="student.completion" :options="commentCategories.penyelesaian" :student-name="student.studentName" /></td>
-              <td><textarea v-model.trim="student.customComment" class="cell-textarea" rows="2" placeholder="Opsional"></textarea></td>
+              <td class="comments-cell">
+                <button class="comment-summary-button" type="button" @click="openCommentModal(student)">
+                  <span class="comment-summary-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
+                      <path d="M8 9h8M8 13h5" />
+                    </svg>
+                  </span>
+                  <span>
+                    <strong>{{ commentSelectionCount(student) ? `${commentSelectionCount(student)}/3 komentar` : "Pilih komentar" }}</strong>
+                    <small>{{ commentSelectionSummary(student) }}</small>
+                  </span>
+                </button>
+              </td>
               <td><input v-model.trim="student.youtubeLink" class="cell-input link-input" type="url" placeholder="https://youtu.be/..." /></td>
               <td class="status-cell" @click.stop>
                 <span v-if="rowErrors(student).length === 0" class="status-pill ready">Siap</span>
@@ -231,6 +238,12 @@
               </td>
               <td>
                 <div class="row-actions">
+                  <button class="icon-btn" type="button" title="Atur komentar" @click="openCommentModal(student)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" />
+                      <path d="M8 9h8M8 13h5" />
+                    </svg>
+                  </button>
                   <button class="icon-btn" type="button" title="Preview PDF" :disabled="rowErrors(student).length > 0" @click="openPreview(student)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
@@ -240,6 +253,13 @@
                   <button class="icon-btn" type="button" title="Salin caption" @click="copyCaption(student)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                  </button>
+                  <button class="icon-btn" type="button" title="Salin komentar tutor" @click="copyTutorFeedback(student)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="11" height="11" rx="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      <path d="M12 13h5M12 16h4" />
                     </svg>
                   </button>
                   <button class="icon-btn danger" type="button" title="Hapus siswa" @click="removeStudent(student.id)">
@@ -270,6 +290,91 @@
       </div>
     </section>
 
+    <div v-if="commentModalStudent" class="modal-backdrop" @click.self="closeCommentModal">
+      <section class="comment-modal" role="dialog" aria-modal="true" :aria-label="`Pilih komentar ${commentModalStudent.studentName}`">
+        <header class="comment-modal-header">
+          <div>
+            <h2>Pilih Komentar</h2>
+            <p>{{ commentModalStudent.studentName || "Siswa" }}</p>
+          </div>
+          <div class="comment-modal-header-actions">
+            <span class="comment-limit-badge" :class="{ full: commentDraftCount >= MAX_COMMENTS }">
+              {{ commentDraftCount }} / {{ MAX_COMMENTS }}
+            </span>
+            <button class="modal-close" type="button" @click="closeCommentModal" aria-label="Tutup pilihan komentar">×</button>
+          </div>
+        </header>
+
+        <div class="comment-modal-scroll">
+          <p class="comment-modal-help">
+            Pilih maksimal 3 komentar bawaan atau custom. Nama siswa akan disesuaikan otomatis pada PDF.
+          </p>
+
+          <section v-for="category in commentCategoryList" :key="category.key" class="comment-picker-category">
+            <h3>{{ category.label }}</h3>
+            <label
+              v-for="(comment, index) in commentCategories[category.key]"
+              :key="commentId(category.key, index)"
+              class="comment-option"
+              :class="{ selected: isDraftCommentSelected(commentId(category.key, index)) }"
+            >
+              <input
+                type="checkbox"
+                :checked="isDraftCommentSelected(commentId(category.key, index))"
+                :disabled="isDraftCommentDisabled(commentId(category.key, index))"
+                @change="toggleDraftComment(commentId(category.key, index))"
+              />
+              <span>{{ replaceStudentName(comment, commentModalStudent.studentName || "Siswa") }}</span>
+            </label>
+          </section>
+
+          <section class="comment-picker-category custom-comments-section">
+            <div class="custom-comments-heading">
+              <div>
+                <h3>KOMENTAR CUSTOM</h3>
+                <p>Maksimal 250 karakter per komentar. Gunakan <code v-text="'{{firstname}}'"></code> untuk nama siswa.</p>
+              </div>
+              <button
+                class="btn btn-secondary add-custom-comment"
+                type="button"
+                :disabled="commentDraftCount >= MAX_COMMENTS || commentDraft.customComments.length >= MAX_COMMENTS"
+                @click="addDraftCustomComment"
+              >
+                + Tambah Custom
+              </button>
+            </div>
+
+            <div v-if="commentDraft.customComments.length" class="custom-comment-list">
+              <div v-for="(comment, index) in commentDraft.customComments" :key="comment.id" class="custom-comment-editor">
+                <div class="custom-comment-editor-heading">
+                  <strong>Komentar custom {{ index + 1 }}</strong>
+                  <button type="button" @click="removeDraftCustomComment(comment.id)">Hapus</button>
+                </div>
+                <textarea
+                  v-model="comment.text"
+                  rows="3"
+                  maxlength="250"
+                  placeholder="Tulis komentar custom untuk siswa ini..."
+                ></textarea>
+                <small>{{ comment.text.length }}/250 karakter</small>
+              </div>
+            </div>
+            <div v-else class="custom-comments-empty">Belum ada komentar custom.</div>
+          </section>
+        </div>
+
+        <footer class="comment-modal-footer">
+          <button class="btn btn-danger-ghost" type="button" :disabled="commentDraftCount === 0" @click="clearDraftComments">
+            Hapus Semua Pilihan
+          </button>
+          <div>
+            <button class="btn btn-secondary" type="button" @click="closeCommentModal">Batal</button>
+            <button class="btn btn-primary" type="button" @click="saveCommentModal">Simpan Komentar</button>
+          </div>
+        </footer>
+      </section>
+    </div>
+
     <div v-if="previewStudent" class="modal-backdrop" @click.self="closePreview">
       <section class="preview-modal" role="dialog" aria-modal="true" aria-label="Preview feedback siswa">
         <header>
@@ -295,7 +400,7 @@
 </template>
 
 <script setup>
-import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { userApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
@@ -325,42 +430,13 @@ const commentCategories = {
   ],
 };
 
-const CommentSelect = defineComponent({
-  name: "CommentSelect",
-  props: {
-    modelValue: Number,
-    options: { type: Array, required: true },
-    studentName: { type: String, default: "" },
-  },
-  emits: ["update:modelValue"],
-  setup(props, { emit }) {
-    const commentForStudent = (comment) => {
-      const name = props.studentName?.trim() || "Siswa";
-      return String(comment || "")
-        .replace(/M\. Alghifari Setyawan/g, name)
-        .replace(/\{\{firstname\}\}/gi, name);
-    };
-
-    return () =>
-      h(
-        "select",
-        {
-          class: "cell-select comment-select",
-          value: props.modelValue ?? "",
-          title: props.modelValue
-            ? commentForStudent(props.options[props.modelValue - 1])
-            : "Tidak ada komentar",
-          onChange: (event) => emit("update:modelValue", Number(event.target.value) || null),
-        },
-        [
-          h("option", { value: "" }, "Tidak ada komentar (opsional)"),
-          ...props.options.map((comment, index) =>
-            h("option", { value: index + 1 }, `${index + 1} — ${commentForStudent(comment)}`),
-          ),
-        ],
-      );
-  },
-});
+const MAX_COMMENTS = 3;
+const commentCategoryList = [
+  { key: "kehadiran", label: "KEHADIRAN" },
+  { key: "keterlibatan", label: "KETERLIBATAN & KESULITAN" },
+  { key: "penyelesaian", label: "PENYELESAIAN TUGAS" },
+];
+const commentId = (categoryKey, index) => `${categoryKey}:${index}`;
 
 const templates = ref([]);
 const students = ref([]);
@@ -372,6 +448,9 @@ const downloadingSingle = ref(false);
 const templatesLoading = ref(false);
 const templatesError = ref("");
 const expandedStatusId = ref(null);
+const commentModalStudentId = ref(null);
+const commentDraft = ref({ selectedComments: [], customComments: [] });
+let customCommentSequence = 0;
 const defaults = ref({
   courseName: "",
   month: null,
@@ -434,20 +513,24 @@ const validCount = computed(() => students.value.filter((student) => rowErrors(s
 const invalidCount = computed(() => students.value.length - validCount.value);
 const firstValidStudent = computed(() => students.value.find((student) => rowErrors(student).length === 0) || null);
 const allSelected = computed(() => students.value.length > 0 && selectedIds.value.length === students.value.length);
+const commentModalStudent = computed(() =>
+  students.value.find((student) => student.id === commentModalStudentId.value) || null,
+);
+const commentDraftCount = computed(() =>
+  commentDraft.value.selectedComments.length + commentDraft.value.customComments.length,
+);
 
 const newStudent = (studentName) => ({
   id: `custom-feedback-${Date.now()}-${++rowSequence}`,
   studentName: studentName.trim(),
   courseName: defaults.value.courseName,
   month: defaults.value.month,
-  attendance: null,
-  engagement: null,
-  completion: null,
+  selectedComments: [],
+  customComments: [],
   youtubeLink: defaults.value.youtubeLink,
   referralLink: defaults.value.referralLink,
   reportBy: defaults.value.reportBy,
   rating: 5,
-  customComment: "",
 });
 
 const parseNames = (value) =>
@@ -517,18 +600,140 @@ const toggleStatusDetails = (studentId) => {
   expandedStatusId.value = expandedStatusId.value === studentId ? null : studentId;
 };
 
+const normalizedStudentComments = (student) => {
+  const selectedComments = Array.isArray(student?.selectedComments)
+    ? student.selectedComments.filter((id) => typeof id === "string")
+    : [
+        student?.attendance ? commentId("kehadiran", Number(student.attendance) - 1) : null,
+        student?.engagement ? commentId("keterlibatan", Number(student.engagement) - 1) : null,
+        student?.completion ? commentId("penyelesaian", Number(student.completion) - 1) : null,
+      ].filter(Boolean);
+  const customComments = Array.isArray(student?.customComments)
+    ? student.customComments
+        .map((comment) => ({
+          id: String(comment?.id || `custom-${Date.now()}-${++customCommentSequence}`),
+          text: String(comment?.text || "").slice(0, 250),
+        }))
+        .filter((comment) => comment.text.trim())
+    : student?.customComment?.trim()
+      ? [{
+          id: `custom-${Date.now()}-${++customCommentSequence}`,
+          text: String(student.customComment).slice(0, 250),
+        }]
+      : [];
+
+  const availableSlots = Math.max(0, MAX_COMMENTS - selectedComments.length);
+  return {
+    selectedComments: selectedComments.slice(0, MAX_COMMENTS),
+    customComments: customComments.slice(0, availableSlots),
+  };
+};
+
+const commentSelectionCount = (student) => {
+  const normalized = normalizedStudentComments(student);
+  return normalized.selectedComments.length + normalized.customComments.length;
+};
+
+const commentSelectionSummary = (student) => {
+  const normalized = normalizedStudentComments(student);
+  if (!normalized.selectedComments.length && !normalized.customComments.length) {
+    return "Belum ada komentar";
+  }
+  const categoryLabels = commentCategoryList
+    .filter((category) => normalized.selectedComments.some((id) => id.startsWith(`${category.key}:`)))
+    .map((category) => category.label.replace(" & KESULITAN", ""));
+  if (normalized.customComments.length) categoryLabels.push(`${normalized.customComments.length} custom`);
+  return categoryLabels.join(" · ");
+};
+
+const openCommentModal = (student) => {
+  const normalized = normalizedStudentComments(student);
+  commentModalStudentId.value = student.id;
+  commentDraft.value = {
+    selectedComments: [...normalized.selectedComments],
+    customComments: normalized.customComments.map((comment) => ({ ...comment })),
+  };
+};
+
+const closeCommentModal = () => {
+  commentModalStudentId.value = null;
+  commentDraft.value = { selectedComments: [], customComments: [] };
+};
+
+const isDraftCommentSelected = (id) => commentDraft.value.selectedComments.includes(id);
+const isDraftCommentDisabled = (id) =>
+  !isDraftCommentSelected(id) && commentDraftCount.value >= MAX_COMMENTS;
+
+const toggleDraftComment = (id) => {
+  const index = commentDraft.value.selectedComments.indexOf(id);
+  if (index >= 0) {
+    commentDraft.value.selectedComments.splice(index, 1);
+    return;
+  }
+  if (commentDraftCount.value >= MAX_COMMENTS) {
+    toast.warning(`Maksimal ${MAX_COMMENTS} komentar untuk setiap siswa`);
+    return;
+  }
+  commentDraft.value.selectedComments.push(id);
+};
+
+const addDraftCustomComment = () => {
+  if (commentDraftCount.value >= MAX_COMMENTS) {
+    toast.warning(`Maksimal ${MAX_COMMENTS} komentar untuk setiap siswa`);
+    return;
+  }
+  commentDraft.value.customComments.push({
+    id: `custom-${Date.now()}-${++customCommentSequence}`,
+    text: "",
+  });
+};
+
+const removeDraftCustomComment = (id) => {
+  commentDraft.value.customComments = commentDraft.value.customComments.filter(
+    (comment) => comment.id !== id,
+  );
+};
+
+const clearDraftComments = () => {
+  commentDraft.value = { selectedComments: [], customComments: [] };
+};
+
+const saveCommentModal = () => {
+  const student = commentModalStudent.value;
+  if (!student) return;
+  const hasEmptyCustom = commentDraft.value.customComments.some((comment) => !comment.text.trim());
+  if (hasEmptyCustom) {
+    toast.warning("Isi komentar custom atau hapus kolom yang masih kosong");
+    return;
+  }
+  student.selectedComments = [...commentDraft.value.selectedComments];
+  student.customComments = commentDraft.value.customComments.map((comment) => ({
+    id: comment.id,
+    text: comment.text.trim(),
+  }));
+  student.attendance = null;
+  student.engagement = null;
+  student.completion = null;
+  student.customComment = "";
+  toast.success(`Komentar ${student.studentName || "siswa"} berhasil disimpan`);
+  closeCommentModal();
+};
+
 const closeStatusDetails = () => {
   expandedStatusId.value = null;
 };
 
 const handleStatusEscape = (event) => {
-  if (event.key === "Escape") closeStatusDetails();
+  if (event.key !== "Escape") return;
+  if (commentModalStudent.value) closeCommentModal();
+  else closeStatusDetails();
 };
 
 const removeStudent = (id) => {
   students.value = students.value.filter((student) => student.id !== id);
   selectedIds.value = selectedIds.value.filter((selectedId) => selectedId !== id);
   if (previewStudent.value?.id === id) previewStudent.value = null;
+  if (commentModalStudentId.value === id) closeCommentModal();
 };
 
 const removeSelected = () => {
@@ -583,16 +788,35 @@ const replaceStudentName = (text, studentName) =>
     .replace(/\{\{firstname\}\}/gi, studentName);
 
 const feedbackText = (student) => {
-  const comments = [
-    commentCategories.kehadiran[student.attendance - 1],
-    commentCategories.keterlibatan[student.engagement - 1],
-    commentCategories.penyelesaian[student.completion - 1],
-  ]
+  const normalized = normalizedStudentComments(student);
+  const comments = normalized.selectedComments
+    .map((id) => {
+      const [categoryKey, rawIndex] = String(id).split(":");
+      return commentCategories[categoryKey]?.[Number(rawIndex)] || "";
+    })
     .filter(Boolean)
     .map((comment) => replaceStudentName(comment, student.studentName));
 
-  if (student.customComment?.trim()) comments.push(replaceStudentName(student.customComment.trim(), student.studentName));
+  normalized.customComments.forEach((comment) => {
+    if (comment.text.trim()) {
+      comments.push(replaceStudentName(comment.text.trim(), student.studentName));
+    }
+  });
   return comments.join("\n\n");
+};
+
+const copyTutorFeedback = async (student) => {
+  const text = feedbackText(student).trim();
+  if (!text) {
+    toast.warning(`Belum ada komentar untuk ${student.studentName || "siswa"}`);
+    return;
+  }
+  try {
+    await writeClipboard(text);
+    toast.success(`Komentar ${student.studentName || "siswa"} berhasil disalin`);
+  } catch {
+    toast.error("Komentar tutor gagal disalin");
+  }
 };
 
 const buildPayload = (student) => {
@@ -808,7 +1032,7 @@ input, select, textarea { width: 100%; box-sizing: border-box; border: 1px solid
 .empty-state { display: flex; min-height: 230px; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: var(--text-secondary, #6b7890); }
 .empty-icon { display: grid; place-items: center; width: 52px; height: 52px; color: #3478f6; background: rgba(59, 130, 246, .12); border-radius: 14px; font-size: 30px; }
 .sheet-wrap { overflow: auto; max-height: 62vh; }
-.feedback-sheet { width: 100%; min-width: 1740px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.feedback-sheet { width: 100%; min-width: 1320px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .feedback-sheet th { position: sticky; top: 0; z-index: 3; padding: 12px 10px; text-align: left; white-space: nowrap; color: var(--text-primary, #182033); background: var(--table-header-bg, #f0f4fa); border-bottom: 1px solid var(--border-color, #dbe2ee); }
 .feedback-sheet td { padding: 9px 8px; vertical-align: top; border-bottom: 1px solid var(--border-color, #e3e8f1); background: var(--card-bg, #fff); }
 .feedback-sheet tr.row-invalid td { background: rgba(245, 158, 11, .025); }
@@ -823,7 +1047,15 @@ thead .name-column { z-index: 4; }
 .course-select { min-width: 210px; }
 .month-select { min-width: 86px; }
 .rating-select { min-width: 110px; }
-.comment-select { min-width: 270px; max-width: 310px; text-overflow: ellipsis; }
+.comments-cell { min-width: 230px; }
+.comment-summary-button { width: 100%; min-width: 215px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border-color, #ccd6e5); border-radius: 10px; background: var(--input-bg, #f7f9fc); color: var(--text-primary, #182033); text-align: left; cursor: pointer; }
+.comment-summary-button:hover { border-color: #3478f6; background: rgba(52, 120, 246, .08); }
+.comment-summary-button > span:last-child { min-width: 0; display: grid; gap: 2px; }
+.comment-summary-button strong, .comment-summary-button small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comment-summary-button strong { font-size: 12px; }
+.comment-summary-button small { max-width: 170px; color: var(--text-secondary, #6b7890); font-size: 11px; }
+.comment-summary-icon { flex: 0 0 30px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: rgba(52, 120, 246, .13); color: #3478f6; }
+.comment-summary-icon svg { width: 17px; height: 17px; }
 .link-input { min-width: 230px; }
 .status-pill { display: inline-flex; border: 0; border-radius: 999px; padding: 6px 9px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .status-pill.ready { color: #059669; background: rgba(16, 185, 129, .12); }
@@ -832,7 +1064,7 @@ thead .name-column { z-index: 4; }
 .status-popover { position: absolute; z-index: 8; top: calc(100% - 4px); right: 8px; width: 250px; padding: 12px 14px; border: 1px solid var(--border-color, #ccd6e5); border-radius: 10px; background: var(--card-bg, #fff); color: var(--text-primary, #182033); box-shadow: 0 12px 30px rgba(0, 0, 0, .18); }
 .status-popover strong { display: block; margin-bottom: 7px; font-size: 12px; }
 .status-popover ul { margin: 0; padding-left: 18px; color: var(--text-secondary, #6b7890); line-height: 1.55; }
-.row-actions { display: flex; gap: 6px; }
+.row-actions { display: flex; min-width: 204px; gap: 6px; }
 .icon-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border-color, #ccd6e5); border-radius: 9px; background: var(--input-bg, #f7f9fc); color: #3478f6; cursor: pointer; }
 .icon-btn:disabled { opacity: .35; cursor: not-allowed; }
 .icon-btn.danger { color: #ef4444; }
@@ -852,6 +1084,41 @@ thead .name-column { z-index: 4; }
 .preview-scroll { overflow: auto; padding: 18px; background: #d7deea; }
 .preview-scroll :deep(.pdf-template) { margin: 0 auto; transform-origin: top center; box-shadow: 0 10px 35px rgba(0,0,0,.22); }
 
+.comment-modal { width: min(920px, 96vw); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #dbe2ee); border-radius: 18px; box-shadow: 0 24px 80px rgba(0, 0, 0, .38); }
+.comment-modal-header, .comment-modal-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; }
+.comment-modal-header { border-bottom: 1px solid var(--border-color, #dbe2ee); }
+.comment-modal-header h2 { margin: 0 0 3px; font-size: 19px; }
+.comment-modal-header p { margin: 0; color: var(--text-secondary, #6b7890); }
+.comment-modal-header-actions { display: flex; align-items: center; gap: 10px; }
+.comment-limit-badge { min-width: 54px; padding: 7px 10px; border-radius: 9px; background: rgba(52, 120, 246, .14); color: #3478f6; font-weight: 800; text-align: center; }
+.comment-limit-badge.full { background: rgba(245, 158, 11, .14); color: #d97706; }
+.comment-modal-scroll { overflow-y: auto; padding: 18px 20px 22px; }
+.comment-modal-help { margin: 0 0 16px; padding: 11px 13px; border: 1px solid rgba(52, 120, 246, .25); border-radius: 10px; background: rgba(52, 120, 246, .08); color: var(--text-secondary, #6b7890); font-size: 13px; line-height: 1.5; }
+.comment-picker-category { margin-bottom: 18px; padding: 12px; border: 1px solid var(--border-color, #dbe2ee); border-radius: 13px; background: var(--input-bg, #f7f9fc); }
+.comment-picker-category:last-child { margin-bottom: 0; }
+.comment-picker-category h3 { margin: 0 0 9px; color: var(--text-primary, #182033); font-size: 12px; letter-spacing: .02em; }
+.comment-option { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: 9px; margin-top: 7px; padding: 10px 11px; border: 1px solid var(--border-color, #dbe2ee); border-radius: 9px; background: var(--card-bg, #fff); color: var(--text-primary, #182033); cursor: pointer; line-height: 1.45; }
+.comment-option:hover { border-color: rgba(52, 120, 246, .55); }
+.comment-option.selected { border-color: #3478f6; background: rgba(52, 120, 246, .1); }
+.comment-option:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.comment-option input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: #3478f6; }
+.comment-option span { min-width: 0; font-size: 12px; }
+.custom-comments-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.custom-comments-heading h3 { margin-bottom: 3px; }
+.custom-comments-heading p { margin: 0; color: var(--text-secondary, #6b7890); font-size: 11px; }
+.custom-comments-heading code { color: #d97706; }
+.add-custom-comment { min-height: 34px; flex-shrink: 0; padding: 0 11px; font-size: 11px; }
+.custom-comment-list { display: grid; gap: 10px; margin-top: 12px; }
+.custom-comment-editor { padding: 11px; border: 1px solid var(--border-color, #dbe2ee); border-radius: 10px; background: var(--card-bg, #fff); }
+.custom-comment-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.custom-comment-editor-heading strong { font-size: 12px; }
+.custom-comment-editor-heading button { border: 0; background: transparent; color: #ef4444; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.custom-comment-editor textarea { min-height: 76px; padding: 10px; resize: vertical; line-height: 1.45; }
+.custom-comment-editor > small { display: block; margin-top: 5px; color: var(--text-secondary, #6b7890); font-size: 10px; text-align: right; }
+.custom-comments-empty { margin-top: 12px; padding: 16px; border: 1px dashed var(--border-color, #dbe2ee); border-radius: 9px; color: var(--text-secondary, #6b7890); font-size: 12px; text-align: center; }
+.comment-modal-footer { border-top: 1px solid var(--border-color, #dbe2ee); }
+.comment-modal-footer > div { display: flex; gap: 9px; }
+
 html.dark .custom-feedback-page, html[data-theme="dark"] .custom-feedback-page, :global(body.dark) .custom-feedback-page { --card-bg: #18263b; --input-bg: #111d30; --table-header-bg: #1e2e46; --border-color: #334661; --text-primary: #f5f7fb; --text-secondary: #aebbd0; }
 
 @media (max-width: 1100px) {
@@ -868,6 +1135,12 @@ html.dark .custom-feedback-page, html[data-theme="dark"] .custom-feedback-page, 
   .download-actions { display: grid; grid-template-columns: 1fr; }
   .table-footer .btn { width: 100%; }
   .preview-modal { max-height: 96vh; }
+  .comment-modal { max-height: 96vh; }
+  .comment-modal-header, .comment-modal-footer { align-items: stretch; }
+  .comment-modal-footer { flex-direction: column-reverse; }
+  .comment-modal-footer > div { display: grid; grid-template-columns: 1fr 1fr; }
+  .custom-comments-heading { align-items: stretch; flex-direction: column; }
+  .add-custom-comment { width: 100%; }
   .preview-scroll { padding: 8px; }
   .preview-scroll :deep(.pdf-template) { transform: scale(.48); width: 210mm; margin-bottom: -52%; }
 }

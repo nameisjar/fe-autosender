@@ -476,7 +476,6 @@
             <MonthlyFeedbackPDFTemplate
               :key="previewRevision"
               :data="previewData"
-              ref="pdfTemplate"
             />
           </div>
 
@@ -729,9 +728,7 @@ import { userApi, deviceApi } from "../api/http.js";
 import { useToast } from "../composables/useToast.js";
 import { useDevices } from "../composables/useDevices.js";
 import MonthlyFeedbackPDFTemplate from "../components/MonthlyFeedbackPDFTemplate.vue";
-import { getImagesAsBase64 } from "../utils/images.js";
 import { normalizePhoneNumber, isValidPhoneNumber } from "../utils/phone.js";
-import html2pdf from "html2pdf.js";
 import RecipientsPicker from "../components/RecipientsPicker.vue";
 
 const toast = useToast();
@@ -1616,151 +1613,62 @@ const handleGenerateAndSend = async () => {
   }
 };
 
-const pdfTemplate = ref(null);
+const safeDownloadFilePart = (value) =>
+  String(value || "Siswa")
+    .replace(/[<>:"/\\|?*]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 80) || "Siswa";
+
+const downloadPdfBlob = (blob, fileName) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+};
+
+const extractPdfDownloadError = async (downloadError) => {
+  const responseData = downloadError?.response?.data;
+  if (responseData instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await responseData.text());
+      return parsed.message || "Gagal membuat PDF";
+    } catch {
+      return "Gagal membuat PDF";
+    }
+  }
+  return responseData?.message || downloadError?.message || "Gagal membuat PDF";
+};
 
 const handleDownloadPDF = async () => {
   if (!previewData.value) return;
 
-  // Pastikan perubahan form terakhir sudah dirender sebelum elemen PDF dikloning.
-  await nextTick();
-  const originalElement = pdfTemplate.value?.$el;
-  if (!originalElement) return;
-
   generating.value = true;
-
-  // 🔧 Create a separate container for PDF rendering
-  let pdfContainer = null;
-
   try {
-    // 🔧 Clone the element and append to a visible but off-screen container
-    pdfContainer = document.createElement("div");
-    pdfContainer.id = "pdf-render-container";
-    pdfContainer.style.cssText = `
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 794px;
-      z-index: -9999;
-      background: white;
-      visibility: visible;
-      opacity: 1;
-    `;
-    document.body.appendChild(pdfContainer);
-
-    // 🔧 Clone and append to container
-    const element = originalElement.cloneNode(true);
-    element.style.cssText = `
-      width: 794px;
-      background: white;
-      display: block;
-    `;
-    pdfContainer.appendChild(element);
-
-    // 🔧 Copy all styles from original to clone (including scoped styles)
-    const copyComputedStyles = (source, target) => {
-      const sourceStyles = window.getComputedStyle(source);
-      for (let i = 0; i < sourceStyles.length; i++) {
-        const prop = sourceStyles[i];
-        try {
-          target.style.setProperty(prop, sourceStyles.getPropertyValue(prop));
-        } catch (e) {}
-      }
+    const payload = {
+      ...previewData.value,
+      month: Number(previewData.value.month),
+      tutorComment:
+        previewData.value.selectedComments || previewData.value.tutorComment || "",
     };
 
-    // Apply computed styles to all elements
-    const sourceElements = originalElement.querySelectorAll("*");
-    const targetElements = element.querySelectorAll("*");
-    sourceElements.forEach((src, idx) => {
-      if (targetElements[idx]) {
-        copyComputedStyles(src, targetElements[idx]);
-      }
-    });
-    copyComputedStyles(originalElement, element);
-
-    // 🔧 Fix header banner: reset dimensions so image renders at natural aspect ratio
-    const headerBanner = element.querySelector('.header-banner');
-    if (headerBanner) {
-      headerBanner.style.overflow = 'visible';
-      headerBanner.style.height = 'auto';
-      headerBanner.style.maxHeight = 'none';
-      const headerImg = headerBanner.querySelector('img');
-      if (headerImg) {
-        headerImg.style.width = '100%';
-        headerImg.style.height = 'auto';
-        headerImg.style.maxHeight = 'none';
-        headerImg.style.objectFit = 'contain';
-      }
-    }
-
-    // 🔧 Wait for all images in clone to fully load
-    const cloneImages = element.querySelectorAll('img');
-    await Promise.all(
-      Array.from(cloneImages).map(
-        (img) =>
-          new Promise((resolve) => {
-            if (img.complete && img.naturalHeight > 0) {
-              resolve();
-            } else {
-              img.onload = resolve;
-              img.onerror = resolve;
-            }
-          })
-      )
+    const response = await userApi.post(
+      "/algorithmics/monthly-feedback/custom/download",
+      { students: [payload], format: "pdf" },
+      { responseType: "blob" },
     );
 
-    // Wait for styles to apply
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Get dimensions after styles are applied
-    const elementWidth = element.offsetWidth || 794;
-    const elementHeight = element.scrollHeight || element.offsetHeight || 1123;
-
-    const studentNameClean = previewStudentName.value.replace(/\s+/g, "_");
-    const monthNum = previewData.value.month;
-    const fileName = "Feedback_" + studentNameClean + "_Bulan" + monthNum + ".pdf";
-
-    const opt = {
-      margin: 0,
-      filename: fileName,
-      image: {
-        type: "jpeg",
-        quality: 0.95,
-      },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: true,
-        backgroundColor: "#ffffff",
-        scrollY: 0,
-        scrollX: 0,
-        width: elementWidth,
-        height: elementHeight,
-        windowWidth: elementWidth,
-        windowHeight: elementHeight,
-      },
-      jsPDF: {
-        unit: "px",
-        format: [elementWidth, elementHeight],
-        orientation: "portrait",
-        compress: true,
-        hotfixes: ["px_scaling"],
-      },
-      pagebreak: {
-        mode: ["avoid-all"],
-      },
-    };
-
-    await html2pdf().set(opt).from(element).save();
-
+    const studentName = safeDownloadFilePart(previewData.value.studentName);
+    const month = Number(previewData.value.month);
+    downloadPdfBlob(response.data, `Feedback_${studentName}_Bulan${month}.pdf`);
     toast.success("PDF berhasil didownload!");
-  } catch (e) {
-    toast.error("Gagal generate PDF: " + (e.message || "Unknown error"));
+  } catch (downloadError) {
+    toast.error(await extractPdfDownloadError(downloadError));
   } finally {
-    // 🔧 Cleanup: remove the PDF container
-    if (pdfContainer && pdfContainer.parentNode) {
-      pdfContainer.parentNode.removeChild(pdfContainer);
-    }
     generating.value = false;
   }
 };
